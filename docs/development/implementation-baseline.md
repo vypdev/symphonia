@@ -16,6 +16,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
+- Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.

@@ -17,6 +17,7 @@ from .registry import ProviderAlreadyRegistered, ProviderNotRegistered, Provider
 from .errors import ProviderApiError, ProviderErrorCategory
 from .spotify import JsonResponse, SpotifyAdapter, UrllibJsonClient
 from .youtube import YouTubeDataAdapter
+from .capabilities import CapabilityError, CapabilityLayers, missing_capabilities, require_capabilities
 from .importing import CollectionImportResult, ImportIssue, collect_playlist_pages, to_playlist_snapshot
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
@@ -25,6 +26,8 @@ __all__ = [
     "AuthorizationAttempt",
     "AuthorizationState",
     "Capability",
+    "CapabilityError",
+    "CapabilityLayers",
     "CollectionImportResult",
     "ConnectionState",
     "ImportIssue",
@@ -51,5 +54,7 @@ __all__ = [
     "WriteOutcome",
     "WriteResult",
     "collect_playlist_pages",
+    "missing_capabilities",
+    "require_capabilities",
     "to_playlist_snapshot",
 ]
