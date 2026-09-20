@@ -1,0 +1,313 @@
+{
+  "$schema": "./catalog.schema.json",
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "home-assistant-app-runtime",
+      "title": "Home Assistant App runtime and Ingress",
+      "status": "draft",
+      "scope": "Install, start, authenticate, persist, upgrade, back up, restore, and diagnose the primary Supervisor-managed Symphonia App",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/home-assistant-app-runtime-and-ingress.md",
+      "requirements": [
+        "SYM-PROD-001",
+        "SYM-ACC-005",
+        "SYM-ARCH-001",
+        "SYM-ARCH-003",
+        "SYM-ARCH-006",
+        "SYM-ARCH-007",
+        "SYM-SEC-008",
+        "SYM-SEC-009",
+        "SYM-SEC-011",
+        "SYM-OBS-003",
+        "SYM-OBS-005",
+        "SYM-HA-001",
+        "SYM-HA-002",
+        "SYM-HA-003",
+        "SYM-HA-004",
+        "SYM-HA-005",
+        "SYM-HA-006",
+        "SYM-HA-007",
+        "SYM-HA-008",
+        "SYM-HA-009",
+        "SYM-TEST-009",
+        "SYM-TEST-012",
+        "SYM-TEST-013",
+        "SYM-DEP-001",
+        "SYM-DEP-002",
+        "SYM-DEP-003",
+        "SYM-DEP-004",
+        "SYM-DEP-005",
+        "SYM-DEP-006",
+        "SYM-DEP-007",
+        "SYM-DEP-008",
+        "SYM-DEP-009",
+        "SYM-DEP-010"
+      ],
+      "evidence": [
+        "docs/decisions/0003-home-assistant-app-primary.md",
+        "docs/architecture/system-architecture.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "RG-004 storage and recovery spike",
+        "Supported Home Assistant versions and CPU architectures",
+        "Secret-encryption key source and backup/restore behavior",
+        "OQ-005 standalone release timing and authentication"
+      ]
+    },
+    {
+      "id": "provider-connections-and-authorization",
+      "title": "Provider connections and authorization",
+      "status": "draft",
+      "scope": "Disclose provider risk, authorize an account, store and refresh grants, probe effective capabilities, and disconnect safely",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/provider-connections-and-authorization.md",
+      "requirements": [
+        "SYM-ACC-002",
+        "SYM-ACC-003",
+        "SYM-ACC-004",
+        "SYM-ACC-006",
+        "SYM-PROV-002",
+        "SYM-PROV-003",
+        "SYM-PROV-008",
+        "SYM-PROV-009",
+        "SYM-PROV-015",
+        "SYM-PROV-016",
+        "SYM-PROV-017",
+        "SYM-PROV-019",
+        "SYM-PROV-020",
+        "SYM-SEC-001",
+        "SYM-SEC-002",
+        "SYM-SEC-003",
+        "SYM-SEC-004",
+        "SYM-SEC-005",
+        "SYM-SEC-006",
+        "SYM-SEC-007",
+        "SYM-SEC-008",
+        "SYM-SEC-009",
+        "SYM-SEC-010",
+        "SYM-TEST-005",
+        "SYM-TEST-011",
+        "SYM-TEST-012"
+      ],
+      "evidence": [
+        "docs/providers/provider-specification.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md",
+        "docs/architecture/system-architecture.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "OQ-004 direct App OAuth versus companion-integration authorization broker",
+        "RG-002 Home Assistant OAuth callback spike",
+        "RG-001 provider-specific scopes and account constraints",
+        "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
+      ]
+    },
+    {
+      "id": "library-import-and-provider-projections",
+      "title": "Library import and provider projections",
+      "status": "draft",
+      "scope": "Import complete provider collections and ordered playlists while retaining provenance, availability, freshness, and policy metadata",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/library-import-and-provider-projections.md",
+      "requirements": [
+        "SYM-PROD-003",
+        "SYM-LIB-001",
+        "SYM-LIB-002",
+        "SYM-LIB-003",
+        "SYM-LIB-004",
+        "SYM-LIB-005",
+        "SYM-LIB-006",
+        "SYM-PROV-004",
+        "SYM-PROV-005",
+        "SYM-PROV-006",
+        "SYM-PROV-007",
+        "SYM-PROV-008",
+        "SYM-PROV-011",
+        "SYM-PROV-012",
+        "SYM-PROV-013",
+        "SYM-PROV-014",
+        "SYM-PROV-018",
+        "SYM-ARCH-004",
+        "SYM-ARCH-005",
+        "SYM-TEST-003",
+        "SYM-TEST-006",
+        "SYM-TEST-010",
+        "SYM-TEST-011"
+      ],
+      "evidence": [
+        "docs/domain/domain-model.md",
+        "docs/providers/provider-specification.md",
+        "docs/providers/provider-research.md",
+        "docs/open-questions.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "RG-001 collection semantics and completeness per provider",
+        "OQ-008 local data retention and export policy",
+        "OQ-007 representative library sizes and import-duration targets",
+        "Provider-specific refresh and deletion obligations"
+      ]
+    },
+    {
+      "id": "recording-identity-resolution",
+      "title": "Recording identity resolution",
+      "status": "draft",
+      "scope": "Resolve provider tracks to provider-independent recordings with versioned evidence, conservative automation, and durable manual decisions",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/recording-identity-resolution.md",
+      "requirements": [
+        "SYM-PROD-002",
+        "SYM-PROD-003",
+        "SYM-LIB-002",
+        "SYM-MATCH-001",
+        "SYM-MATCH-002",
+        "SYM-MATCH-003",
+        "SYM-MATCH-004",
+        "SYM-MATCH-005",
+        "SYM-MATCH-006",
+        "SYM-MATCH-007",
+        "SYM-MATCH-008",
+        "SYM-ARCH-014",
+        "SYM-TEST-007",
+        "SYM-TEST-008"
+      ],
+      "evidence": [
+        "docs/decisions/0001-provider-independent-recording-domain.md",
+        "docs/domain/domain-model.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "RG-003 licensed or synthetic labeled matching corpus",
+        "Automatic-link precision and false-link tolerance",
+        "Versioned scoring and confidence policy",
+        "Provider-specific candidate retrieval feasibility and quota"
+      ]
+    },
+    {
+      "id": "one-time-playlist-copy",
+      "title": "One-time playlist copy",
+      "status": "draft",
+      "scope": "Preview and execute a finite playlist copy with an immutable plan, explicit omissions, ordered writes, and item-level outcomes",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/one-time-playlist-copy.md",
+      "requirements": [
+        "SYM-PROD-002",
+        "SYM-PL-001",
+        "SYM-PL-002",
+        "SYM-PL-003",
+        "SYM-PL-004",
+        "SYM-PL-005",
+        "SYM-PL-006",
+        "SYM-PL-007",
+        "SYM-PL-008",
+        "SYM-PL-009",
+        "SYM-PROD-004",
+        "SYM-PROD-005",
+        "SYM-PROD-006",
+        "SYM-PROV-010",
+        "SYM-PROV-019",
+        "SYM-ARCH-009",
+        "SYM-ARCH-010",
+        "SYM-JOB-003",
+        "SYM-JOB-004",
+        "SYM-JOB-005",
+        "SYM-TEST-004",
+        "SYM-TEST-006"
+      ],
+      "evidence": [
+        "docs/decisions/0002-copy-and-sync-are-distinct.md",
+        "docs/domain/domain-model.md",
+        "docs/product/product-specification.md",
+        "docs/providers/provider-research.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "OQ-003 default treatment of non-ready entries",
+        "RG-001 proven target create/add/order/duplicate behavior",
+        "Provider-specific unknown-write reconciliation strategy",
+        "Target naming, visibility, and existing-playlist selection policy"
+      ]
+    },
+    {
+      "id": "durable-operations-and-recovery",
+      "title": "Durable operations and recovery",
+      "status": "draft",
+      "scope": "Execute imports and provider writes through durable, observable, lease-based operations that recover safely across restarts",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/durable-operations-and-recovery.md",
+      "requirements": [
+        "SYM-PROD-004",
+        "SYM-PROD-005",
+        "SYM-PROD-006",
+        "SYM-ARCH-001",
+        "SYM-ARCH-002",
+        "SYM-ARCH-005",
+        "SYM-ARCH-008",
+        "SYM-ARCH-009",
+        "SYM-ARCH-010",
+        "SYM-JOB-001",
+        "SYM-JOB-002",
+        "SYM-JOB-003",
+        "SYM-JOB-004",
+        "SYM-JOB-005",
+        "SYM-JOB-006",
+        "SYM-JOB-007",
+        "SYM-JOB-008",
+        "SYM-OBS-001",
+        "SYM-OBS-002",
+        "SYM-OBS-003",
+        "SYM-OBS-004",
+        "SYM-OBS-005",
+        "SYM-OBS-006",
+        "SYM-TEST-004",
+        "SYM-TEST-013",
+        "SYM-DEP-002",
+        "SYM-DEP-008"
+      ],
+      "evidence": [
+        "docs/architecture/system-architecture.md",
+        "docs/development/development-specification.md",
+        "docs/open-questions.md",
+        "docs/providers/home-assistant-ecosystem-review.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "RG-004 storage engine and lease/crash-recovery spike",
+        "OQ-007 representative operation sizes and timing targets",
+        "Process topology and worker concurrency defaults",
+        "Retention policy for step detail and operation history"
+      ]
+    }
+  ]
+}
