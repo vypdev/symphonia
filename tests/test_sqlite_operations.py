@@ -72,6 +72,42 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertEqual(completed.checkpoint, {"confirmed": ["occ-1"]})
         self.assertIsNone(completed.worker_id)
 
+        events = self.repository.events(operation.operation_id)
+        self.assertEqual(
+            [event.event_type for event in events],
+            ["created", "claimed", "checkpointed"],
+        )
+        self.assertEqual([event.state for event in events], ["queued", "running", "succeeded"])
+        self.assertEqual(events[1].worker_id, "worker-a")
+
+    def test_checkpoint_events_store_only_sanitized_summary(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={"plan_digest": "abc"},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.checkpoint(
+            operation.operation_id,
+            worker_id="worker-a",
+            checkpoint={
+                "confirmed_occurrences": ["occ-1", "occ-2"],
+                "issues": [{"code": "provider_error"}],
+                "secret_token": "must-not-be-audit-payload",
+            },
+            now=self.now + timedelta(seconds=1),
+        )
+
+        event = self.repository.events(operation.operation_id)[-1]
+        self.assertEqual(event.payload["confirmed_occurrences_count"], 2)
+        self.assertEqual(event.payload["issues_count"], 1)
+        self.assertEqual(
+            event.payload["checkpoint_keys"],
+            ["confirmed_occurrences", "issues", "secret_token"],
+        )
+        self.assertNotIn("must-not-be-audit-payload", event.payload)
+
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
             operation_type="import",
@@ -219,6 +255,10 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertEqual(completed.state, "cancelled")
         self.assertFalse(completed.cancel_requested)
         self.assertIsNone(completed.worker_id)
+        self.assertEqual(
+            [event.event_type for event in self.repository.events(operation.operation_id)],
+            ["created", "claimed", "cancellation_requested", "checkpointed"],
+        )
 
     def test_legacy_store_is_migrated_forward_without_losing_operations(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -258,6 +298,12 @@ class OperationRepositoryTests(unittest.TestCase):
             try:
                 record = repository.get("legacy-1")
                 self.assertFalse(record.cancel_requested)
+                self.assertEqual(
+                    repository._connection.execute(
+                        "SELECT COUNT(*) FROM operation_events"
+                    ).fetchone()[0],
+                    0,
+                )
                 self.assertEqual(
                     repository._connection.execute("PRAGMA user_version").fetchone()[0],
                     OperationRepository.SCHEMA_VERSION,

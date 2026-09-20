@@ -53,6 +53,19 @@ class OperationRecord:
     updated_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class OperationEvent:
+    """Append-only audit record for an operation state transition."""
+
+    sequence: int
+    operation_id: str
+    event_type: str
+    state: str
+    worker_id: str | None
+    payload: dict[str, Any]
+    created_at: datetime
+
+
 class OperationRepository:
     """Transactional operation repository backed by one SQLite database."""
 
@@ -98,6 +111,17 @@ class OperationRepository:
             );
             CREATE INDEX IF NOT EXISTS operations_eligibility_idx
                 ON operations (state, next_run_at, lease_expires_at);
+            CREATE TABLE IF NOT EXISTS operation_events (
+                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                operation_id TEXT NOT NULL REFERENCES operations(operation_id),
+                event_type TEXT NOT NULL,
+                state TEXT NOT NULL,
+                worker_id TEXT,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS operation_events_operation_idx
+                ON operation_events (operation_id, sequence);
             """
         )
         columns = {
@@ -126,6 +150,7 @@ class OperationRepository:
         operation_id = operation_id or str(uuid.uuid4())
         timestamp = _utc(now)
         payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        self._connection.execute("BEGIN IMMEDIATE")
         try:
             self._connection.execute(
                 """
@@ -136,13 +161,26 @@ class OperationRepository:
                 """,
                 (operation_id, operation_type, idempotency_key, payload_json, timestamp, timestamp),
             )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="created",
+                state="queued",
+                worker_id=None,
+                payload={},
+                created_at=timestamp,
+            )
+            self._connection.execute("COMMIT")
         except sqlite3.IntegrityError:
+            self._connection.execute("ROLLBACK")
             existing = self._by_idempotency(idempotency_key)
             if existing is None:
                 raise
             if existing.operation_type != operation_type or existing.payload != payload:
                 raise IdempotencyConflict("idempotency key is already bound to another operation")
             return existing
+        except Exception:
+            self._connection.execute("ROLLBACK")
+            raise
         return self.get(operation_id)
 
     def get(self, operation_id: str) -> OperationRecord:
@@ -152,6 +190,21 @@ class OperationRepository:
         if row is None:
             raise OperationNotFound(operation_id)
         return self._record(row)
+
+    def events(self, operation_id: str) -> tuple[OperationEvent, ...]:
+        """Return the immutable audit trail in transition order."""
+
+        self.get(operation_id)
+        rows = self._connection.execute(
+            """
+            SELECT sequence, operation_id, event_type, state, worker_id, payload_json, created_at
+              FROM operation_events
+             WHERE operation_id = ?
+             ORDER BY sequence ASC
+            """,
+            (operation_id,),
+        ).fetchall()
+        return tuple(self._event(row) for row in rows)
 
     def claim(
         self,
@@ -195,6 +248,14 @@ class OperationRepository:
                 """,
                 (worker_id, expires_text, now_text, operation_id),
             )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="claimed",
+                state="running",
+                worker_id=worker_id,
+                payload={"lease_expires_at": expires_text},
+                created_at=now_text,
+            )
             self._connection.execute("COMMIT")
         except Exception:
             self._connection.execute("ROLLBACK")
@@ -229,6 +290,14 @@ class OperationRepository:
             self._connection.execute(
                 "UPDATE operations SET lease_expires_at = ?, updated_at = ? WHERE operation_id = ?",
                 (expires_text, now_text, operation_id),
+            )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="lease_renewed",
+                state="running",
+                worker_id=worker_id,
+                payload={"lease_expires_at": expires_text},
+                created_at=now_text,
             )
             self._connection.execute("COMMIT")
         except Exception:
@@ -282,6 +351,14 @@ class OperationRepository:
                     operation_id,
                 ),
             )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="checkpointed",
+                state=effective_state,
+                worker_id=worker_id if effective_state == "running" else None,
+                payload=self._checkpoint_summary(checkpoint),
+                created_at=now_text,
+            )
             self._connection.execute("COMMIT")
         except Exception:
             self._connection.execute("ROLLBACK")
@@ -307,6 +384,14 @@ class OperationRepository:
                     "UPDATE operations SET cancel_requested = 1, updated_at = ? WHERE operation_id = ?",
                     (now_text, operation_id),
                 )
+                self._append_event(
+                    operation_id=operation_id,
+                    event_type="cancellation_requested",
+                    state="running",
+                    worker_id=row["worker_id"],
+                    payload={},
+                    created_at=now_text,
+                )
             else:
                 self._connection.execute(
                     """
@@ -316,6 +401,14 @@ class OperationRepository:
                      WHERE operation_id = ?
                     """,
                     (now_text, operation_id),
+                )
+                self._append_event(
+                    operation_id=operation_id,
+                    event_type="cancelled",
+                    state="cancelled",
+                    worker_id=None,
+                    payload={},
+                    created_at=now_text,
                 )
             self._connection.execute("COMMIT")
         except Exception:
@@ -339,6 +432,14 @@ class OperationRepository:
             self._connection.execute(
                 "UPDATE operations SET state = 'queued', updated_at = ? WHERE operation_id = ?",
                 (now_text, operation_id),
+            )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="resumed",
+                state="queued",
+                worker_id=None,
+                payload={},
+                created_at=now_text,
             )
             self._connection.execute("COMMIT")
         except Exception:
@@ -378,6 +479,14 @@ class OperationRepository:
                 """,
                 (checkpoint_json, next_run_text, now_text, operation_id),
             )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="retry_scheduled",
+                state="retry_scheduled",
+                worker_id=None,
+                payload={"next_run_at": next_run_text, **self._checkpoint_summary(checkpoint)},
+                created_at=now_text,
+            )
             self._connection.execute("COMMIT")
         except Exception:
             self._connection.execute("ROLLBACK")
@@ -389,6 +498,45 @@ class OperationRepository:
             "SELECT * FROM operations WHERE idempotency_key = ?", (idempotency_key,)
         ).fetchone()
         return None if row is None else self._record(row)
+
+    def _append_event(
+        self,
+        *,
+        operation_id: str,
+        event_type: str,
+        state: str,
+        worker_id: str | None,
+        payload: dict[str, Any],
+        created_at: str,
+    ) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO operation_events (
+                operation_id, event_type, state, worker_id, payload_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                operation_id,
+                event_type,
+                state,
+                worker_id,
+                json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                created_at,
+            ),
+        )
+
+    @staticmethod
+    def _checkpoint_summary(checkpoint: dict[str, Any]) -> dict[str, Any]:
+        """Keep audit data useful while excluding checkpoint values by default."""
+
+        summary: dict[str, Any] = {
+            "checkpoint_keys": sorted(str(key) for key in checkpoint),
+        }
+        for key in ("confirmed_occurrences", "issues"):
+            value = checkpoint.get(key)
+            if isinstance(value, (list, tuple, set)):
+                summary[f"{key}_count"] = len(value)
+        return summary
 
     @staticmethod
     def _record(row: sqlite3.Row) -> OperationRecord:
@@ -405,4 +553,16 @@ class OperationRepository:
             cancel_requested=bool(row["cancel_requested"]),
             created_at=_parse_utc(row["created_at"]),
             updated_at=_parse_utc(row["updated_at"]),
+        )
+
+    @staticmethod
+    def _event(row: sqlite3.Row) -> OperationEvent:
+        return OperationEvent(
+            sequence=row["sequence"],
+            operation_id=row["operation_id"],
+            event_type=row["event_type"],
+            state=row["state"],
+            worker_id=row["worker_id"],
+            payload=json.loads(row["payload_json"]),
+            created_at=_parse_utc(row["created_at"]),
         )

@@ -3,6 +3,7 @@
 from .sqlite_operations import (
     IdempotencyConflict,
     OperationNotFound,
+    OperationEvent,
     OperationRepository,
     LeaseConflict,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "IdempotencyConflict",
     "LeaseConflict",
     "OperationNotFound",
+    "OperationEvent",
     "OperationRepository",
     "PlaylistProjectionRepository",
     "ResolutionDecisionRepository",
