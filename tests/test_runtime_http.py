@@ -49,8 +49,9 @@ class RuntimeHTTPTests(unittest.TestCase):
         self.assertEqual(payload, {"error": "not_found"})
 
     def test_unsafe_ingress_base_path_is_rejected(self) -> None:
-        with self.assertRaises(ValueError):
-            route_get("/ready", self.repository, ingress_path="/bad/../path")
+        for ingress_path in ("/bad/../path", "/local_symphonia?query", "/local\x00symphonia"):
+            with self.assertRaises(ValueError):
+                route_get("/ready", self.repository, ingress_path=ingress_path)
 
     def test_readiness_can_use_the_composed_runtime_healthcheck(self) -> None:
         status, payload = route_get("/ready", self.repository, readiness_check=lambda: False)

@@ -37,8 +37,10 @@ class RuntimeConfigTests(unittest.TestCase):
             {"host": "host with spaces"},
             {"database_path": "   "},
             {"database_path": "bad\x00path"},
+            {"database_path": "bad\npath"},
             {"ingress_path": "relative"},
             {"ingress_path": "/bad/../path"},
+            {"ingress_path": "/local_symphonia?query"},
             {"ingress_path": 1},
         )
         for values in invalid_values:
@@ -47,6 +49,15 @@ class RuntimeConfigTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "port"):
             RuntimeConfig.from_environment({"SYMPHONIA_PORT": "invalid"})
+
+    def test_rejects_invalid_host_and_non_integral_port(self) -> None:
+        for values in (
+            {"host": "127.0.0.1\x00"},
+            {"port": True},
+            {"port": 8099.5},
+        ):
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                RuntimeConfig(**values)
 
 
 if __name__ == "__main__":

@@ -120,6 +120,10 @@ def route_get(
 def _normalize_base_path(value: str) -> str:
     if not value or not value.startswith("/"):
         raise ValueError("ingress path must start with '/'")
+    if any(ord(char) < 0x20 or ord(char) == 0x7F for char in value):
+        raise ValueError("ingress path must not contain control characters")
+    if "?" in value or "#" in value:
+        raise ValueError("ingress path must contain only a path")
     normalized = value.rstrip("/") or "/"
     if "//" in normalized or "/.." in normalized or "/./" in normalized:
         raise ValueError("ingress path contains an unsafe segment")

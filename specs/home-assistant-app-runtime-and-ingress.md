@@ -156,6 +156,8 @@ No final App option names are accepted yet. The first implementation RFC should 
 
 Invalid or unknown values fail closed before workers start. Authentication, non-root execution, secret redaction, audit history, and mount/network restrictions are not configurable.
 
+The current foundation profile applies this boundary before server creation: host and database values reject control characters, ports must be integral and within the valid TCP range, and the Ingress base path must be a normalized path without query, fragment, control, or traversal segments. These checks are implementation evidence only; final App option names and supported deployment values remain open.
+
 ## 8. Clean Architecture design
 
 ### 8.1 Responsibilities and dependency direction
