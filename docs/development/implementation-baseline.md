@@ -11,6 +11,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Dependency-free domain values for ordered playlist snapshots, the six product entry classifications, copy policies, immutable copy plans, and acceptance digests.
 - Dependency-free SQLite operation repository proving idempotent creation, time-bounded worker leases, checkpoint ownership, retry scheduling, and expired-lease recovery.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
+- SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Deterministic `unittest` coverage under `tests/`.
 
 The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, provider API adapters, user authentication, Ingress, UI, migrations beyond the initial schema, backup/restore, and operation handlers remain unimplemented and blocked by their SDD decisions.

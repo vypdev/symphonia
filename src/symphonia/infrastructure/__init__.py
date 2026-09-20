@@ -6,6 +6,14 @@ from .sqlite_operations import (
     OperationRepository,
     LeaseConflict,
 )
+from .sqlite_plans import CopyPlanNotFound, CopyPlanRepository, StoredCopyPlan
 
-__all__ = ["IdempotencyConflict", "LeaseConflict", "OperationNotFound", "OperationRepository"]
-
+__all__ = [
+    "CopyPlanNotFound",
+    "CopyPlanRepository",
+    "IdempotencyConflict",
+    "LeaseConflict",
+    "OperationNotFound",
+    "OperationRepository",
+    "StoredCopyPlan",
+]
