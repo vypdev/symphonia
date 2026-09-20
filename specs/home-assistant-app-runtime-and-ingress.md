@@ -30,9 +30,15 @@ Without a runtime contract, framework selection can accidentally determine authe
 
 ### 2.2 Current behavior
 
-No Symphonia runtime exists. The accepted behavior is limited to ADR 0003 and global requirements. This SDD is prospective and does not imply that App packaging, images, listeners, or migrations have been implemented.
+An owner-approved dependency-free runtime foundation exists, but the complete Supervisor-managed App described here does not. The foundation includes a non-root container metadata scaffold, `/data` persistence, validated process configuration, Ingress-relative health/readiness/version routing, composed SQLite stores, transactionally consistent backup/preflight helpers, and deterministic tests. It does not provide the accepted authentication, migration ledger, restore workflow, platform matrix, or complete lifecycle UI required by this SDD.
 
-### 2.3 Evidence and unknowns
+This SDD remains prospective and `Draft`; the foundation evidence below must not be read as implementation readiness or as proof that the complete App capability exists.
+
+### 2.3 Foundation evidence boundary
+
+The current foundation is intentionally limited to reversible composition, persistence, packaging, and safety contracts. It is useful for later spikes and does not resolve `RG-004`, the supported Home Assistant matrix, encryption-key/backup ownership, or standalone-release decisions. New App behavior must wait for those gates and explicit owner approval.
+
+### 2.4 Evidence and unknowns
 
 - Accepted evidence: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md).
 - Platform evidence: current App, Ingress, persistent `/data`, backup, and security documentation linked from [provider research](../docs/providers/provider-research.md#home-assistant-platform).

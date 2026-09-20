@@ -22,6 +22,8 @@ Provider work crosses unreliable networks and may take longer than an HTTP reque
 
 The product, architecture, and provider specifications require resumability, rate-limit awareness, explicit partial outcomes, auditable state, and safe operation in the Home Assistant App lifecycle.
 
+An owner-approved foundation slice now proves a dependency-free SQLite operation repository, leases, checkpoints, retries, cancellation, recovery events, bounded diagnostics, provider-independent handlers, and deterministic worker tests. The capability SDD remains `Draft`: persistent-store and worker-topology decisions, retention, migration strategy, representative sizing, and the complete provider/UI vertical slice are still open. This evidence does not authorize production operation policy or claim that the full capability is implemented.
+
 Evidence sources:
 
 - [Product specification](../docs/product/product-specification.md)

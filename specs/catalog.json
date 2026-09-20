@@ -51,9 +51,23 @@
         "docs/providers/home-assistant-ecosystem-review.md"
       ],
       "implementationEvidence": {
-        "code": [],
-        "tests": [],
-        "documentation": []
+        "code": [
+          "src/symphonia/runtime/config.py",
+          "src/symphonia/runtime/http.py",
+          "src/symphonia/runtime/resources.py",
+          "Dockerfile",
+          "addon/config.yaml"
+        ],
+        "tests": [
+          "tests/test_runtime_config.py",
+          "tests/test_runtime_http.py",
+          "tests/test_runtime_resources.py",
+          "tests/test_homeassistant_app_metadata.py"
+        ],
+        "documentation": [
+          "docs/development/implementation-baseline.md",
+          "specs/home-assistant-app-runtime-and-ingress.md"
+        ]
       },
       "blockers": [
         "RG-004 storage and recovery spike",
@@ -348,9 +362,24 @@
         "docs/providers/home-assistant-ecosystem-review.md"
       ],
       "implementationEvidence": {
-        "code": [],
-        "tests": [],
-        "documentation": []
+        "code": [
+          "src/symphonia/infrastructure/sqlite_operations.py",
+          "src/symphonia/application/operation_runner.py",
+          "src/symphonia/application/operation_worker.py",
+          "src/symphonia/application/copy_execution.py",
+          "src/symphonia/application/library_import_execution.py"
+        ],
+        "tests": [
+          "tests/test_sqlite_operations.py",
+          "tests/test_operation_runner.py",
+          "tests/test_operation_worker.py",
+          "tests/test_copy_execution.py",
+          "tests/test_library_import_execution.py"
+        ],
+        "documentation": [
+          "docs/development/implementation-baseline.md",
+          "specs/durable-operations-and-recovery.md"
+        ]
       },
       "blockers": [
         "RG-004 storage engine and lease/crash-recovery spike",

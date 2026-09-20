@@ -14,6 +14,10 @@ This is the human-readable view of [`catalog.json`](./catalog.json). Until gener
 | `one-time-playlist-copy` | Draft | [One-time playlist copy](one-time-playlist-copy.md) | Blocked by unresolved-entry policy and proven target write semantics |
 | `durable-operations-and-recovery` | Draft | [Durable operations and recovery](durable-operations-and-recovery.md) | Blocked by the persistence/lease/restart spike and operating targets |
 
+## Foundation evidence boundary
+
+`home-assistant-app-runtime` and `durable-operations-and-recovery` have owner-approved foundation evidence in `catalog.json`. The listed code, tests, and documentation cover only dependency-free persistence, lifecycle composition, packaging, redaction, diagnostics, backup preflight, and deterministic worker mechanics. They do not change either capability's `Draft` status or clear its blockers; OAuth, secret ownership, complete migration/restore, production topology, UI, and provider-vertical acceptance remain gated by their SDDs.
+
 ## Deliberately absent
 
 There is no implementation SDD for persistent playlist synchronization. It remains specified only at the domain/future level until:
