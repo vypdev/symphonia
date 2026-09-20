@@ -112,6 +112,23 @@ class CopyPlanningTests(unittest.TestCase):
         second_plan = self.service.plan(second, target_provider="youtube", target_playlist_name="Rock")
         self.assertNotEqual(first_plan.digest, second_plan.digest)
 
+    def test_source_provider_object_type_is_part_of_plan_digest(self) -> None:
+        track = snapshot(
+            SourcePlaylistEntry(
+                "occ-1", 0, "same-id", EntryClassification.READY, "target-1", provider_track_object_type="track"
+            )
+        )
+        episode = snapshot(
+            SourcePlaylistEntry(
+                "occ-1", 0, "same-id", EntryClassification.READY, "target-1", provider_track_object_type="episode"
+            )
+        )
+
+        track_plan = self.service.plan(track, target_provider="youtube", target_playlist_name="Rock")
+        episode_plan = self.service.plan(episode, target_provider="youtube", target_playlist_name="Rock")
+
+        self.assertNotEqual(track_plan.digest, episode_plan.digest)
+
 
 if __name__ == "__main__":
     unittest.main()

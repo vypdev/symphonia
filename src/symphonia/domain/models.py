@@ -113,12 +113,15 @@ class CopyPlanEntry:
     target_track_id: str | None
     reason: str | None
     evidence: tuple[str, ...]
+    source_provider_track_object_type: str = "track"
 
     def __post_init__(self) -> None:
         if self.disposition not in {"write", "blocked", "omit"}:
             raise ValueError("disposition must be write, blocked, or omit")
         if self.disposition == "write" and not self.target_track_id:
             raise ValueError("write entries require a target_track_id")
+        if not self.source_provider_track_object_type.strip():
+            raise ValueError("source_provider_track_object_type must not be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,6 +221,7 @@ def build_copy_plan(
                 target_track_id=source.target_track_id if ready else None,
                 reason=reason,
                 evidence=source.evidence,
+                source_provider_track_object_type=source.provider_track_object_type,
             )
         )
 
@@ -242,6 +246,7 @@ def build_copy_plan(
                 "target_track_id": entry.target_track_id,
                 "reason": entry.reason,
                 "evidence": list(entry.evidence),
+                "source_provider_track_object_type": entry.source_provider_track_object_type,
             }
             for entry in plan_entries
         ],

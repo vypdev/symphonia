@@ -119,6 +119,7 @@ def _serialize(plan: CopyPlan) -> dict[str, Any]:
                 "target_track_id": entry.target_track_id,
                 "reason": entry.reason,
                 "evidence": list(entry.evidence),
+                "source_provider_track_object_type": entry.source_provider_track_object_type,
             }
             for entry in plan.entries
         ],
@@ -144,6 +145,7 @@ def _deserialize(payload: dict[str, Any]) -> CopyPlan:
                 target_track_id=entry["target_track_id"],
                 reason=entry["reason"],
                 evidence=tuple(entry["evidence"]),
+                source_provider_track_object_type=entry.get("source_provider_track_object_type", "track"),
             )
             for entry in payload["entries"]
         ),
