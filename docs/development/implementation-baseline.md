@@ -44,6 +44,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Runtime configuration validates host, port, database path, and Ingress base path before startup.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.
 - Provider connection diagnostics expose only provider/state counts, never account or credential data.
+- Import diagnostics expose bounded snapshot freshness and availability counts without playlist content.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.

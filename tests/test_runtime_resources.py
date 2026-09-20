@@ -103,6 +103,16 @@ class RuntimeResourcesTests(unittest.TestCase):
                 self.assertTrue(diagnostics["ready"])
                 self.assertEqual(diagnostics["queue"]["total"], 1)
                 self.assertEqual(diagnostics["connections"], {"total": 0, "by_provider": {}})
+                self.assertEqual(
+                    diagnostics["projections"],
+                    {
+                        "snapshot_count": 0,
+                        "current_playlist_count": 0,
+                        "entry_count": 0,
+                        "unavailable_entry_count": 0,
+                        "latest_published_at": None,
+                    },
+                )
                 self.assertEqual(len(diagnostics["operations"]), 1)
                 self.assertNotIn("must-not-appear", str(diagnostics))
                 with self.assertRaises(ValueError):

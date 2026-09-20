@@ -63,6 +63,22 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
         self.assertEqual(stored.snapshot.entries[0].provider_track_title, "Song title")
         self.assertEqual(stored.snapshot.entries[0].source_added_at, "2026-09-20T12:00:00Z")
 
+    def test_summary_reports_import_freshness_without_playlist_content(self) -> None:
+        self.repository.publish(
+            collect_playlist_pages([page(available=False)]),
+            snapshot_id="snapshot-summary",
+            published_at=NOW,
+        )
+
+        summary = self.repository.summary()
+
+        self.assertEqual(summary["snapshot_count"], 1)
+        self.assertEqual(summary["current_playlist_count"], 1)
+        self.assertEqual(summary["entry_count"], 1)
+        self.assertEqual(summary["unavailable_entry_count"], 1)
+        self.assertEqual(summary["latest_published_at"], "2026-09-20T12:00:00.000000+00:00")
+        self.assertNotIn("playlist-1", str(summary))
+
     def test_legacy_projection_schema_gets_metadata_columns(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/legacy.sqlite3"

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import sqlite3
+from typing import Any
 
 from symphonia.domain.models import EntryClassification, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.providers.contracts import ProviderPlaylistEntry
@@ -249,6 +250,30 @@ class PlaylistProjectionRepository:
             (provider, namespace, playlist_id),
         ).fetchone()
         return None if row is None else self.get(row["snapshot_id"])
+
+    def summary(self) -> dict[str, Any]:
+        """Return bounded import freshness/counts without playlist contents."""
+
+        snapshots = self._connection.execute(
+            "SELECT COUNT(*) AS count, MAX(published_at) AS latest_published_at FROM playlist_snapshots"
+        ).fetchone()
+        current = self._connection.execute(
+            "SELECT COUNT(*) AS count FROM current_playlist_snapshots"
+        ).fetchone()
+        entries = self._connection.execute(
+            """
+            SELECT COUNT(*) AS count,
+                   COALESCE(SUM(CASE WHEN available = 0 THEN 1 ELSE 0 END), 0) AS unavailable_count
+              FROM playlist_snapshot_entries
+            """
+        ).fetchone()
+        return {
+            "snapshot_count": int(snapshots["count"]),
+            "current_playlist_count": int(current["count"]),
+            "entry_count": int(entries["count"]),
+            "unavailable_entry_count": int(entries["unavailable_count"]),
+            "latest_published_at": snapshots["latest_published_at"],
+        }
 
     def _entries(self, snapshot_id: str, provider: str) -> tuple[SourcePlaylistEntry, ...]:
         rows = self._connection.execute(
