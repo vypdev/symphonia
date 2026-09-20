@@ -4,9 +4,12 @@ from .copy_planning import CopyPlanningService
 from .copy_workflow import CopyWorkflowService
 from .copy_execution import CopyExecutionService
 from .library_import import ImportPublication, LibraryImportService
+from .authorization import AuthorizationService, AuthorizationStart
 
 __all__ = [
     "CopyExecutionService",
+    "AuthorizationService",
+    "AuthorizationStart",
     "CopyPlanningService",
     "CopyWorkflowService",
     "ImportPublication",

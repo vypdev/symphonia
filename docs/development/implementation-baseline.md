@@ -16,6 +16,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
+- Application authorization boundary that generates one-use state without persisting the raw value.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
 - Offline-testable official Spotify playlist reader with bounded pagination and normalized error categories.
