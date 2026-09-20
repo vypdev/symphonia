@@ -25,6 +25,7 @@ class RuntimeResourcesTests(unittest.TestCase):
                 self.assertIn("playlist_snapshots", tables)
                 self.assertIn("authorization_attempts", tables)
                 self.assertIn("resolution_decisions", tables)
+                self.assertTrue(resources.healthcheck())
             finally:
                 resources.close()
 

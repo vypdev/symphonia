@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -28,6 +29,7 @@ class SymphoniaHTTPServer(HTTPServer):
         super().__init__(address, SymphoniaRequestHandler)
         self.resources = resources
         self.repository = resources.operations if resources is not None else repository
+        self.readiness_check: Callable[[], bool] = resources.healthcheck if resources is not None else repository.healthcheck
         self.service_version = __version__
         self.ingress_path = _normalize_base_path(ingress_path)
 
@@ -48,6 +50,7 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
             self.server.repository,
             self.server.service_version,
             self.server.ingress_path,
+            self.server.readiness_check,
         )
         self._json(status, payload)
 
@@ -86,6 +89,7 @@ def route_get(
     repository: OperationRepository,
     service_version: str = __version__,
     ingress_path: str = "/",
+    readiness_check: Callable[[], bool] | None = None,
 ) -> tuple[int, dict[str, Any]]:
     """Resolve a GET request without opening a socket.
 
@@ -101,7 +105,7 @@ def route_get(
         return 200, {"service": "symphonia", "status": "ok", "version": service_version}
     if relative_path == "/ready":
         try:
-            healthy = repository.healthcheck()
+            healthy = (readiness_check or repository.healthcheck)()
         except Exception:  # readiness must fail closed without exposing internals
             healthy = False
         return (200, {"service": "symphonia", "status": "ready"}) if healthy else (

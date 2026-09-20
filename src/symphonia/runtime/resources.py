@@ -68,5 +68,22 @@ class RuntimeResources:
         ):
             repository.close()
 
+    def healthcheck(self) -> bool:
+        """Check every durable store without exposing adapter internals."""
+
+        try:
+            for repository in (
+                self.operations,
+                self.plans,
+                self.connections,
+                self.authorization,
+                self.projections,
+                self.resolutions,
+            ):
+                repository._connection.execute("SELECT 1").fetchone()  # type: ignore[attr-defined]
+        except Exception:
+            return False
+        return True
+
 
 __all__ = ["RuntimeResources"]

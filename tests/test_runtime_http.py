@@ -52,6 +52,12 @@ class RuntimeHTTPTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             route_get("/ready", self.repository, ingress_path="/bad/../path")
 
+    def test_readiness_can_use_the_composed_runtime_healthcheck(self) -> None:
+        status, payload = route_get("/ready", self.repository, readiness_check=lambda: False)
+
+        self.assertEqual(status, 503)
+        self.assertEqual(payload["status"], "not_ready")
+
 
 if __name__ == "__main__":
     unittest.main()
