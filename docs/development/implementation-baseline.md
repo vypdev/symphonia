@@ -34,7 +34,7 @@ docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 The container exposes only the current health/readiness/version surface. A future App manifest must add Ingress, Supervisor metadata, supported architectures, backup declarations, and any direct callback policy only after the runtime SDD blockers are resolved.
 - Deterministic `unittest` coverage under `tests/`.
 
-The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, provider API adapters, user authentication, Ingress, UI, migrations beyond the initial schema, backup/restore, and operation handlers remain unimplemented and blocked by their SDD decisions.
+The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, provider API adapters, user authentication, Ingress, UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup/restore, and operation handlers remain unimplemented and blocked by their SDD decisions.
 
 ## Local verification
 

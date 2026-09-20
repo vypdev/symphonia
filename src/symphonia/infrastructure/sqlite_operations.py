@@ -69,7 +69,7 @@ class OperationEvent:
 class OperationRepository:
     """Transactional operation repository backed by one SQLite database."""
 
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
 
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
