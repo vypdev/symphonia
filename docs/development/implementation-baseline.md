@@ -16,6 +16,7 @@ The first implementation increment is intentionally narrower than any provider o
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
 - A copy executor that creates target playlists through a semantic writer port, checkpoints each occurrence, and reconciles unknown writes before retry.
 - SQLite persistence for complete playlist projections that keeps incomplete imports from replacing the last complete snapshot and isolates external IDs by namespace.
+- An application import use case that reports partial results without advancing freshness or replacing the last complete projection.
 
 ## Local container profile
 
