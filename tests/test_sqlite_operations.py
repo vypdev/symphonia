@@ -94,7 +94,7 @@ class OperationRepositoryTests(unittest.TestCase):
             checkpoint={
                 "confirmed_occurrences": ["occ-1", "occ-2"],
                 "issues": [{"code": "provider_error"}],
-                "secret_token": "must-not-be-audit-payload",
+                "private_value": "must-not-be-an-audit-payload",
             },
             now=self.now + timedelta(seconds=1),
         )
@@ -104,9 +104,61 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertEqual(event.payload["issues_count"], 1)
         self.assertEqual(
             event.payload["checkpoint_keys"],
-            ["confirmed_occurrences", "issues", "secret_token"],
+            ["confirmed_occurrences", "issues", "private_value"],
         )
-        self.assertNotIn("must-not-be-audit-payload", event.payload)
+        self.assertNotIn("must-not-be-an-audit-payload", event.payload)
+
+    def test_checkpoint_rejects_nested_credentials_before_persistence(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="checkpoint-credential",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+
+        with self.assertRaisesRegex(ValueError, "access_token"):
+            self.repository.checkpoint(
+                operation.operation_id,
+                worker_id="worker-a",
+                checkpoint={"provider": {"access_token": "must-not-persist"}},
+                now=self.now + timedelta(seconds=1),
+            )
+
+        self.assertEqual(self.repository.get(operation.operation_id).checkpoint, {})
+
+    def test_retry_and_rate_limit_checkpoints_reject_credentials(self) -> None:
+        retry_operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="retry-checkpoint-credential",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(retry_operation.operation_id, worker_id="worker-a", now=self.now)
+        with self.assertRaises(ValueError):
+            self.repository.schedule_retry(
+                retry_operation.operation_id,
+                worker_id="worker-a",
+                next_run_at=self.now + timedelta(minutes=1),
+                checkpoint={"refresh_token": "must-not-persist"},
+                now=self.now,
+            )
+
+        rate_limit_operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="rate-limit-checkpoint-credential",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(rate_limit_operation.operation_id, worker_id="worker-a", now=self.now)
+        with self.assertRaises(ValueError):
+            self.repository.schedule_rate_limit(
+                rate_limit_operation.operation_id,
+                worker_id="worker-a",
+                next_run_at=self.now + timedelta(minutes=1),
+                checkpoint={"client_secret": "must-not-persist"},
+                now=self.now,
+            )
 
     def test_diagnostic_export_is_bounded_and_redacted(self) -> None:
         operation = self.repository.create(

@@ -29,7 +29,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Authorization callback binding rejects unsafe schemes, fragments, credentials, whitespace, and non-loopback HTTP hosts.
 - Normalized provider errors and provider codes redact common bearer/token/secret/password/cookie forms at the provider boundary.
-- Operation persistence recursively rejects credential-shaped payload keys and cyclic structures before SQLite writes.
+- Operation payloads and durable checkpoints recursively reject credential-shaped keys and cyclic structures before SQLite writes.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Copy plans bind target connection and effective write-capability evidence into their digest.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.

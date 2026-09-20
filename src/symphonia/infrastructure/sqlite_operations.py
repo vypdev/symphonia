@@ -557,6 +557,7 @@ class OperationRepository:
 
         if state not in {"running", "succeeded", "partial", "failed", "cancelled", "waiting_user"}:
             raise ValueError("invalid checkpoint state")
+        _validate_payload_keys(checkpoint)
         now_text = _utc(now)
         checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         self._connection.execute("BEGIN IMMEDIATE")
@@ -697,6 +698,7 @@ class OperationRepository:
     ) -> OperationRecord:
         """Release a lease and persist a restart-safe retry time."""
 
+        _validate_payload_keys(checkpoint)
         now_text = _utc(now)
         next_run_text = _utc(next_run_at)
         checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -764,6 +766,7 @@ class OperationRepository:
     ) -> OperationRecord:
         """Release a lease until an absolute provider rate-limit time."""
 
+        _validate_payload_keys(checkpoint)
         now_text = _utc(now)
         next_run_text = _utc(next_run_at)
         checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
