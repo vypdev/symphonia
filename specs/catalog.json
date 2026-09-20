@@ -62,7 +62,8 @@
           "tests/test_runtime_config.py",
           "tests/test_runtime_http.py",
           "tests/test_runtime_resources.py",
-          "tests/test_homeassistant_app_metadata.py"
+          "tests/test_homeassistant_app_metadata.py",
+          "tests/test_architecture_boundaries.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
@@ -374,7 +375,8 @@
           "tests/test_operation_runner.py",
           "tests/test_operation_worker.py",
           "tests/test_copy_execution.py",
-          "tests/test_library_import_execution.py"
+          "tests/test_library_import_execution.py",
+          "tests/test_architecture_boundaries.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
