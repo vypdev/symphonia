@@ -4,7 +4,11 @@ from datetime import datetime, timezone
 import unittest
 
 from symphonia.domain import EntryClassification
-from symphonia.infrastructure import IncompleteCollectionError, PlaylistProjectionRepository
+from symphonia.infrastructure import (
+    IncompleteCollectionError,
+    PlaylistProjectionRepository,
+    SnapshotConflictError,
+)
 from symphonia.providers import (
     MediaKind,
     ProviderObjectRef,
@@ -48,6 +52,44 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
         current = self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
         self.assertEqual(current.snapshot_id, "snapshot-1")
 
+    def test_republishing_same_snapshot_is_idempotent(self) -> None:
+        result = collect_playlist_pages([page()])
+        first = self.repository.publish(result, snapshot_id="snapshot-1", published_at=NOW)
+        second = self.repository.publish(result, snapshot_id="snapshot-1", published_at=NOW.replace(minute=1))
+        self.assertEqual(first.snapshot_id, second.snapshot_id)
+        count = self.repository._connection.execute("SELECT COUNT(*) FROM playlist_snapshots").fetchone()[0]
+        self.assertEqual(count, 1)
+
+        newer = collect_playlist_pages([page(namespace="connection-1")])
+        self.repository.publish(newer, snapshot_id="snapshot-2", published_at=NOW.replace(minute=2))
+        self.repository.publish(result, snapshot_id="snapshot-1", published_at=NOW.replace(minute=3))
+        current = self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
+        self.assertEqual(current.snapshot_id, "snapshot-2")
+
+    def test_reusing_snapshot_id_for_different_content_is_rejected(self) -> None:
+        self.repository.publish(collect_playlist_pages([page()]), snapshot_id="snapshot-1", published_at=NOW)
+        changed = collect_playlist_pages(
+            [
+                ProviderPlaylistPage(
+                    ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1"),
+                    (
+                        ProviderPlaylistEntry(
+                            "occ-1",
+                            0,
+                            ProviderObjectRef("spotify", "track", "track-2", "connection-1"),
+                            MediaKind.TRACK,
+                        ),
+                    ),
+                    None,
+                    None,
+                    True,
+                    revision="rev-1",
+                )
+            ]
+        )
+        with self.assertRaises(SnapshotConflictError):
+            self.repository.publish(changed, snapshot_id="snapshot-1", published_at=NOW)
+
     def test_same_external_playlist_id_isolated_by_namespace(self) -> None:
         first = collect_playlist_pages([page(namespace="connection-1")])
         second = collect_playlist_pages([page(namespace="connection-2")])
@@ -65,4 +107,3 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

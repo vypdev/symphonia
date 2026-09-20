@@ -25,6 +25,10 @@ class IncompleteCollectionError(ValueError):
     pass
 
 
+class SnapshotConflictError(ValueError):
+    """Raised when a snapshot ID is reused for different imported content."""
+
+
 @dataclass(frozen=True, slots=True)
 class StoredPlaylistSnapshot:
     snapshot_id: str
@@ -95,6 +99,15 @@ class PlaylistProjectionRepository:
             raise ValueError("snapshot_id must not be empty")
         if not result.entries and result.playlist == "":
             raise ValueError("result must identify a playlist")
+        existing = self._connection.execute(
+            "SELECT * FROM playlist_snapshots WHERE snapshot_id = ?", (snapshot_id,)
+        ).fetchone()
+        if existing is not None:
+            if not self._matches_result(existing, result):
+                raise SnapshotConflictError("snapshot_id is already bound to different imported content")
+            # Publication is idempotent and must not move a newer current
+            # pointer backwards if a client retries an older response.
+            return self.get(snapshot_id)
         timestamp = _utc(published_at)
         self._connection.execute("BEGIN IMMEDIATE")
         try:
@@ -140,6 +153,37 @@ class PlaylistProjectionRepository:
             self._connection.execute("ROLLBACK")
             raise
         return self.get(snapshot_id)
+
+    def _matches_result(self, snapshot_row: sqlite3.Row, result: CollectionImportResult) -> bool:
+        if (
+            snapshot_row["provider"] != result.provider
+            or snapshot_row["namespace"] != result.namespace
+            or snapshot_row["playlist_id"] != result.playlist
+            or snapshot_row["revision"] != result.revision
+        ):
+            return False
+        rows = self._connection.execute(
+            """
+            SELECT occurrence_id, position, provider_track_id,
+                   provider_track_namespace, media_kind, available
+              FROM playlist_snapshot_entries
+             WHERE snapshot_id = ?
+             ORDER BY position
+            """,
+            (snapshot_row["snapshot_id"],),
+        ).fetchall()
+        entries = sorted(result.entries, key=lambda entry: entry.position)
+        if len(rows) != len(entries):
+            return False
+        return all(
+            row["occurrence_id"] == entry.occurrence_id
+            and row["position"] == entry.position
+            and row["provider_track_id"] == entry.track.object_id
+            and row["provider_track_namespace"] == entry.track.namespace
+            and row["media_kind"] == entry.media_kind.value
+            and bool(row["available"]) == entry.available
+            for row, entry in zip(rows, entries)
+        )
 
     def get(self, snapshot_id: str) -> StoredPlaylistSnapshot:
         row = self._connection.execute(
@@ -192,4 +236,3 @@ class PlaylistProjectionRepository:
             )
             for row in rows
         )
-

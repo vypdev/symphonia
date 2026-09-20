@@ -9,7 +9,12 @@ from .sqlite_operations import (
 )
 from .sqlite_plans import CopyPlanNotFound, CopyPlanRepository, StoredCopyPlan
 from .sqlite_resolutions import ResolutionDecisionRepository
-from .sqlite_library import IncompleteCollectionError, PlaylistProjectionRepository, StoredPlaylistSnapshot
+from .sqlite_library import (
+    IncompleteCollectionError,
+    PlaylistProjectionRepository,
+    SnapshotConflictError,
+    StoredPlaylistSnapshot,
+)
 
 __all__ = [
     "CopyPlanNotFound",
@@ -22,6 +27,7 @@ __all__ = [
     "OperationRepository",
     "PlaylistProjectionRepository",
     "ResolutionDecisionRepository",
+    "SnapshotConflictError",
     "StoredCopyPlan",
     "StoredPlaylistSnapshot",
 ]
