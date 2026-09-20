@@ -56,7 +56,7 @@ class OperationRepository:
     """Transactional operation repository backed by one SQLite database."""
 
     def __init__(self, path: str = ":memory:") -> None:
-        self._connection = sqlite3.connect(path, isolation_level=None)
+        self._connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._connection.execute("PRAGMA busy_timeout = 5000")
@@ -64,6 +64,12 @@ class OperationRepository:
 
     def close(self) -> None:
         self._connection.close()
+
+    def healthcheck(self) -> bool:
+        """Return whether the migrated store can answer a basic read."""
+
+        row = self._connection.execute("SELECT 1 AS healthy").fetchone()
+        return row is not None and row["healthy"] == 1
 
     def _migrate(self) -> None:
         self._connection.executescript(
@@ -272,4 +278,3 @@ class OperationRepository:
             created_at=_parse_utc(row["created_at"]),
             updated_at=_parse_utc(row["updated_at"]),
         )
-
