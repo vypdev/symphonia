@@ -104,6 +104,8 @@ class RuntimeResources:
 
         if not destination_path.strip():
             raise ValueError("destination_path must not be empty")
+        if not self.healthcheck():
+            raise RuntimeError("cannot back up an unhealthy runtime")
         if self.database_path != ":memory:" and destination_path != ":memory:":
             if Path(self.database_path).expanduser().resolve() == Path(destination_path).expanduser().resolve():
                 raise ValueError("destination_path must differ from the live database")

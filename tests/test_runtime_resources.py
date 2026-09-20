@@ -87,6 +87,23 @@ class RuntimeResourcesTests(unittest.TestCase):
             finally:
                 resources.close()
 
+    def test_backup_to_fails_closed_when_a_store_is_unhealthy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            destination_path = str(Path(directory) / "backup.sqlite3")
+            resources = RuntimeResources.open(source_path)
+            try:
+                resources.plans.close()
+                with self.assertRaisesRegex(RuntimeError, "unhealthy"):
+                    resources.backup_to(destination_path)
+                self.assertFalse(Path(destination_path).exists())
+            finally:
+                resources.resolutions.close()
+                resources.projections.close()
+                resources.authorization.close()
+                resources.connections.close()
+                resources.operations.close()
+
     def test_validate_backup_rejects_missing_or_corrupt_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             missing = str(Path(directory) / "missing.sqlite3")
