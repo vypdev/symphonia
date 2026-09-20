@@ -7,6 +7,7 @@ from .sqlite_operations import (
     LeaseConflict,
 )
 from .sqlite_plans import CopyPlanNotFound, CopyPlanRepository, StoredCopyPlan
+from .sqlite_resolutions import ResolutionDecisionRepository
 
 __all__ = [
     "CopyPlanNotFound",
@@ -15,5 +16,6 @@ __all__ = [
     "LeaseConflict",
     "OperationNotFound",
     "OperationRepository",
+    "ResolutionDecisionRepository",
     "StoredCopyPlan",
 ]
