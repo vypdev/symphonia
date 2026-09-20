@@ -113,6 +113,7 @@ class RuntimeResourcesTests(unittest.TestCase):
                         "latest_published_at": None,
                     },
                 )
+                self.assertEqual(diagnostics["resolutions"], {"total": 0, "by_action": {}})
                 self.assertEqual(len(diagnostics["operations"]), 1)
                 self.assertNotIn("must-not-appear", str(diagnostics))
                 with self.assertRaises(ValueError):

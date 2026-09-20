@@ -101,6 +101,11 @@ class IdentityResolutionTests(unittest.TestCase):
             latest = repository.latest("spotify:connection-1:track-1", "recording-1")
             self.assertEqual(latest.action, ManualDecisionAction.ACCEPT)
             self.assertEqual(repository.count(), 2)
+            self.assertEqual(
+                repository.summary(),
+                {"total": 2, "by_action": {"accept": 1, "reject": 1}},
+            )
+            self.assertNotIn("recording-1", str(repository.summary()))
         finally:
             repository.close()
 

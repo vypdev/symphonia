@@ -6,6 +6,7 @@ from dataclasses import replace
 import json
 import sqlite3
 import uuid
+from typing import Any
 
 from symphonia.identity.models import ManualDecision, ManualDecisionAction
 
@@ -109,3 +110,17 @@ class ResolutionDecisionRepository:
 
     def count(self) -> int:
         return int(self._connection.execute("SELECT COUNT(*) FROM resolution_decisions").fetchone()[0])
+
+    def summary(self) -> dict[str, Any]:
+        """Return decision counts without track, candidate, actor, or reason data."""
+
+        rows = self._connection.execute(
+            """
+            SELECT action, COUNT(*) AS count
+              FROM resolution_decisions
+             GROUP BY action
+             ORDER BY action
+            """
+        ).fetchall()
+        by_action = {str(row["action"]): int(row["count"]) for row in rows}
+        return {"total": sum(by_action.values()), "by_action": by_action}

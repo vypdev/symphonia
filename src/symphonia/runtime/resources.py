@@ -135,6 +135,7 @@ class RuntimeResources:
                 "queue": self.operations.queue_summary(now=now),
                 "connections": self.connections.health_summary(),
                 "projections": self.projections.summary(),
+                "resolutions": self.resolutions.summary(),
                 "operations": self.operations.diagnostics(
                     limit=operation_limit,
                     event_limit=event_limit,
