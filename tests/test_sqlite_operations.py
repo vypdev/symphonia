@@ -190,9 +190,30 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertEqual(summary["total"], 3)
         self.assertEqual(summary["states"], {"queued": 1, "retry_scheduled": 1, "running": 1})
         self.assertEqual(summary["eligible_count"], 2)
+        self.assertEqual(summary["expired_lease_count"], 0)
+        self.assertEqual(
+            summary["oldest_eligible_at"],
+            (self.now - timedelta(seconds=1)).isoformat(timespec="microseconds"),
+        )
+        self.assertEqual(summary["oldest_eligible_age_seconds"], 1)
         self.assertEqual(summary["cancellation_requested_count"], 0)
         self.assertNotIn("opaque", str(summary))
         self.assertNotIn("private", str(summary))
+
+    def test_queue_summary_counts_expired_leases(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="summary-expired",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now, lease_seconds=1)
+
+        summary = self.repository.queue_summary(now=self.now + timedelta(seconds=2))
+
+        self.assertEqual(summary["eligible_count"], 1)
+        self.assertEqual(summary["expired_lease_count"], 1)
+        self.assertEqual(summary["oldest_eligible_age_seconds"], 1)
 
     def test_operation_payload_rejects_credential_named_fields(self) -> None:
         with self.assertRaises(ValueError):

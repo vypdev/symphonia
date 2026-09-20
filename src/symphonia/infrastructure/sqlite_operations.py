@@ -284,7 +284,13 @@ class OperationRepository:
         states = {str(row["state"]): int(row["count"]) for row in state_rows}
         eligible = self._connection.execute(
             """
-            SELECT COUNT(*) AS count
+            SELECT COUNT(*) AS count,
+                   MIN(
+                       CASE WHEN state = 'running'
+                            THEN COALESCE(lease_expires_at, created_at)
+                            ELSE COALESCE(next_run_at, created_at)
+                       END
+                   ) AS oldest_eligible_at
               FROM operations
              WHERE cancel_requested = 0
                AND (
@@ -297,13 +303,33 @@ class OperationRepository:
             """,
             (now_text, now_text),
         ).fetchone()
+        expired_leases = self._connection.execute(
+            """
+            SELECT COUNT(*) AS count
+              FROM operations
+             WHERE cancel_requested = 0
+               AND state = 'running'
+               AND (lease_expires_at IS NULL OR lease_expires_at <= ?)
+            """,
+            (now_text,),
+        ).fetchone()
         cancellation_rows = self._connection.execute(
             "SELECT COUNT(*) AS count FROM operations WHERE cancel_requested = 1"
         ).fetchone()
+        oldest_eligible_at = eligible["oldest_eligible_at"]
+        oldest_eligible_age_seconds = None
+        if oldest_eligible_at is not None:
+            oldest_eligible_age_seconds = max(
+                0,
+                int((now - _parse_utc(oldest_eligible_at)).total_seconds()),
+            )
         return {
             "total": sum(states.values()),
             "states": states,
             "eligible_count": int(eligible["count"]),
+            "expired_lease_count": int(expired_leases["count"]),
+            "oldest_eligible_at": oldest_eligible_at,
+            "oldest_eligible_age_seconds": oldest_eligible_age_seconds,
             "cancellation_requested_count": int(cancellation_rows["count"]),
         }
 
