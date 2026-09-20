@@ -8,9 +8,9 @@ Symphonia is a library-management and interoperability project, not a new music 
 
 ## Project status
 
-**Specification stage. No production application has been implemented.**
+**Implementation foundation stage. Provider integrations and the Home Assistant App artifact are not implemented yet.**
 
-The current work establishes a reviewable source of truth before technology selection or implementation begins. In particular, official provider feasibility still needs validation: Google's public YouTube Data API can manage YouTube video playlists, but the research performed for this specification did not identify an official API exposing the complete YouTube Music library model.
+The current work combines a reviewable source of truth with the first owner-approved, dependency-free domain/persistence slice. Official provider feasibility still needs validation: Google's public YouTube Data API can manage YouTube video playlists, but the research performed for this specification did not identify an official API exposing the complete YouTube Music library model.
 
 ## Documentation
 

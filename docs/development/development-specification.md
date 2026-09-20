@@ -5,7 +5,7 @@
 
 ## Specification-driven workflow
 
-Implementation begins only when the applicable capability SDD is `Ready for implementation` and the owner explicitly approves the increment. The SDD lifecycle, required content, readiness gate, and catalog rules are defined in the [SDD standard](../../specs/README.md). Start new capability designs from the [mandatory template](../../specs/_template.md), and keep their state in the [catalog](../../specs/CATALOG.md).
+Implementation begins only when the applicable capability SDD is `Ready for implementation` and the owner explicitly approves the increment. The current [implementation baseline](implementation-baseline.md) is the explicitly approved exception for dependency-free domain/persistence foundations; it does not authorize provider, OAuth, UI, or Home Assistant capability work while those SDDs remain Draft. The SDD lifecycle, required content, readiness gate, and catalog rules are defined in the [SDD standard](../../specs/README.md). Start new capability designs from the [mandatory template](../../specs/_template.md), and keep their state in the [catalog](../../specs/CATALOG.md).
 
 For each proposed increment:
 

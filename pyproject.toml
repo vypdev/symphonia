@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "symphonia"
+version = "0.1.0.dev0"
+description = "Self-hosted, provider-independent music library hub"
+requires-python = ">=3.11"
+license = { text = "TBD" }
+authors = [{ name = "Symphonia maintainers" }]
+dependencies = []
+
+[project.scripts]
+symphonia = "symphonia.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
