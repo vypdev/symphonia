@@ -156,7 +156,11 @@ class OperationRepository:
             ).fetchone()
             if row is None:
                 raise OperationNotFound(operation_id)
-            eligible = row["state"] in {"queued", "retry_scheduled"}
+            eligible = row["state"] == "queued" or (
+                row["state"] == "retry_scheduled"
+                and row["next_run_at"] is not None
+                and row["next_run_at"] <= now_text
+            )
             expired = row["state"] == "running" and (
                 row["lease_expires_at"] is None or row["lease_expires_at"] <= now_text
             )
@@ -170,6 +174,41 @@ class OperationRepository:
                  WHERE operation_id = ?
                 """,
                 (worker_id, expires_text, now_text, operation_id),
+            )
+            self._connection.execute("COMMIT")
+        except Exception:
+            self._connection.execute("ROLLBACK")
+            raise
+        return self.get(operation_id)
+
+    def renew_lease(
+        self,
+        operation_id: str,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_seconds: int = 30,
+    ) -> OperationRecord:
+        """Extend a healthy lease; an expired owner cannot resurrect it."""
+
+        if lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive")
+        now_text = _utc(now)
+        expires_text = _utc(now + timedelta(seconds=lease_seconds))
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self._connection.execute(
+                "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
+            ).fetchone()
+            if row is None:
+                raise OperationNotFound(operation_id)
+            if row["state"] != "running" or row["worker_id"] != worker_id:
+                raise LeaseConflict("worker does not own a running operation")
+            if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
+                raise LeaseConflict("operation lease has expired")
+            self._connection.execute(
+                "UPDATE operations SET lease_expires_at = ?, updated_at = ? WHERE operation_id = ?",
+                (expires_text, now_text, operation_id),
             )
             self._connection.execute("COMMIT")
         except Exception:

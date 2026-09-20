@@ -127,7 +127,44 @@ class OperationRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(reclaimed.worker_id, "worker-b")
 
+    def test_retry_cannot_be_claimed_before_its_scheduled_time(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.schedule_retry(
+            operation.operation_id,
+            worker_id="worker-a",
+            next_run_at=self.now + timedelta(minutes=1),
+            checkpoint={"last": "rate_limited"},
+            now=self.now + timedelta(seconds=1),
+        )
+        with self.assertRaises(LeaseConflict):
+            self.repository.claim(
+                operation.operation_id,
+                worker_id="worker-b",
+                now=self.now + timedelta(seconds=30),
+            )
+
+    def test_healthy_worker_can_renew_lease(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        claimed = self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now, lease_seconds=5)
+        renewed = self.repository.renew_lease(
+            operation.operation_id,
+            worker_id="worker-a",
+            now=self.now + timedelta(seconds=1),
+            lease_seconds=60,
+        )
+        self.assertGreater(renewed.lease_expires_at, claimed.lease_expires_at)
+
 
 if __name__ == "__main__":
     unittest.main()
-
