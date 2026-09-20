@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import os
 from pathlib import Path
 import sqlite3
+import tempfile
 from typing import Any
 from urllib.parse import quote
 
@@ -104,18 +106,41 @@ class RuntimeResources:
 
         if not destination_path.strip():
             raise ValueError("destination_path must not be empty")
+        if self.database_path == ":memory:":
+            raise ValueError("backups require a persistent database path")
+        if destination_path == ":memory:":
+            raise ValueError("destination_path must be a persistent filesystem path")
         if not self.healthcheck():
             raise RuntimeError("cannot back up an unhealthy runtime")
-        if self.database_path != ":memory:" and destination_path != ":memory:":
-            if Path(self.database_path).expanduser().resolve() == Path(destination_path).expanduser().resolve():
-                raise ValueError("destination_path must differ from the live database")
+        live_path = Path(self.database_path).expanduser().resolve()
+        destination_path_object = Path(destination_path).expanduser().resolve()
+        if live_path == destination_path_object:
+            raise ValueError("destination_path must differ from the live database")
 
-        destination = sqlite3.connect(destination_path)
+        temporary_path: str | None = None
         try:
-            self.operations._connection.backup(destination)  # type: ignore[attr-defined]
-            destination.commit()
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                prefix=f".{destination_path_object.name}.",
+                suffix=".tmp",
+                dir=destination_path_object.parent,
+                delete=False,
+            ) as temporary:
+                temporary_path = temporary.name
+            destination = sqlite3.connect(temporary_path)
+            try:
+                self.operations._connection.backup(destination)  # type: ignore[attr-defined]
+                destination.commit()
+            finally:
+                destination.close()
+            os.replace(temporary_path, destination_path_object)
+            temporary_path = None
         finally:
-            destination.close()
+            if temporary_path is not None:
+                try:
+                    os.unlink(temporary_path)
+                except FileNotFoundError:
+                    pass
 
     @classmethod
     def validate_backup(cls, backup_path: str) -> bool:

@@ -87,6 +87,42 @@ class RuntimeResourcesTests(unittest.TestCase):
             finally:
                 resources.close()
 
+    def test_backup_to_rejects_in_memory_runtime_and_destination(self) -> None:
+        resources = RuntimeResources.open(":memory:")
+        try:
+            with self.assertRaises(ValueError):
+                resources.backup_to("backup.sqlite3")
+        finally:
+            resources.close()
+
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            resources = RuntimeResources.open(source_path)
+            try:
+                with self.assertRaises(ValueError):
+                    resources.backup_to(":memory:")
+            finally:
+                resources.close()
+
+    def test_backup_to_replaces_an_existing_destination_atomically(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            backup_path = Path(directory) / "backup.sqlite3"
+            backup_path.write_text("old backup", encoding="utf-8")
+            resources = RuntimeResources.open(source_path)
+            try:
+                resources.operations.create(
+                    operation_type="test",
+                    idempotency_key="atomic-backup",
+                    payload={},
+                    now=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                )
+                resources.backup_to(str(backup_path))
+            finally:
+                resources.close()
+
+            self.assertTrue(RuntimeResources.validate_backup(str(backup_path)))
+
     def test_backup_to_fails_closed_when_a_store_is_unhealthy(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source_path = str(Path(directory) / "symphonia.sqlite3")
