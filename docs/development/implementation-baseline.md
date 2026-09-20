@@ -39,6 +39,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
 - Explicit runtime resource composition and reverse-order shutdown for all durable repositories.
 - Readiness can validate every composed durable store instead of only the operation queue.
+- Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
@@ -64,7 +65,7 @@ docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 The container exposes only the current health/readiness/version surface. A future App manifest must add Ingress, Supervisor metadata, supported architectures, backup declarations, and any direct callback policy only after the runtime SDD blockers are resolved.
 - Deterministic `unittest` coverage under `tests/`.
 
-The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, secret storage, user authentication, Ingress UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup/restore, and production runtime handler wiring remain unimplemented and blocked by their SDD decisions.
+The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, secret storage, user authentication, Ingress UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup retention/restore policy, and production runtime handler wiring remain unimplemented and blocked by their SDD decisions.
 
 ## Local verification
 

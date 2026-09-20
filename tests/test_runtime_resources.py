@@ -3,7 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 import tempfile
 import unittest
+from datetime import datetime, timezone
 
+from symphonia.infrastructure import OperationRepository
 from symphonia.runtime import RuntimeResources
 
 
@@ -35,6 +37,40 @@ class RuntimeResourcesTests(unittest.TestCase):
     def test_empty_database_path_is_rejected_before_opening_stores(self) -> None:
         with self.assertRaises(ValueError):
             RuntimeResources.open("   ")
+
+    def test_backup_to_copies_a_consistent_database(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            backup_path = str(Path(directory) / "backup.sqlite3")
+            resources = RuntimeResources.open(source_path)
+            try:
+                created = resources.operations.create(
+                    operation_type="test",
+                    idempotency_key="backup-key",
+                    payload={"value": "persisted"},
+                    now=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                )
+                resources.backup_to(backup_path)
+            finally:
+                resources.close()
+
+            backup = OperationRepository(backup_path)
+            try:
+                restored = backup.get(created.operation_id)
+                self.assertEqual(restored.payload, {"value": "persisted"})
+                self.assertEqual(len(backup.events(created.operation_id)), 1)
+            finally:
+                backup.close()
+
+    def test_backup_to_rejects_the_live_database(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            resources = RuntimeResources.open(source_path)
+            try:
+                with self.assertRaises(ValueError):
+                    resources.backup_to(source_path)
+            finally:
+                resources.close()
 
 
 if __name__ == "__main__":
