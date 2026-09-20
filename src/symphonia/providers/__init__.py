@@ -15,7 +15,7 @@ from .connections import ConnectionState, ProviderConnection
 from .authorization import AuthorizationAttempt, AuthorizationState
 from .authorization import validate_redirect_uri
 from .registry import ProviderAlreadyRegistered, ProviderNotRegistered, ProviderRegistry
-from .errors import ProviderApiError, ProviderErrorCategory
+from .errors import ProviderApiError, ProviderErrorCategory, redact_error_detail
 from .spotify import JsonResponse, SpotifyAdapter, UrllibJsonClient
 from .youtube import YouTubeDataAdapter
 from .apple_music import AppleJsonResponse, AppleMusicAdapter, UrllibAppleMusicClient
@@ -39,6 +39,7 @@ __all__ = [
     "ProviderApiError",
     "ProviderAlreadyRegistered",
     "ProviderErrorCategory",
+    "redact_error_detail",
     "ProviderCapabilities",
     "ProviderConnection",
     "ProviderManifest",

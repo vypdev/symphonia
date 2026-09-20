@@ -5,6 +5,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import re
+
+
+_BEARER = re.compile(r"(?i)\bBearer\s+[^\s,;]+")
+_ASSIGNMENT = re.compile(
+    r"(?i)\b(token|access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|secret|password|cookie|authorization)\s*[:=]\s*[^\s,;]+"
+)
+
+
+def redact_error_detail(detail: str) -> str:
+    """Remove common credential forms before an error leaves the provider port."""
+
+    if not isinstance(detail, str) or not detail.strip():
+        raise ValueError("provider error detail must not be empty")
+    redacted = _BEARER.sub("Bearer [REDACTED]", detail)
+    return _ASSIGNMENT.sub(lambda match: f"{match.group(1)}=[REDACTED]", redacted)
 
 
 class ProviderErrorCategory(str, Enum):
@@ -33,9 +49,10 @@ class ProviderApiError(RuntimeError):
     correlation_id: str | None = None
 
     def __post_init__(self) -> None:
-        RuntimeError.__init__(self, self.detail)
+        redacted_detail = redact_error_detail(self.detail)
+        object.__setattr__(self, "detail", redacted_detail)
+        RuntimeError.__init__(self, redacted_detail)
         if not self.detail.strip():
             raise ValueError("provider error detail must not be empty")
         if self.correlation_id is not None and not self.correlation_id.strip():
             raise ValueError("correlation_id must not be blank")
-

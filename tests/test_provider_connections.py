@@ -13,6 +13,7 @@ from symphonia.providers import (
     ProviderErrorCategory,
     ProviderManifest,
     ProviderRegistry,
+    redact_error_detail,
 )
 
 
@@ -38,6 +39,15 @@ class FakeAdapter:
 
 
 class ProviderConnectionServiceTests(unittest.TestCase):
+    def test_provider_error_detail_redacts_common_credentials(self) -> None:
+        detail = redact_error_detail("Bearer abc123 token=secret refresh_token=refresh-value")
+        error = ProviderApiError(ProviderErrorCategory.NETWORK_ERROR, detail)
+
+        self.assertNotIn("abc123", str(error))
+        self.assertNotIn("secret", str(error))
+        self.assertNotIn("refresh-value", str(error))
+        self.assertIn("[REDACTED]", str(error))
+
     def setUp(self) -> None:
         self.connections = ProviderConnectionRepository()
         self.registry = ProviderRegistry()
