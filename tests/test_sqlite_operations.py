@@ -137,6 +137,25 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertNotIn("secret-token", serialized)
         self.assertNotIn("provider-secret", serialized)
 
+    def test_diagnostics_list_is_bounded_and_redacted(self) -> None:
+        for index in range(3):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key=f"diagnostic-{index}",
+                payload={"access_token": f"secret-{index}"},
+                now=self.now + timedelta(seconds=index),
+            )
+
+        diagnostics = self.repository.diagnostics(limit=2, event_limit=1)
+
+        self.assertEqual(len(diagnostics), 2)
+        self.assertTrue(all("payload_keys" in item for item in diagnostics))
+        self.assertTrue(all("access_token" in item["payload_keys"] for item in diagnostics))
+        self.assertNotIn("secret-", str(diagnostics))
+
+        with self.assertRaises(ValueError):
+            self.repository.diagnostics(limit=0)
+
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
             operation_type="import",

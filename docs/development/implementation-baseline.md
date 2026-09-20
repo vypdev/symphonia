@@ -13,6 +13,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Atomic scheduler-facing claim selection for queued, due-retry, and expired-lease operations.
 - Append-only SQLite operation event history for auditable transitions with sanitized checkpoint summaries.
 - Bounded redacted operation diagnostics for support and a future authenticated operations view.
+- Bounded recent-operation diagnostics listing that exposes only redacted support views.
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Bounded transient retry budgets for copy and import handlers with durable exhaustion outcomes.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.

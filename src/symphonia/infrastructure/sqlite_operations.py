@@ -239,6 +239,24 @@ class OperationRepository:
             ],
         }
 
+    def diagnostics(self, *, limit: int = 50, event_limit: int = 20) -> tuple[dict[str, Any], ...]:
+        """Return a bounded list of redacted operation support views."""
+
+        if limit <= 0:
+            raise ValueError("limit must be positive")
+        if event_limit <= 0:
+            raise ValueError("event_limit must be positive")
+        rows = self._connection.execute(
+            """
+            SELECT operation_id
+              FROM operations
+             ORDER BY updated_at DESC, operation_id DESC
+             LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return tuple(self.diagnostic(row["operation_id"], event_limit=event_limit) for row in rows)
+
     def claim(
         self,
         operation_id: str,
