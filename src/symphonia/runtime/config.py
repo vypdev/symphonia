@@ -8,7 +8,7 @@ from collections.abc import Mapping
 
 
 def _normalize_ingress_path(value: str) -> str:
-    if not value or not value.startswith("/"):
+    if not isinstance(value, str) or not value or not value.startswith("/"):
         raise ValueError("ingress path must start with '/'")
     normalized = value.rstrip("/") or "/"
     if "//" in normalized or "/.." in normalized or "/./" in normalized:

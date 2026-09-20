@@ -39,6 +39,7 @@ class RuntimeConfigTests(unittest.TestCase):
             {"database_path": "bad\x00path"},
             {"ingress_path": "relative"},
             {"ingress_path": "/bad/../path"},
+            {"ingress_path": 1},
         )
         for values in invalid_values:
             with self.subTest(values=values), self.assertRaises(ValueError):
