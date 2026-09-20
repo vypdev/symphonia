@@ -126,6 +126,24 @@ class RuntimeResourcesTests(unittest.TestCase):
                 resources.connections.close()
                 resources.operations.close()
 
+    def test_diagnostics_fail_closed_if_a_store_fails_after_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            try:
+                original = resources.operations.queue_summary
+
+                def fail_after_readiness(*, now):
+                    raise RuntimeError("internal database detail")
+
+                resources.operations.queue_summary = fail_after_readiness  # type: ignore[method-assign]
+                self.assertEqual(
+                    resources.diagnostics(now=datetime(2026, 9, 20, tzinfo=timezone.utc)),
+                    {"ready": False},
+                )
+                resources.operations.queue_summary = original  # type: ignore[method-assign]
+            finally:
+                resources.close()
+
 
 if __name__ == "__main__":
     unittest.main()

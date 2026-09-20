@@ -127,18 +127,22 @@ class RuntimeResources:
             raise ValueError("operation_limit must be positive")
         if event_limit <= 0:
             raise ValueError("event_limit must be positive")
-        ready = self.healthcheck()
-        if not ready:
+        try:
+            if not self.healthcheck():
+                return {"ready": False}
+            return {
+                "ready": True,
+                "queue": self.operations.queue_summary(now=now),
+                "connections": self.connections.health_summary(),
+                "operations": self.operations.diagnostics(
+                    limit=operation_limit,
+                    event_limit=event_limit,
+                ),
+            }
+        except Exception:
+            # A concurrent close or adapter failure must not expose internals
+            # or make a support endpoint look healthier than the stores are.
             return {"ready": False}
-        return {
-            "ready": True,
-            "queue": self.operations.queue_summary(now=now),
-            "connections": self.connections.health_summary(),
-            "operations": self.operations.diagnostics(
-                limit=operation_limit,
-                event_limit=event_limit,
-            ),
-        }
 
 
 __all__ = ["RuntimeResources"]
