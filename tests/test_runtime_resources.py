@@ -205,6 +205,8 @@ class RuntimeResourcesTests(unittest.TestCase):
                 self.assertNotIn("must-not-appear", str(diagnostics))
                 with self.assertRaises(ValueError):
                     resources.diagnostics(now=datetime(2026, 9, 20, tzinfo=timezone.utc), operation_limit=0)
+                with self.assertRaises(ValueError):
+                    resources.diagnostics(now=datetime(2026, 9, 20, tzinfo=timezone.utc), event_limit=101)
             finally:
                 resources.close()
 

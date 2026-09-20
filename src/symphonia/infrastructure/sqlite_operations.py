@@ -42,6 +42,8 @@ class LeaseConflict(RuntimeError):
 _SECRET_PAYLOAD_KEY = re.compile(
     r"(?i)(?:^|[_-])(access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|password|cookie|authorization|secret[_-]?token)(?:$|[_-])|^(?:secret|token)$"
 )
+_MAX_DIAGNOSTIC_OPERATIONS = 100
+_MAX_DIAGNOSTIC_EVENTS = 100
 
 
 def _validate_payload_keys(payload: Any) -> None:
@@ -256,8 +258,8 @@ class OperationRepository:
     def diagnostic(self, operation_id: str, *, event_limit: int = 100) -> dict[str, Any]:
         """Return a bounded, redacted support view of one operation."""
 
-        if event_limit <= 0:
-            raise ValueError("event_limit must be positive")
+        if not 0 < event_limit <= _MAX_DIAGNOSTIC_EVENTS:
+            raise ValueError(f"event_limit must be between 1 and {_MAX_DIAGNOSTIC_EVENTS}")
         record = self.get(operation_id)
         all_events = self.events(operation_id)
         selected_events = all_events[-event_limit:]
@@ -289,10 +291,10 @@ class OperationRepository:
     def diagnostics(self, *, limit: int = 50, event_limit: int = 20) -> tuple[dict[str, Any], ...]:
         """Return a bounded list of redacted operation support views."""
 
-        if limit <= 0:
-            raise ValueError("limit must be positive")
-        if event_limit <= 0:
-            raise ValueError("event_limit must be positive")
+        if not 0 < limit <= _MAX_DIAGNOSTIC_OPERATIONS:
+            raise ValueError(f"limit must be between 1 and {_MAX_DIAGNOSTIC_OPERATIONS}")
+        if not 0 < event_limit <= _MAX_DIAGNOSTIC_EVENTS:
+            raise ValueError(f"event_limit must be between 1 and {_MAX_DIAGNOSTIC_EVENTS}")
         rows = self._connection.execute(
             """
             SELECT operation_id

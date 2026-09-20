@@ -242,6 +242,8 @@ class RuntimeResources:
             raise ValueError("operation_limit must be positive")
         if event_limit <= 0:
             raise ValueError("event_limit must be positive")
+        if operation_limit > 100 or event_limit > 100:
+            raise ValueError("diagnostic limits must not exceed 100")
         try:
             if not self.healthcheck():
                 return {"ready": False}

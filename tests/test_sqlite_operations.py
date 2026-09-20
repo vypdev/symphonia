@@ -188,6 +188,8 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertNotIn("secret-plan", serialized)
         self.assertNotIn("secret-token", serialized)
         self.assertNotIn("provider-secret", serialized)
+        with self.assertRaises(ValueError):
+            self.repository.diagnostic(operation.operation_id, event_limit=101)
 
     def test_diagnostics_list_is_bounded_and_redacted(self) -> None:
         for index in range(3):
@@ -207,6 +209,8 @@ class OperationRepositoryTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.repository.diagnostics(limit=0)
+        with self.assertRaises(ValueError):
+            self.repository.diagnostics(limit=101)
 
     def test_queue_summary_is_aggregate_and_counts_only_eligible_work(self) -> None:
         queued = self.repository.create(
