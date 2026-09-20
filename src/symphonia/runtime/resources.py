@@ -76,6 +76,12 @@ class RuntimeResources:
         ):
             repository.close()
 
+    def __enter__(self) -> "RuntimeResources":
+        return self
+
+    def __exit__(self, _exception_type: object, _exception: object, _traceback: object) -> None:
+        self.close()
+
     def healthcheck(self) -> bool:
         """Check every durable store without exposing adapter internals."""
 

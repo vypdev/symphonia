@@ -39,6 +39,14 @@ class RuntimeResourcesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             RuntimeResources.open("   ")
 
+    def test_resources_support_context_manager_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            with resources as managed:
+                self.assertIs(managed, resources)
+                self.assertTrue(managed.healthcheck())
+            self.assertFalse(resources.healthcheck())
+
     def test_readiness_fails_closed_when_one_store_is_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))

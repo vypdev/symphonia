@@ -39,6 +39,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Provider readers enforce bounded page sizes, repeated-cursor detection, and configurable maximum page counts.
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
 - Explicit runtime resource composition and reverse-order shutdown for all durable repositories.
+- Runtime resources support explicit and context-manager lifecycle shutdown.
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
