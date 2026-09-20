@@ -7,6 +7,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Protocol
 
+from .errors import redact_error_detail
+
 
 class WriteOutcome(str, Enum):
     CONFIRMED_SUCCESS = "confirmed_success"
@@ -32,6 +34,10 @@ class WriteResult:
     detail: str | None = None
     retry_at: datetime | None = None
 
+    def __post_init__(self) -> None:
+        if self.detail is not None:
+            object.__setattr__(self, "detail", redact_error_detail(self.detail))
+
 
 class ProviderWriteError(RuntimeError):
     """A target-creation failure with an explicit retry/reconciliation class."""
@@ -43,9 +49,10 @@ class ProviderWriteError(RuntimeError):
         provider_code: str | None = None,
         retry_at: datetime | None = None,
     ) -> None:
-        super().__init__(detail)
+        redacted_detail = redact_error_detail(detail)
+        super().__init__(redacted_detail)
         self.outcome = outcome
-        self.detail = detail
+        self.detail = redacted_detail
         self.provider_code = provider_code
         self.retry_at = retry_at
 

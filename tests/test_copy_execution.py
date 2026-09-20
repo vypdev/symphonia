@@ -6,7 +6,7 @@ import unittest
 from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
 from symphonia.domain import CopyPolicy, EntryClassification, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.infrastructure import CopyPlanRepository, OperationRepository
-from symphonia.providers import TargetPlaylist, WriteOutcome, WriteResult
+from symphonia.providers import ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
 
 NOW = datetime(2026, 9, 20, 12, 0, tzinfo=timezone.utc)
@@ -157,6 +157,25 @@ class CopyExecutionTests(unittest.TestCase):
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "waiting_rate_limit")
         self.assertEqual(operation.next_run_at, NOW + timedelta(minutes=2))
+
+    def test_write_boundary_redacts_credentials_in_errors_and_results(self) -> None:
+        error = ProviderWriteError(
+            WriteOutcome.PERMANENT_FAILURE,
+            "Bearer abc123 token=secret refresh_token=refresh-value",
+        )
+        result = WriteResult(
+            WriteOutcome.PERMANENT_FAILURE,
+            detail="authorization=header-value password=hunter2",
+        )
+
+        for value in (str(error), error.detail, result.detail):
+            self.assertNotIn("abc123", value)
+            self.assertNotIn("secret", value)
+            self.assertNotIn("refresh-value", value)
+            self.assertNotIn("header-value", value)
+            self.assertNotIn("hunter2", value)
+        self.assertIn("[REDACTED]", str(error))
+        self.assertIn("[REDACTED]", result.detail)
 
 
 if __name__ == "__main__":
