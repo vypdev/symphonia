@@ -20,6 +20,12 @@ from .sqlite_connections import (
     ConnectionNotFound,
     ProviderConnectionRepository,
 )
+from .sqlite_authorization import (
+    AuthorizationAttemptError,
+    AuthorizationAttemptNotFound,
+    AuthorizationAttemptRepository,
+    state_digest,
+)
 
 __all__ = [
     "CopyPlanNotFound",
@@ -27,6 +33,9 @@ __all__ = [
     "IncompleteCollectionError",
     "ConnectionConflict",
     "ConnectionNotFound",
+    "AuthorizationAttemptError",
+    "AuthorizationAttemptNotFound",
+    "AuthorizationAttemptRepository",
     "IdempotencyConflict",
     "LeaseConflict",
     "OperationNotFound",
@@ -38,4 +47,5 @@ __all__ = [
     "SnapshotConflictError",
     "StoredCopyPlan",
     "StoredPlaylistSnapshot",
+    "state_digest",
 ]
