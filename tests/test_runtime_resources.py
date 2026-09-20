@@ -85,6 +85,46 @@ class RuntimeResourcesTests(unittest.TestCase):
             finally:
                 resources.close()
 
+    def test_diagnostics_combine_safe_queue_and_operation_views(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            try:
+                resources.operations.create(
+                    operation_type="test",
+                    idempotency_key="diagnostic-key",
+                    payload={"plan_digest": "must-not-appear"},
+                    now=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                )
+                diagnostics = resources.diagnostics(
+                    now=datetime(2026, 9, 20, 0, 0, 1, tzinfo=timezone.utc),
+                    operation_limit=1,
+                    event_limit=1,
+                )
+                self.assertTrue(diagnostics["ready"])
+                self.assertEqual(diagnostics["queue"]["total"], 1)
+                self.assertEqual(len(diagnostics["operations"]), 1)
+                self.assertNotIn("must-not-appear", str(diagnostics))
+                with self.assertRaises(ValueError):
+                    resources.diagnostics(now=datetime(2026, 9, 20, tzinfo=timezone.utc), operation_limit=0)
+            finally:
+                resources.close()
+
+    def test_diagnostics_fail_closed_when_a_store_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            resources.plans.close()
+            try:
+                self.assertEqual(
+                    resources.diagnostics(now=datetime(2026, 9, 20, tzinfo=timezone.utc)),
+                    {"ready": False},
+                )
+            finally:
+                resources.resolutions.close()
+                resources.projections.close()
+                resources.authorization.close()
+                resources.connections.close()
+                resources.operations.close()
+
 
 if __name__ == "__main__":
     unittest.main()

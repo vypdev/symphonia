@@ -42,6 +42,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Runtime configuration validates host, port, database path, and Ingress base path before startup.
+- Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.

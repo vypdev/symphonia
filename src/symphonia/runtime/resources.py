@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 import sqlite3
+from typing import Any
 
 from symphonia.infrastructure import (
     AuthorizationAttemptRepository,
@@ -111,6 +113,31 @@ class RuntimeResources:
             destination.commit()
         finally:
             destination.close()
+
+    def diagnostics(
+        self,
+        *,
+        now: datetime,
+        operation_limit: int = 50,
+        event_limit: int = 20,
+    ) -> dict[str, Any]:
+        """Return a bounded support view without database paths or payloads."""
+
+        if operation_limit <= 0:
+            raise ValueError("operation_limit must be positive")
+        if event_limit <= 0:
+            raise ValueError("event_limit must be positive")
+        ready = self.healthcheck()
+        if not ready:
+            return {"ready": False}
+        return {
+            "ready": True,
+            "queue": self.operations.queue_summary(now=now),
+            "operations": self.operations.diagnostics(
+                limit=operation_limit,
+                event_limit=event_limit,
+            ),
+        }
 
 
 __all__ = ["RuntimeResources"]
