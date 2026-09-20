@@ -45,11 +45,15 @@ class CopyExecutionService:
             lease_seconds=lease_seconds,
         )
         checkpoint = dict(operation.checkpoint)
+        if operation.cancel_requested:
+            return self._finish(operation, worker_id, checkpoint, now, "cancelled")
         confirmed = list(checkpoint.get("confirmed_occurrences", []))
         issues = list(checkpoint.get("issues", []))
         target_id = checkpoint.get("target_playlist_id")
 
         if target_id is None:
+            if self.operations.get(operation.operation_id).cancel_requested:
+                return self._finish(operation, worker_id, checkpoint, now, "cancelled")
             target_key = f"{digest}:target"
             try:
                 target = writer.ensure_target_playlist(
@@ -81,12 +85,18 @@ class CopyExecutionService:
         for entry in stored.plan.writable_entries:
             if entry.occurrence_id in confirmed:
                 continue
-            self.operations.renew_lease(
-                operation.operation_id,
-                worker_id=worker_id,
-                now=now,
-                lease_seconds=lease_seconds,
-            )
+            try:
+                self.operations.renew_lease(
+                    operation.operation_id,
+                    worker_id=worker_id,
+                    now=now,
+                    lease_seconds=lease_seconds,
+                )
+            except Exception:
+                latest = self.operations.get(operation.operation_id)
+                if latest.cancel_requested:
+                    return self._finish(latest, worker_id, checkpoint, now, "running")
+                raise
             step_key = f"{digest}:entry:{entry.occurrence_id}"
             result = writer.add_entry(
                 target_playlist_id=target_id,
@@ -187,4 +197,3 @@ class CopyExecutionService:
             now=now,
             state="waiting_user",
         )
-

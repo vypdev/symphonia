@@ -48,6 +48,7 @@ class OperationRecord:
     worker_id: str | None
     lease_expires_at: datetime | None
     next_run_at: datetime | None
+    cancel_requested: bool
     created_at: datetime
     updated_at: datetime
 
@@ -84,6 +85,7 @@ class OperationRepository:
                 worker_id TEXT,
                 lease_expires_at TEXT,
                 next_run_at TEXT,
+                cancel_requested INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -156,6 +158,8 @@ class OperationRepository:
             ).fetchone()
             if row is None:
                 raise OperationNotFound(operation_id)
+            if row["cancel_requested"]:
+                raise LeaseConflict("operation cancellation has been requested")
             eligible = row["state"] == "queued" or (
                 row["state"] == "retry_scheduled"
                 and row["next_run_at"] is not None
@@ -242,16 +246,61 @@ class OperationRepository:
                 raise LeaseConflict("worker does not own a running operation")
             if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
                 raise LeaseConflict("operation lease has expired")
+            effective_state = "cancelled" if row["cancel_requested"] else state
             self._connection.execute(
                 """
                 UPDATE operations
                    SET state = ?, checkpoint_json = ?, updated_at = ?,
                        worker_id = CASE WHEN ? = 'running' THEN worker_id ELSE NULL END,
-                       lease_expires_at = CASE WHEN ? = 'running' THEN lease_expires_at ELSE NULL END
+                       lease_expires_at = CASE WHEN ? = 'running' THEN lease_expires_at ELSE NULL END,
+                       cancel_requested = CASE WHEN ? = 'cancelled' THEN 0 ELSE cancel_requested END
                  WHERE operation_id = ?
                 """,
-                (state, checkpoint_json, now_text, state, state, operation_id),
+                (
+                    effective_state,
+                    checkpoint_json,
+                    now_text,
+                    effective_state,
+                    effective_state,
+                    effective_state,
+                    operation_id,
+                ),
             )
+            self._connection.execute("COMMIT")
+        except Exception:
+            self._connection.execute("ROLLBACK")
+            raise
+        return self.get(operation_id)
+
+    def cancel(self, operation_id: str, *, now: datetime) -> OperationRecord:
+        """Request cooperative cancellation and preserve in-flight ownership."""
+
+        now_text = _utc(now)
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self._connection.execute(
+                "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
+            ).fetchone()
+            if row is None:
+                raise OperationNotFound(operation_id)
+            if row["state"] in {"succeeded", "partial", "failed", "cancelled"}:
+                self._connection.execute("COMMIT")
+                return self.get(operation_id)
+            if row["state"] == "running":
+                self._connection.execute(
+                    "UPDATE operations SET cancel_requested = 1, updated_at = ? WHERE operation_id = ?",
+                    (now_text, operation_id),
+                )
+            else:
+                self._connection.execute(
+                    """
+                    UPDATE operations
+                       SET state = 'cancelled', worker_id = NULL, lease_expires_at = NULL,
+                           cancel_requested = 0, updated_at = ?
+                     WHERE operation_id = ?
+                    """,
+                    (now_text, operation_id),
+                )
             self._connection.execute("COMMIT")
         except Exception:
             self._connection.execute("ROLLBACK")
@@ -337,6 +386,7 @@ class OperationRepository:
             worker_id=row["worker_id"],
             lease_expires_at=None if row["lease_expires_at"] is None else _parse_utc(row["lease_expires_at"]),
             next_run_at=None if row["next_run_at"] is None else _parse_utc(row["next_run_at"]),
+            cancel_requested=bool(row["cancel_requested"]),
             created_at=_parse_utc(row["created_at"]),
             updated_at=_parse_utc(row["updated_at"]),
         )

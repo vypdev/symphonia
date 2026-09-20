@@ -185,6 +185,39 @@ class OperationRepositoryTests(unittest.TestCase):
         resumed = self.repository.resume(operation.operation_id, now=self.now + timedelta(seconds=2))
         self.assertEqual(resumed.state, "queued")
 
+    def test_queued_cancellation_is_terminal(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        cancelled = self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=1))
+        self.assertEqual(cancelled.state, "cancelled")
+        self.assertFalse(cancelled.cancel_requested)
+
+    def test_running_cancellation_is_acknowledged_at_checkpoint(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        claimed = self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        requested = self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=1))
+        self.assertEqual(requested.state, "running")
+        self.assertTrue(requested.cancel_requested)
+        completed = self.repository.checkpoint(
+            claimed.operation_id,
+            worker_id="worker-a",
+            checkpoint={"confirmed": ["occ-1"]},
+            now=self.now + timedelta(seconds=2),
+            state="running",
+        )
+        self.assertEqual(completed.state, "cancelled")
+        self.assertFalse(completed.cancel_requested)
+        self.assertIsNone(completed.worker_id)
+
 
 if __name__ == "__main__":
     unittest.main()
