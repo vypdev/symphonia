@@ -24,6 +24,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Offline-testable official Spotify playlist reader with bounded pagination and normalized error categories.
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
+- Ingress-relative health/version routing with normalized, traversal-safe base paths.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.

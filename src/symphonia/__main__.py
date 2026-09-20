@@ -17,8 +17,13 @@ def main() -> None:
         default=os.getenv("SYMPHONIA_DATABASE", "./symphonia.sqlite3"),
         help="SQLite path; Home Assistant App deployments should use /data/symphonia.sqlite3",
     )
+    parser.add_argument(
+        "--ingress-path",
+        default=os.getenv("SYMPHONIA_INGRESS_PATH", "/"),
+        help="Ingress base path, for example /local_symphonia",
+    )
     args = parser.parse_args()
-    server = create_server(args.host, args.port, args.database)
+    server = create_server(args.host, args.port, args.database, args.ingress_path)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -30,4 +35,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

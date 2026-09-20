@@ -5,6 +5,7 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from typing import Any
+from urllib.parse import urlsplit
 
 from symphonia import __version__
 from symphonia.infrastructure.sqlite_operations import OperationRepository
@@ -13,10 +14,11 @@ from symphonia.infrastructure.sqlite_operations import OperationRepository
 class SymphoniaHTTPServer(HTTPServer):
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], repository: OperationRepository) -> None:
+    def __init__(self, address: tuple[str, int], repository: OperationRepository, ingress_path: str = "/") -> None:
         super().__init__(address, SymphoniaRequestHandler)
         self.repository = repository
         self.service_version = __version__
+        self.ingress_path = _normalize_base_path(ingress_path)
 
 
 class SymphoniaRequestHandler(BaseHTTPRequestHandler):
@@ -25,7 +27,12 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
     server: SymphoniaHTTPServer
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
-        status, payload = route_get(self.path, self.server.repository, self.server.service_version)
+        status, payload = route_get(
+            self.path,
+            self.server.repository,
+            self.server.service_version,
+            self.server.ingress_path,
+        )
         self._json(status, payload)
 
     def _json(self, status: int, payload: dict[str, Any]) -> None:
@@ -42,14 +49,24 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
         return
 
 
-def create_server(host: str = "127.0.0.1", port: int = 8099, database_path: str = ":memory:") -> SymphoniaHTTPServer:
+def create_server(
+    host: str = "127.0.0.1",
+    port: int = 8099,
+    database_path: str = ":memory:",
+    ingress_path: str = "/",
+) -> SymphoniaHTTPServer:
     """Create a server with an already-migrated durable operation store."""
 
     repository = OperationRepository(database_path)
-    return SymphoniaHTTPServer((host, port), repository)
+    return SymphoniaHTTPServer((host, port), repository, ingress_path)
 
 
-def route_get(path: str, repository: OperationRepository, service_version: str = __version__) -> tuple[int, dict[str, Any]]:
+def route_get(
+    path: str,
+    repository: OperationRepository,
+    service_version: str = __version__,
+    ingress_path: str = "/",
+) -> tuple[int, dict[str, Any]]:
     """Resolve a GET request without opening a socket.
 
     Keeping this decision pure-ish makes health/readiness contract tests work
@@ -57,9 +74,12 @@ def route_get(path: str, repository: OperationRepository, service_version: str =
     mistaken for application readiness.
     """
 
-    if path == "/health":
+    relative_path = _relative_path(path, _normalize_base_path(ingress_path))
+    if relative_path is None:
+        return 404, {"error": "not_found"}
+    if relative_path == "/health":
         return 200, {"service": "symphonia", "status": "ok", "version": service_version}
-    if path == "/ready":
+    if relative_path == "/ready":
         try:
             healthy = repository.healthcheck()
         except Exception:  # readiness must fail closed without exposing internals
@@ -68,6 +88,27 @@ def route_get(path: str, repository: OperationRepository, service_version: str =
             503,
             {"service": "symphonia", "status": "not_ready"},
         )
-    if path == "/version":
+    if relative_path == "/version":
         return 200, {"service": "symphonia", "version": service_version}
     return 404, {"error": "not_found"}
+
+
+def _normalize_base_path(value: str) -> str:
+    if not value or not value.startswith("/"):
+        raise ValueError("ingress path must start with '/'")
+    normalized = value.rstrip("/") or "/"
+    if "//" in normalized or "/.." in normalized or "/./" in normalized:
+        raise ValueError("ingress path contains an unsafe segment")
+    return normalized
+
+
+def _relative_path(request_path: str, base_path: str) -> str | None:
+    path = urlsplit(request_path).path or "/"
+    if base_path == "/":
+        return path
+    if path == base_path:
+        return "/"
+    prefix = f"{base_path}/"
+    if path.startswith(prefix):
+        return path[len(base_path):] or "/"
+    return None

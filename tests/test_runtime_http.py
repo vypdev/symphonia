@@ -31,6 +31,27 @@ class RuntimeHTTPTests(unittest.TestCase):
         self.assertEqual(status, 404)
         self.assertEqual(payload, {"error": "not_found"})
 
+    def test_ingress_base_path_is_stripped_without_accepting_sibling_paths(self) -> None:
+        status, payload = route_get(
+            "/local_symphonia/ready?poll=1",
+            self.repository,
+            ingress_path="/local_symphonia",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["status"], "ready")
+
+        status, payload = route_get(
+            "/local_symphonia-extra/ready",
+            self.repository,
+            ingress_path="/local_symphonia",
+        )
+        self.assertEqual(status, 404)
+        self.assertEqual(payload, {"error": "not_found"})
+
+    def test_unsafe_ingress_base_path_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            route_get("/ready", self.repository, ingress_path="/bad/../path")
+
 
 if __name__ == "__main__":
     unittest.main()
