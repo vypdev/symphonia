@@ -18,6 +18,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
+- Offline-testable official Spotify playlist reader with bounded pagination and normalized error categories.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
