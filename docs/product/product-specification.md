@@ -17,6 +17,7 @@ The product initially optimizes for trustworthy library interoperability: import
 4. **Provider differences remain explicit.** The UI and workflows degrade according to declared capabilities rather than pretending that all providers are equivalent.
 5. **Self-hosted is a product constraint.** Operation, backup, upgrades, credentials, and recovery must be understandable to a homelab operator.
 6. **Home Assistant is the primary host, not the domain boundary.** The primary package is a Home Assistant App with an Ingress UI, while the same core remains independently runnable and testable.
+7. **The App should feel native to its host.** UI hierarchy, components, terminology, density, themes, responsive behavior, and feedback follow current Home Assistant patterns through an independent compatibility layer; see the [Home Assistant-native UI specification](home-assistant-ui-specification.md).
 
 ## Users
 
@@ -33,6 +34,7 @@ Multi-user authorization, sharing between Symphonia users, and hosted SaaS opera
 - Retain enough operation history to diagnose matching and provider failures.
 - Establish extension points that make a third provider possible without changing the core domain.
 - Run continuously on ordinary self-hosted infrastructure.
+- Provide a Home Assistant-native-adjacent management experience that remains accessible and semantically consistent in Ingress and standalone profiles.
 
 ## Explicit non-goals
 
@@ -46,6 +48,7 @@ The MVP MUST NOT include:
 - multi-user tenancy or role-based administration;
 - automatic bidirectional playlist synchronization;
 - Home Assistant coupling inside the domain/application core or standalone composition;
+- a generic detached SaaS dashboard, direct dependency on private Home Assistant frontend internals, or decorative styling that competes with operational state;
 - an assumption that similar titles imply identical recordings.
 
 ## Core user journeys
@@ -88,6 +91,10 @@ The MVP MUST NOT include:
 3. The user can retry only the recoverable work or start a new plan when the source changed.
 
 ## MVP requirements
+
+### Home Assistant-native UI
+
+The cross-cutting `SYM-UI-001`–`SYM-UI-015` requirements live in the [Home Assistant-native UI specification](home-assistant-ui-specification.md). Every feature SDD with a web surface must map its feature-specific states and actions onto that shared component, accessibility, responsive, Ingress, localization, sanitization, and visual-compatibility contract. [ADR 0004](../decisions/0004-home-assistant-native-ui.md) records the accepted decision to use an owned compatibility layer rather than private Home Assistant frontend modules.
 
 ### Product and account
 

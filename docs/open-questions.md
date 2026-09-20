@@ -102,6 +102,20 @@ Compare SQLite and PostgreSQL for transaction boundaries, leases, crash recovery
 
 Define what belongs in the App UI versus a companion custom integration. Decide transport/auth/version discovery and a minimal entity/action/event surface. Ensure Home Assistant actions create ordinary audited Symphonia operations and that the integration can be unavailable independently.
 
+### RG-006 — Home Assistant UI compatibility and host-context spike
+
+The owner has accepted the Home Assistant-native-adjacent direction, independent compatibility layer, and no-private-frontend-dependency boundary in [ADR 0004](decisions/0004-home-assistant-native-ui.md). Before the [UI foundation SDD](../specs/home-assistant-native-ui.md) becomes `Ready for implementation`, a documentation/prototype spike must:
+
+- declare the supported Home Assistant and evergreen-browser matrix;
+- verify arbitrary Ingress base paths, deep links, refresh, assets, HTTP, and any WebSocket/SSE transport;
+- capture the exact supported public contract for theme, locale, direction, timezone, safe-area insets, and context changes, including origin/message/schema validation and deterministic fallback;
+- compare candidate frontend/build approaches against component-package isolation, bundle/old-device cost, accessibility, localization, catalog, and standalone reuse;
+- create a dated official Home Assistant reference manifest with public-data provenance, light/dark availability, phone/wide viewports, human review ownership, and immutable history;
+- prototype representative navigation, card, button, form, status/alert, dialog, progress/empty, settings/list row, dense data, and ordered-evidence components without production feature behavior; and
+- prove keyboard/focus/announcement, reduced-motion, contrast, long/RTL text, safe-area/zoom/virtual-keyboard, no document overflow, and bounded table/diagnostic scrolling.
+
+The result selects the presentation implementation/tooling and supported matrix. It does not authorize production UI work until the SDD is ready and the owner explicitly approves implementation.
+
 ## Future synchronization questions
 
 These do not block the copy MVP but block sync implementation:
@@ -119,7 +133,7 @@ These do not block the copy MVP but block sync implementation:
 ## Implementation decisions intentionally deferred
 
 - backend language and framework;
-- UI framework/design system;
+- UI framework/build tooling and supported HA/browser matrix; the Home Assistant-native design-system contract itself is accepted by ADR 0004;
 - SQLite versus PostgreSQL;
 - internal durable runner versus job library;
 - secret encryption primitive and key source;
@@ -150,6 +164,7 @@ These need evidence and small RFCs; popularity is not evidence.
 | App backups contain usable provider tokens or lose the decryption key | Medium | Critical security/recovery failure | Threat model, external key design, restore tests, sanitized export |
 | Single-node embedded storage cannot handle job concurrency/backup safely | Low-medium | Medium | `RG-004`; no multi-replica claim |
 | Home Assistant coupling leaks into domain/application | Medium | High maintenance/portability cost | ADR 0003 dependency rule and architecture tests |
+| Native-looking UI depends on unstable private Home Assistant components or drifts into an unrelated SaaS design | Medium | High compatibility and product-coherence cost | ADR 0004, owned compatibility layer, `RG-006`, dated official references, catalog/a11y/responsive/visual release gates |
 | Unknown target library sizes lead to unjustified performance design | High | Medium | `OQ-007`, measurable targets before optimization |
 | Future Apple Music support is mistaken for full sync despite no documented remove/reorder operation | Medium | High if scope is promoted | Per-operation/object capability probes; Apple feasibility gates before scope change |
 
@@ -162,3 +177,5 @@ These need evidence and small RFCs; popularity is not evidence.
 5. **Close the [runtime](../specs/home-assistant-app-runtime-and-ingress.md) and [durable-operation](../specs/durable-operations-and-recovery.md) SDD blockers (`RG-004`).** Choose process topology and storage only after crash, lease, migration, backup, and representative-scale evidence.
 
 After those tasks, revisit playlist ownership (`OQ-002`) before creating any persistent-synchronization SDD. The Home Assistant native surface (`RG-005`) can proceed in parallel once the service API shape is stable, but it is not a prerequisite for the copy MVP.
+
+The UI compatibility spike (`RG-006`) can also proceed in parallel as non-production evidence. It must settle the supported host/browser/context/tooling matrix before any production frontend work, while feature content and behavior continue to be owned by their existing SDDs.

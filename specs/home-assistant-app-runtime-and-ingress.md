@@ -6,7 +6,7 @@
 - Owners: Symphonia maintainers
 - Scope: define the install, lifecycle, authentication, persistence, recovery, upgrade, backup, and diagnostics contract for the primary Supervisor-managed App.
 - Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-011`
-- Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform)
+- Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform), [UI foundation](home-assistant-native-ui.md)
 - Required review gates: product UX, architecture, Home Assistant platform, testing, documentation, security/operations
 - Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; encryption-key/backup contract; standalone release timing from `OQ-005`
 
@@ -180,6 +180,8 @@ Invalid or unknown values fail closed before workers start. Authentication, non-
 
 ## 9. UI/UX and content contract
 
+All lifecycle surfaces conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). The shell, heading/toolbar, navigation, cards/sections, buttons, statuses, alerts, progress/loading/empty states, dialogs, and diagnostics containers come from the shared compatibility layer; this SDD owns their lifecycle content and allowed actions, not a parallel visual system. Host theme/locale/direction/safe-area context uses only the validated public adapter and does not change readiness or authorization.
+
 ### 9.1 Information hierarchy
 
 The App panel starts with service status, completed startup fact, next transition, required action, retained state, and a link to bounded diagnostics.
@@ -208,7 +210,7 @@ Next: the App will reconnect automatically; provider operations continue safely.
 
 ### 9.3 Accessibility and localization
 
-Status is textual and announced when it changes; focus remains stable during polling/push updates. Ingress navigation works at narrow widths and never depends on color. Initial locale follows Home Assistant where available with English fallback; exact supported locales require the UI SDD/toolchain.
+Status is textual and announced when it changes; focus remains stable during polling/push updates. Ingress navigation works at narrow widths and never depends on color. Initial locale follows validated Home Assistant context where available with English fallback; the exact locale set remains part of the UI foundation's supported-matrix and translation-plan blockers.
 
 ## 10. Failure, recovery, and cleanup
 
@@ -260,6 +262,8 @@ Minimum **58 distinct cases**:
 
 All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. A disposable HA OS/Supervised-compatible smoke environment covers install, Ingress, restart, backup/restore, and upgrade. Manual evidence covers desktop/mobile and light/dark startup/error views.
 
+The eight feature-specific UI cases above supplement rather than replace the 84-case UI-foundation budget. The runtime release also inherits component-catalog, arbitrary-base-path, host-context fallback, safe-area, accessibility, responsive-geometry, hostile-content, and dated visual-reference gates from that SDD.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content | Validation/navigation |
@@ -281,6 +285,7 @@ All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock f
 8. Given an unsupported downgrade, the App blocks before writes and points to compatible restore/upgrade guidance.
 9. Given hostile restored/config/diagnostic values, no path escape, arbitrary URL, secret output, or code execution occurs.
 10. Given Supervisor stop, new admissions stop and shutdown leaves every lease recoverable within the bounded time.
+11. Given supported Home Assistant theme/locale/direction/safe-area context or its absence, every lifecycle state uses the shared Home Assistant-native components, preserves focus/status/actions at phone and wide widths, and falls back without touching readiness or authorization.
 
 ## 17. Requirements traceability
 
@@ -318,6 +323,7 @@ All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock f
 
 - Primary sources: Home Assistant App/Ingress/security documentation linked from [provider research](../docs/providers/provider-research.md#home-assistant-platform).
 - Related SDDs: [provider authorization](provider-connections-and-authorization.md), [durable operations](durable-operations-and-recovery.md).
-- Accepted: App is the primary deployment boundary; core remains HA-independent.
+- Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
+- Accepted: App is the primary deployment boundary; core remains HA-independent; UI follows the owned Home Assistant-native compatibility layer.
 - Rejected: all logic in a custom integration; unauthenticated management port; fresh database fallback after migration failure.
 - Follow-up: standalone release and companion integration native surface.

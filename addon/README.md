@@ -9,5 +9,8 @@ the App/service boundary used by `vypdev/homeassistant-gateway`:
 - the service image runs the repository root `Dockerfile` as a non-root user.
 
 The metadata is not a published release yet. The image reference, supported
-architecture matrix, OAuth callback contract, UI, backup/restore behavior and
-release signing still require their SDD gates before stable publication.
+architecture matrix, OAuth callback contract, Home Assistant-native UI,
+backup/restore behavior and release signing still require their SDD gates
+before stable publication. The future UI is governed by the
+[Home Assistant-native UI foundation](../specs/home-assistant-native-ui.md); the
+metadata scaffold does not imply that UI has been implemented.

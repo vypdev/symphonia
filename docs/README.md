@@ -11,6 +11,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | --- | --- | --- |
 | [SDD standard and catalog](../specs/README.md) | Capability boundaries, readiness, end-to-end design, numeric test budgets, acceptance and evidence | Shared product policy or silent overrides of horizontal specifications |
 | [Product specification](product/product-specification.md) | Outcomes, scope, journeys, product requirements | Entity design or technology choices |
+| [Home Assistant-native UI specification](product/home-assistant-ui-specification.md) | Cross-cutting UI direction, component families, host context, accessibility, responsive and visual compatibility requirements | Feature-specific content/state or frontend framework selection |
 | [Domain model](domain/domain-model.md) | Ubiquitous language, invariants, identity, copy and sync semantics | Provider API facts |
 | [System architecture](architecture/system-architecture.md) | Boundaries, execution model, security and operations | Final implementation stack |
 | [Provider specification](providers/provider-specification.md) | Provider port, capabilities, normalized errors | Claims about a specific API |
@@ -27,6 +28,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | Prefix | Area |
 | --- | --- |
 | `SYM-PROD` | Product and user experience |
+| `SYM-UI` | Home Assistant-native UI and component compatibility |
 | `SYM-ACC` | Local and provider accounts |
 | `SYM-LIB` | Unified library |
 | `SYM-MATCH` | Identity resolution |

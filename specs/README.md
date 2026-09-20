@@ -11,6 +11,7 @@ The existing `docs/` documents remain the horizontal sources of truth:
 | Source | Owns |
 | --- | --- |
 | [`docs/product/product-specification.md`](../docs/product/product-specification.md) | Product scope, journeys, and stable requirement IDs |
+| [`docs/product/home-assistant-ui-specification.md`](../docs/product/home-assistant-ui-specification.md) | Cross-cutting UI/component, host-context, accessibility, responsive, and visual compatibility requirements |
 | [`docs/domain/domain-model.md`](../docs/domain/domain-model.md) | Shared language, identity, invariants, copy/sync semantics |
 | [`docs/architecture/system-architecture.md`](../docs/architecture/system-architecture.md) | System-wide boundaries, security, persistence, and operations |
 | [`docs/providers/provider-specification.md`](../docs/providers/provider-specification.md) | Provider port and capability contract |
@@ -66,6 +67,7 @@ Every SDD MUST cover these concerns or state why a concern is not applicable:
 - Partial success and unknown external write outcomes are first-class states, not generic failures.
 - User-facing errors follow: impact, cause, next action, retained state.
 - Configuration cannot weaken authorization, secret handling, auditability, identity provenance, or idempotency safeguards.
+- Every web-surface SDD maps its feature-specific states and actions onto the Home Assistant-native UI foundation; it does not create a parallel design system or depend on private Home Assistant frontend modules.
 
 ## Numeric test budget
 
@@ -104,6 +106,7 @@ Readiness is necessary but not authorization to implement. The owner must still 
 | Capability | SDD | Why it exists before code |
 | --- | --- | --- |
 | Home Assistant App runtime | [App runtime and Ingress](home-assistant-app-runtime-and-ingress.md) | Packaging, lifecycle, authentication boundary, persistence, backup |
+| Home Assistant-native UI | [UI foundation](home-assistant-native-ui.md) | Shared component families, host context, accessibility, responsive behavior, catalog, visual compatibility |
 | Provider connections | [Provider connections and authorization](provider-connections-and-authorization.md) | OAuth/cookies, secrets, callback boundary, effective capabilities |
 | Provider imports | [Library import and provider projections](library-import-and-provider-projections.md) | Completeness, provenance, unavailable items, retention |
 | Recording identity | [Recording identity resolution](recording-identity-resolution.md) | Conservative matching, evidence, manual decisions |

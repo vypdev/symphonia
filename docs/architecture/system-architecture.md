@@ -9,6 +9,7 @@ The architecture is derived from these needs:
 
 - long-running, self-hosted operation on modest hardware;
 - a primary Supervisor-managed Home Assistant App experience similar to `vypdev/homeassistant-gateway`;
+- a management UI that follows current Home Assistant component, theme, responsive, and interaction patterns without depending on private frontend internals;
 - a core that can run and be tested without Home Assistant;
 - provider-independent domain and replaceable adapters;
 - durable imports and provider writes that survive restarts;
@@ -18,7 +19,7 @@ The architecture is derived from these needs:
 - a future native Home Assistant surface without duplicating domain policy; and
 - simple backup, restore, upgrade, and diagnostics.
 
-These drivers do not yet justify a programming language, web framework, frontend framework, or database product.
+These drivers do not yet justify a programming language, web framework, frontend framework, or database product. The observable UI direction and compatibility-layer boundary are accepted separately in [ADR 0004](../decisions/0004-home-assistant-native-ui.md); that decision does not select a framework.
 
 ## Context and trust boundaries
 
@@ -69,7 +70,7 @@ This follows the useful boundary pattern in `homeassistant-gateway` without carr
 
 | Component | Responsibility | Explicit exclusions |
 | --- | --- | --- |
-| Web UI | Connection setup, library/playlist views, resolution queue, copy preview, history, diagnostics | Provider tokens, matching policy, direct provider calls |
+| Web UI | Home Assistant-native-adjacent shell and component compatibility layer; connection setup, library/playlist views, resolution queue, copy preview, history, diagnostics | Provider tokens, matching policy, direct provider calls, private HA frontend modules |
 | HTTP/API presentation | Authenticated input/output mapping, validation shape, request correlation | Domain decisions and raw exception exposure |
 | Application use cases | Connect/disconnect, import, resolve, plan copy, execute copy, inspect operations | Provider-specific response types |
 | Domain | Provider-independent entities, invariants, capability requirements, matching/copy/sync policy | IO and scheduling |
@@ -80,6 +81,27 @@ This follows the useful boundary pattern in `homeassistant-gateway` without carr
 | Secret store adapter | Encrypt/decrypt credential material and rotate key references | Returning plaintext to UI/logs |
 | Observability | Structured logs, metrics, health/readiness, sanitized diagnostics | Provider payload dumping |
 | Home Assistant adapter | Ingress identity and future native integration contract | Owning music domain rules |
+
+## Presentation and Home Assistant-native UI boundary
+
+The cross-cutting UI contract lives in the [Home Assistant-native UI specification](../product/home-assistant-ui-specification.md), is accepted by [ADR 0004](../decisions/0004-home-assistant-native-ui.md), and is made implementation-driving by the [UI foundation SDD](../../specs/home-assistant-native-ui.md).
+
+```text
+public HA/App context ─→ validated context adapter ─→ semantic UI tokens
+browser/standalone fallback ────────────────────────┘
+                                                    ↓
+feature view model ─→ feature composition ─→ presentation-only components
+       ↑                    │                       │
+application API/use case ───┘                       └→ catalog/reference tests
+```
+
+Text equivalent: a validated adapter maps only supported Home Assistant App context, with deterministic browser/standalone fallbacks, into semantic tokens. Feature views combine application-owned view models with a presentation-only component package; catalog, accessibility, responsive, Ingress, and visual-reference tests verify the result.
+
+The compatibility package owns tokens, component geometry, accessibility interaction, and layout helpers. It may depend on the selected frontend framework and presentation assets, but it must not import API clients, application/domain models, provider adapters, Home Assistant private modules, or parent-page DOM/storage. Feature views own orchestration and route state but consume component families through one public package boundary rather than styling parallel one-off controls.
+
+Official Home Assistant documentation, design-portal examples, and current source are the primary evolving reference. Pinned `homeassistant-gateway` sources and screenshots are implementation evidence only. Any direct reuse of a Home Assistant component requires a documented public/versioned contract, supported-version matrix, fallback, and rollback path; superficial runtime availability in the parent frame is not a contract.
+
+Theme, locale, direction, timezone, safe-area, and base-path facts are untrusted until the context adapter validates their supported message/origin/schema. They affect presentation and formatting only; they never grant authorization or change domain/application policy. Standalone composition supplies the same semantic inputs from its own authenticated profile and must preserve the same feature states and actions.
 
 ## Deployment model
 
@@ -276,11 +298,11 @@ The MVP may render metrics in its UI and logs; choosing Prometheus/OpenTelemetry
 | Concern | Reason not yet chosen | Evidence needed |
 | --- | --- | --- |
 | Backend language/framework | Provider SDK maturity, job ergonomics, footprint, HA App maintainability | Thin vertical spike and maintainer preference |
-| UI framework | Ingress routing/auth and complex review UI matter more than popularity | OAuth/Ingress and accessibility prototype |
+| UI framework/build tooling | The Home Assistant-native component, accessibility, catalog, Ingress, and standalone contracts are accepted, but the implementation technology remains reversible | `RG-006` prototype proving public context, package boundaries, bundle/compatibility cost, catalog and browser evidence |
 | SQLite versus PostgreSQL | Concurrency, backup, migration, and library scale unmeasured | Storage/job lease spike and target sizes |
 | Job library versus internal durable runner | Retry/idempotency needs are specific; external brokers add operations | Failure/restart spike |
 | Secret encryption/key source | HA App secret facilities and portable standalone behavior differ | Threat model and backup/restore test |
 | Companion integration transport | Need push, authentication, discovery, and version compatibility | Home Assistant integration RFC |
 | Public API/event protocol | Only internal UI needs are currently concrete | UI and companion-integration contract design |
 
-No implementation agent should infer these choices from examples in `homeassistant-gateway`.
+No implementation agent should infer these technology choices from examples in `homeassistant-gateway`. The Gateway informs the accepted presentation boundary and verification approach, not an automatic dependency or stack selection.

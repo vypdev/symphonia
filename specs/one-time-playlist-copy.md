@@ -6,7 +6,7 @@
 - Owners: Symphonia maintainers
 - Scope: preview and execute a finite playlist copy using an immutable plan, explicit non-ready policy, ordered writes, reconciliation, and item-level outcomes.
 - Related requirements: `SYM-PROD-002`, `SYM-PROD-004`–`SYM-PROD-006`, `SYM-PL-001`–`SYM-PL-009`, `SYM-PROV-010`, `SYM-PROV-019`, `SYM-ARCH-009`–`SYM-ARCH-010`, `SYM-JOB-003`–`SYM-JOB-005`, `SYM-TEST-004`, `SYM-TEST-006`
-- Related decisions/research: [ADR 0002](../docs/decisions/0002-copy-and-sync-are-distinct.md), [copy domain model](../docs/domain/domain-model.md), [provider research](../docs/providers/provider-research.md), `OQ-003`, `RG-001`
+- Related decisions/research: [ADR 0002](../docs/decisions/0002-copy-and-sync-are-distinct.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [copy domain model](../docs/domain/domain-model.md), [provider research](../docs/providers/provider-research.md), [UI foundation](home-assistant-native-ui.md), `OQ-003`, `RG-001`
 - Required review gates: product UX, domain, architecture, provider feasibility, testing, documentation, security/operations
 - Open decisions blocking readiness: default non-ready policy; proven target write behavior; target collision policy; reconciliation semantics for ambiguous provider writes
 
@@ -159,6 +159,8 @@ Provider-specific workarounds shall remain behind ports and shall not alter doma
 
 ## 9. UI, UX, and accessibility
 
+Source/target selection, dry-run summary, ordered occurrence review, ambiguity resolution links, acceptance, execution, reconciliation, and result views conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They use shared headings/toolbars, fields/selectors, cards/sections, status/alerts, progress, responsive data rows/tables, buttons, and adaptive confirmation dialogs. The immutable-plan and item-evidence density may extend ordinary settings patterns, but must preserve Home Assistant tokens, focus, action hierarchy, and documented intentional divergences.
+
 The review page shall show:
 
 - source playlist and captured version;
@@ -234,6 +236,8 @@ Minimum planned automated tests: **94**.
 
 Required fault injection includes timeouts before and after provider acceptance, duplicate delivery, process death at every write checkpoint, expired authorization, rate limits, capability drift, and ambiguous reconciliation.
 
+The twelve feature-specific UI cases supplement the UI-foundation budget and inherit its component-catalog, host-context, accessibility, responsive, theme/localization, hostile-content, and dated visual-reference gates.
+
 ## 15. Documentation impact
 
 Implementation shall update:
@@ -258,6 +262,7 @@ Implementation shall update:
 10. Partial success has per-item explanations and a safe remediation path.
 11. Logs and diagnostics contain no provider secrets.
 12. The numeric test budget and required fault-injection scenarios pass.
+13. Plan selection, review, blocked, accepted, running, waiting, reconciling, partial, cancelled, failed, and completed fixtures use the shared Home Assistant-native components and preserve every ordered occurrence, textual consequence, focus/action, and safe recovery path at phone and wide widths.
 
 ## 17. Requirement traceability
 
@@ -302,3 +307,5 @@ App -> User: show terminal and per-item outcomes
 - [SDD catalog](CATALOG.md)
 - [Recording identity resolution SDD](recording-identity-resolution.md)
 - [Durable operations and recovery SDD](durable-operations-and-recovery.md)
+- [Home Assistant-native UI foundation SDD](home-assistant-native-ui.md)
+- [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md)

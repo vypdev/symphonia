@@ -6,7 +6,7 @@
 - Owners: Symphonia maintainers
 - Scope: execute imports and provider writes through durable, observable operations that recover safely across restarts, rate limits, uncertain writes, and upgrades.
 - Related requirements: `SYM-PROD-004`–`SYM-PROD-006`, `SYM-ARCH-001`–`SYM-ARCH-002`, `SYM-ARCH-005`, `SYM-ARCH-008`–`SYM-ARCH-010`, `SYM-JOB-001`–`SYM-JOB-008`, `SYM-OBS-001`–`SYM-OBS-006`, `SYM-TEST-004`, `SYM-TEST-013`, `SYM-DEP-002`, `SYM-DEP-008`
-- Related decisions/research: [system architecture](../docs/architecture/system-architecture.md), [development specification](../docs/development/development-specification.md), `RG-004`
+- Related decisions/research: [system architecture](../docs/architecture/system-architecture.md), [development specification](../docs/development/development-specification.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `RG-004`
 - Required review gates: architecture, persistence/recovery, provider contracts, testing, documentation, security/operations
 - Open decisions blocking readiness: persistent store; worker/process topology; lease and retention parameters; supported migration strategy; representative operation sizes and timing targets
 
@@ -165,6 +165,8 @@ The persistent store and wakeup mechanism may be one technology or separate ones
 
 ## 9. UI, UX, and accessibility
 
+Operation list/detail, progress, wait, recovery, cancellation, reconciliation, and terminal-result surfaces conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They use shared statuses, alerts, progress/loading, cards/sections, responsive result rows/tables, buttons, and adaptive dialogs. Visual updates are projections of persisted operation state; component animation or in-memory events can improve immediacy but never invent progress or success.
+
 The operations view shall show action type, actor-safe label, creation time, current state, progress numerator/denominator when meaningful, next retry time, and available actions.
 
 Example running state:
@@ -243,6 +245,8 @@ Minimum planned automated tests: **86**.
 
 Required deterministic tests include duplicate dispatch, concurrent claim, lease expiry, clock boundaries, crash before/after every checkpoint, store outage, retry exhaustion, rate-limit timing, cancellation races, unknown outcomes, and compatible/incompatible upgrades.
 
+The eight feature-specific UI cases supplement the UI-foundation budget and inherit its component-catalog, host-context, accessibility, responsive, theme/localization, hostile-content, and dated visual-reference gates.
+
 ## 15. Documentation impact
 
 Implementation shall update:
@@ -269,6 +273,7 @@ Implementation shall update:
 11. Supported upgrades preserve or safely refuse every persisted state fixture.
 12. Logs, metrics, events, and diagnostics contain no credentials or prohibited content.
 13. The numeric test budget and fault-injection suite pass.
+14. Queued, running, rate-limited, retry-scheduled, waiting-user, recovering, reconciling, partial, failed, cancelled, and succeeded fixtures use shared Home Assistant-native components; updates preserve focus, never move progress backward without explanation, and remain truthful after disconnect/reload at narrow and wide widths.
 
 ## 17. Requirement traceability
 
@@ -316,3 +321,5 @@ UI -> Operation store: read durable progress view
 - [SDD catalog](CATALOG.md)
 - [Home Assistant App runtime and Ingress SDD](home-assistant-app-runtime-and-ingress.md)
 - [One-time playlist copy SDD](one-time-playlist-copy.md)
+- [Home Assistant-native UI foundation SDD](home-assistant-native-ui.md)
+- [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md)

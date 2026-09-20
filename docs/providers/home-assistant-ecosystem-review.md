@@ -18,11 +18,13 @@ The strongest precedent is Music Assistant: a separate service/App owns the musi
 4. **Treat unofficial YouTube Music access as a distinct product mode.** Music Assistant and `ytube_music_player` demonstrate useful access through `ytmusicapi`, browser cookies, internal endpoints, and proof-of-origin tokens. They do not turn that surface into a supported Google API. An unofficial adapter would need explicit opt-in, health warnings, separate release gating, and no promise of symmetric copy/sync.
 5. **Apple Music is a credible future official-library adapter.** Apple's official API documents library reads, catalog/library search, ISRC, playlist creation, and adding tracks. It does not document playlist-track removal, so new-playlist copy is more plausible than mirror sync. Its user-token acquisition and Home Assistant callback story still require a spike.
 6. **Do not inherit playback-first shortcuts.** Symphonia must preserve unavailable entries, expose ambiguous matches, prove pagination completeness, and retain auditable user decisions even where an existing playback product can skip, merge, cap, or rescan data.
+7. **Adopt the Gateway's independent Home Assistant-native UI pattern, not its stack by implication.** At the pinned commit reviewed, `vypdev/homeassistant-gateway` reproduces Home Assistant component families and operational density through its own tokens/primitives, catalog, visual references, and responsive/accessibility tests while avoiding private Home Assistant frontend imports. Symphonia has accepted that boundary in [ADR 0004](../decisions/0004-home-assistant-native-ui.md); framework selection remains open.
 
 ## Projects reviewed
 
 | Project | What it establishes | Useful pattern for Symphonia | Boundary or warning |
 | --- | --- | --- | --- |
+| [`vypdev/homeassistant-gateway`](https://github.com/vypdev/homeassistant-gateway/tree/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42) | A Supervisor App can present a coherent HA-native-adjacent Ingress UI using an owned component compatibility layer, catalog, dated official-demo references, and browser/visual tests | Semantic tokens, presentation-only primitives, shared component families, light/dark and mobile evidence, explicit private-HA dependency boundary | Community implementation reviewed at one commit; its Lit/Vite/Storybook choices and exact CSS are not automatically Symphonia decisions |
 | [Home Assistant Spotify](https://www.home-assistant.io/integrations/spotify) | A maintained Home Assistant integration can use application credentials, the HA external OAuth callback, and multiple account entries | Native config flow, reauthentication, callback and credential UX | It is a playback/media-browser integration, not a cross-provider library system |
 | [Home Assistant Music Assistant integration](https://www.home-assistant.io/integrations/music_assistant/) | Home Assistant can discover and connect to a separate music server running as an App or container | Service owns domain; integration exposes bounded native actions/entities over an API | Installing an App and installing an integration remain separate lifecycle steps |
 | [Music Assistant server](https://github.com/music-assistant/server) | Provider plugins, feature declarations, multiple instances, a normalized internal library, provider mappings, scheduled sync, and versioned SQLite migrations work at real scale | Provider manifest, connection instance, normalized mapping graph, scheduled imports | Playback requirements and automatic merging are not Symphonia requirements |
@@ -122,6 +124,44 @@ Important limitations for Symphonia:
 
 Therefore Apple Music looks promising for future import and one-time copy-to-new-playlist, but not for strict mirror or bidirectional sync until removal/reorder and authentication are proven.
 
+## Home Assistant-native UI lessons from `homeassistant-gateway`
+
+The Gateway repository was inspected at commit [`1ed75be9f8fabdab386db0fe4320cfb0f67d4f42`](https://github.com/vypdev/homeassistant-gateway/tree/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42), committed 2026-08-27. This pin matters: the repository is active, while Home Assistant component names and tokens also evolve.
+
+### Evidence inspected
+
+- [`docs/frontend-design.md`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-design.md) chooses a native-adjacent rather than SaaS-like surface: familiar density/terminology, solid surfaces, moderate borders, restrained elevation, no ambient gradients/glassmorphism, limited motion, light/dark mapping, and explicit accessibility rules.
+- [`docs/frontend-design-system.md`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-design-system.md) defines a presentation-only primitive layer and keeps application state, API calls, and domain-specific options in owning views/controllers.
+- [`docs/frontend-ui-catalog.md`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-ui-catalog.md) requires an isolated catalog for buttons, icon buttons, tabs, cards, sections, metrics, toolbars, result rows, fields/selects, status chips, alerts, loading/empty states, dialogs, and responsive layouts.
+- [`frontend/src/ui/ui-primitives.ts`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/frontend/src/ui/ui-primitives.ts) and [`ui-layouts.ts`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/frontend/src/ui/ui-layouts.ts) show concrete semantic behavior: button loading disables repeat action and exposes `aria-busy`; tabs implement roles/selection/keyboard navigation; fields associate help/errors; alerts use live semantics; dialogs use stable labels/descriptions; responsive lists/tables and settings rows are reusable.
+- [`docs/frontend-testing-strategy.md`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-testing-strategy.md) layers pure/runtime, controller, HTTP adapter, UX-structure, responsive geometry, flow, visual, and production-bundle evidence. It explicitly checks page overflow, element clipping, allowed internal scrolling, active navigation, and multiple browser engines.
+- [`docs/ui-reference/home-assistant/README.md`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/ui-reference/home-assistant/README.md) records 20 public-demo Home Assistant screenshots with capture date, viewport, public-data provenance, inspection policy, and a warning that source/documentation must also be checked.
+- [`docs/frontend-and-credentials.md`](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-and-credentials.md) keeps normal management Ingress-only and makes credential values/status boundaries explicit in the UI contract.
+
+### Patterns to adopt
+
+1. Own a small semantic compatibility layer rather than styling raw controls independently in each view.
+2. Use official Home Assistant source/design/docs as the current target and dated public-demo captures as reviewable visual evidence.
+3. Keep UI primitives presentation-only; route/API/controller/application/domain state remains outside them.
+4. Treat light/dark, narrow/wide, focus, disabled, loading, error, empty, partial, and completed variants as catalog requirements, not polish after feature implementation.
+5. Verify responsive geometry explicitly: no document overflow or clipped actions; tables/diagnostics may scroll only in bounded containers.
+6. Keep the visual layer quiet: opaque surfaces, semantic borders/tokens, restrained elevation and motion, status text alongside color/icons.
+7. Require human review for screenshot updates and retain reports/traces on failure.
+
+### Patterns to adapt
+
+- Symphonia needs richer item-level uncertainty, matching evidence, playlist order/duplicate displays, long-running durable operations, and provider risk disclosure than the Gateway. Its component catalog must therefore cover dense ordered lists, evidence comparisons, immutable-plan review, and partial/reconciliation states.
+- The Gateway's exact Lit, Vite, Storybook, palette, radii, navigation, and CSS values are evidence, not accepted Symphonia dependencies. The selected implementation must satisfy the [UI specification](../product/home-assistant-ui-specification.md) and [UI foundation SDD](../../specs/home-assistant-native-ui.md).
+- Home Assistant 2026.8 documents safe-area propagation for App iframes; Symphonia must validate the supported version range and context/origin/schema instead of assuming the latest behavior everywhere.
+- The Gateway uses fixed public-demo reference captures. Symphonia should keep an immutable manifest/history so one newly captured Home Assistant release does not erase why an older supported release differs.
+
+### Patterns to avoid
+
+- Importing Home Assistant components merely because their tags happen to exist in a parent page.
+- Reading parent DOM, private CSS, `.storage`, cookies, or undocumented frontend state to obtain theme/locale/identity.
+- Treating snapshot generation as approval, source-string assertions as accessibility tests, or Chromium pixel identity as cross-browser correctness.
+- Copying the Gateway's product-specific navigation, policy labels, or credential flows into music workflows.
+
 ## Security lessons
 
 A 2026 [Music Assistant security advisory](https://github.com/music-assistant/server/security/advisories/GHSA-7jcc-p6xr-835j) described an unauthenticated direct service port combined with user-controlled filesystem paths and root execution. Symphonia does not need a filesystem music provider, but the boundary lessons apply:
@@ -140,6 +180,7 @@ A 2026 [Music Assistant security advisory](https://github.com/music-assistant/se
 - Provider manifests, multiple connection instances, and declared features.
 - Internal provider-representation mappings and versioned migrations.
 - Native Home Assistant application-credential/config-flow patterns where a companion integration genuinely owns that boundary.
+- Home Assistant-native-adjacent UI through an independent semantic token/component layer, deterministic catalog, and dated official visual references.
 
 ### Adapt
 
@@ -147,6 +188,7 @@ A 2026 [Music Assistant security advisory](https://github.com/music-assistant/se
 - Replace playback-friendly automatic merging with evidence-backed, reversible identity links.
 - Replace “rescan after failure” with recovery that protects user-authored state.
 - Treat provider quality labels as a first-class support tier visible in planning and diagnostics.
+- Extend the Gateway's operational components for Symphonia's uncertainty evidence, ordered occurrences, long-running durable state, and item-level partial outcomes.
 
 ### Avoid
 
@@ -155,6 +197,7 @@ A 2026 [Music Assistant security advisory](https://github.com/music-assistant/se
 - Skipping unavailable tracks or returning capped lists as if complete.
 - Exposing a direct unauthenticated port merely to make OAuth convenient.
 - Letting provider values influence local file paths, arbitrary URI schemes, redirects, or code/module loading.
+- Depending on private Home Assistant frontend modules/parent DOM or accepting visual snapshots without semantic, accessibility, responsive, and human-review evidence.
 
 ## Design consequences for the next RFCs
 
@@ -167,3 +210,4 @@ This review does not accept a dependency or new provider into the MVP. It narrow
 5. Add an Apple Music test-account spike as a future-provider candidate, focusing on Music User Token acquisition, catalog/library IDs, `canEdit`, playlist append, and absence of remove/reorder.
 6. Require completeness markers for every import/list operation and preserve unavailable entries.
 7. Threat-model every directly exposed App listener and prevent provider-controlled values from acquiring filesystem or executable semantics.
+8. Treat the [UI specification](../product/home-assistant-ui-specification.md) and [UI foundation SDD](../../specs/home-assistant-native-ui.md) as the shared presentation contract; complete `RG-006` before selecting or implementing the frontend stack.

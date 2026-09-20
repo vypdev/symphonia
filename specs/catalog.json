@@ -63,6 +63,56 @@
       ]
     },
     {
+      "id": "home-assistant-native-ui",
+      "title": "Home Assistant-native UI foundation",
+      "status": "ready-for-review",
+      "scope": "Provide the shared Home Assistant-native-adjacent shell, component families, semantic tokens, host-context adaptation, accessibility, responsive behavior, component catalog, and visual compatibility evidence",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/home-assistant-native-ui.md",
+      "requirements": [
+        "SYM-UI-001",
+        "SYM-UI-002",
+        "SYM-UI-003",
+        "SYM-UI-004",
+        "SYM-UI-005",
+        "SYM-UI-006",
+        "SYM-UI-007",
+        "SYM-UI-008",
+        "SYM-UI-009",
+        "SYM-UI-010",
+        "SYM-UI-011",
+        "SYM-UI-012",
+        "SYM-UI-013",
+        "SYM-UI-014",
+        "SYM-UI-015",
+        "SYM-JOB-007",
+        "SYM-SEC-004",
+        "SYM-SEC-008",
+        "SYM-TEST-005",
+        "SYM-TEST-009",
+        "SYM-TEST-014",
+        "SYM-TEST-015"
+      ],
+      "evidence": [
+        "docs/decisions/0004-home-assistant-native-ui.md",
+        "docs/product/home-assistant-ui-specification.md",
+        "docs/architecture/system-architecture.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "Supported Home Assistant and browser matrix",
+        "Frontend framework and build-tool selection",
+        "RG-006 verified theme, locale, direction, safe-area, and Ingress context contract",
+        "Accepted dated visual-reference capture and update procedure"
+      ]
+    },
+    {
       "id": "provider-connections-and-authorization",
       "title": "Provider connections and authorization",
       "status": "draft",

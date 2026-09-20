@@ -121,6 +121,8 @@ Define validation, precedence, migration, a meaningful alternative, and behavior
 
 ## 9. UI/UX and content contract
 
+If this capability has a web surface, state how its feature-specific content/actions/states compose the [Home Assistant-native UI foundation](home-assistant-native-ui.md), which shared component families it uses, and any intentional divergence. If no web surface exists, mark this explicitly and explain why.
+
 ### 9.1 Information hierarchy
 
 1. Current status.
@@ -228,6 +230,7 @@ Define deterministic fakes/clocks/IDs, coverage expectations, contract fixtures,
 - [ ] Numeric test budget and stated coverage pass.
 - [ ] Configuration, migration, backup, rollback, and recovery agree.
 - [ ] Pending, action-required, partial, failed, and completed UX states are verified.
+- [ ] Every web surface uses the shared Home Assistant-native component/catalog/host-context contract, or an intentional divergence is documented and approved.
 - [ ] Accessibility, localization, sanitization, and secret-safety gates pass.
 - [ ] User/setup/operator/contributor documentation is complete and discoverable.
 - [ ] Catalog status and implementation evidence are current.

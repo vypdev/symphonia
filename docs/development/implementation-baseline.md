@@ -72,7 +72,7 @@ docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 The container exposes only the current health/readiness/version surface. A future App manifest must add Ingress, Supervisor metadata, supported architectures, backup declarations, and any direct callback policy only after the runtime SDD blockers are resolved.
 - Deterministic `unittest` coverage under `tests/`.
 
-The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, secret storage, user authentication, Ingress UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup retention/restore policy, and production runtime handler wiring remain unimplemented and blocked by their SDD decisions.
+The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, secret storage, user authentication, Ingress UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup retention/restore policy, and production runtime handler wiring remain unimplemented and blocked by their SDD decisions. The Home Assistant-native UI direction and compatibility-layer boundary are documented in [ADR 0004](../decisions/0004-home-assistant-native-ui.md) and the [UI foundation SDD](../../specs/home-assistant-native-ui.md), but this foundation slice does not authorize or include frontend implementation.
 
 ## Local verification
 

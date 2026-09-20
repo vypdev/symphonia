@@ -88,6 +88,15 @@ Use a controlled clock and fault-injecting providers to test 429/reset, timeouts
 
 Contract tests validate request/response schemas, authentication, authorization, pagination, base paths, correlation, and sanitized errors. Browser tests cover Ingress-relative navigation, narrow/wide layouts, keyboard access, focus/error announcements, OAuth return/error screens, ambiguous-resolution review, copy preview, partial results, reconnect, and restart recovery.
 
+The [Home Assistant-native UI specification](../product/home-assistant-ui-specification.md) and [UI foundation SDD](../../specs/home-assistant-native-ui.md) add four distinct evidence layers:
+
+1. presentation-package contract tests for component semantics, variants, tokens, focus, validation, and announcements;
+2. a deterministic component catalog covering light/dark, narrow/wide, long/RTL text, disabled/loading/empty/error/destructive states, reduced motion, and increased contrast;
+3. responsive geometry and Ingress tests proving no unexpected document overflow, no clipped essential actions, bounded internal table/diagnostic scrolling, safe-area handling, arbitrary base paths, deep links, refresh, assets, and push transports; and
+4. reviewed visual comparison against a dated official Home Assistant reference manifest with public-data provenance and documented intentional divergences.
+
+Canonical pixel baselines may use one declared browser engine, but all supported engines must pass behavior, accessibility, and geometry contracts. Generated screenshot updates are never self-approving and source-string assertions do not substitute for browser accessibility/interaction tests.
+
 UI tests MUST not consider an element visible or a request successful proof that the domain outcome occurred; they verify the returned operation and history.
 
 ### Home Assistant App tests
@@ -121,6 +130,8 @@ The live matrix must verify documented behavior, not reverse-engineered endpoint
 - **SYM-TEST-011:** Provider tests MUST cover object-level capability denial and identical upstream IDs from different media types or provider instances without collision.
 - **SYM-TEST-012:** App artifact/smoke tests MUST enumerate every listening port and prove that any non-Ingress callback listener cannot reach management routes or trust Ingress identity headers.
 - **SYM-TEST-013:** Migration tests MUST use a per-release history, include stable/beta path divergence, and prove failure leaves the prior database recoverable rather than replacing locally authored state with a fresh rescan.
+- **SYM-TEST-014:** Every shared UI component family and representative feature state MUST pass deterministic catalog, keyboard/focus/semantics, accessibility, theme, localization, responsive-geometry, and hostile-content checks before release.
+- **SYM-TEST-015:** Every supported Home Assistant release profile MUST pass arbitrary Ingress base-path, public host-context validation/fallback, theme/locale/direction/safe-area, and reviewed visual-reference compatibility gates; private frontend availability MUST NOT be a test prerequisite.
 
 ## Matching evaluation
 
@@ -140,6 +151,7 @@ A change is incomplete until, in proportion to its scope:
 - no secret or real private identifier is present in source/fixtures/output;
 - migrations, backup, and rollback implications are documented and tested;
 - frontend accessibility and Ingress base-path behavior pass;
+- the shared component catalog, dated Home Assistant visual references, supported HA/browser matrix, and any intentional UI divergences are current and reviewed;
 - App/standalone artifact metadata is consistent;
 - local checks and CI pass; and
 - the full diff contains no unrelated generated artifacts.
@@ -173,6 +185,7 @@ Release channels, semantic-version policy, supported upgrade window, and exact a
 | `SYM-SEC-009` callback isolation | Listener route enumeration + Home Assistant App smoke test |
 | `SYM-SEC-010` untrusted provider values | Path/URI/redirect/egress injection tests |
 | `SYM-HA-002` Ingress | Base-path HTTP/browser + App smoke test |
+| `SYM-UI-001`–`SYM-UI-015` Home Assistant-native UI | UI package/catalog + a11y/keyboard + responsive/Ingress/context + reviewed dated visual evidence |
 | `SYM-DEP-006` restore | Artifact smoke using a backup with active/waiting jobs |
 
 The SDD catalog and each capability's traceability section are the prospective matrix before code exists. Implementation evidence should be generated or maintained when work is approved; this baseline does not invent test filenames before a stack exists.

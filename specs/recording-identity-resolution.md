@@ -6,7 +6,7 @@
 - Owners: Symphonia maintainers
 - Scope: resolve provider track representations to provider-independent recordings using explainable, versioned evidence and durable manual decisions.
 - Related requirements: `SYM-PROD-002`–`SYM-PROD-003`, `SYM-LIB-002`, `SYM-MATCH-001`–`SYM-MATCH-008`, `SYM-ARCH-014`, `SYM-TEST-007`–`SYM-TEST-008`
-- Related decisions/research: [ADR 0001](../docs/decisions/0001-provider-independent-recording-domain.md), [identity domain model](../docs/domain/domain-model.md#identity-resolution-specification), [provider research](../docs/providers/provider-research.md), `RG-003`
+- Related decisions/research: [ADR 0001](../docs/decisions/0001-provider-independent-recording-domain.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [identity domain model](../docs/domain/domain-model.md#identity-resolution-specification), [provider research](../docs/providers/provider-research.md), [UI foundation](home-assistant-native-ui.md), `RG-003`
 - Required review gates: product UX, domain/music semantics, architecture, provider feasibility, testing/data licensing, documentation
 - Open decisions blocking readiness: reviewed labeled corpus; automatic-link precision/false-link tolerance; versioned scoring/confidence policy; provider candidate retrieval/quota evidence
 
@@ -182,6 +182,8 @@ Users cannot lower safety thresholds ad hoc, enable title-only auto-linking, dis
 
 ## 9. UI/UX and content contract
 
+Resolution queue, candidate comparison, evidence, history, and confirmation surfaces conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They compose shared cards/sections, status/alerts, tabs where justified, dense responsive result rows/tables, buttons, and adaptive dialogs. Music evidence may require richer comparison layouts than ordinary Home Assistant settings, but those layouts must keep Home Assistant density, tokens, focus, and action hierarchy and document any intentional divergence.
+
 ### 9.1 Information hierarchy
 
 The review queue shows source identity/state first, then the best candidates and decisive evidence/differences, followed by one primary action. It never leads with an unexplained numeric score.
@@ -271,6 +273,8 @@ Minimum **96 distinct cases** due to the high cost of false links:
 
 The corpus includes exact duplicates, missing/wrong/reused ISRC, covers, live/studio, remasters, remixes/edits, acoustic, clean/explicit, compilations, featured artists, localized metadata, music/lyric videos, uploads, duration drift, and misleading titles. Candidate recall and accepted-link precision are reported separately. Numeric acceptance thresholds remain a blocker until corpus review.
 
+The twelve feature-specific UI cases supplement the UI-foundation budget and inherit its catalog, host-context, theme/localization, accessibility, responsive, hostile-content, and dated visual-reference gates.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content | Validation/navigation |
@@ -292,6 +296,7 @@ The corpus includes exact duplicates, missing/wrong/reused ISRC, covers, live/st
 8. Given automatic-link invalidation, future plans see ambiguity/unmatched while completed plan/history references remain unchanged.
 9. Given hostile metadata/URLs/user notes, comparison UI and logs remain escaped, bounded, and non-executable.
 10. Given resolver-version rollout/rollback, manual decisions persist and corpus regressions block release under the accepted thresholds.
+11. Given unmatched, ambiguous, manually resolved, automatically invalidated, and provider-search-degraded fixtures, candidate/evidence views use shared Home Assistant-native components, remain keyboard-complete and comparison-readable on narrow screens, and never reduce evidence to color, artwork, or score alone.
 
 ## 17. Requirements traceability
 
@@ -328,6 +333,7 @@ The corpus includes exact duplicates, missing/wrong/reused ISRC, covers, live/st
 
 - Primary sources: official provider metadata research in [provider research](../docs/providers/provider-research.md).
 - Related SDDs: [imports](library-import-and-provider-projections.md), [playlist copy](one-time-playlist-copy.md), [durable operations](durable-operations-and-recovery.md).
+- Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: recording identity is provider-independent; uncertainty/manual evidence are first-class.
 - Rejected: title-only matching, opaque score-only UX, silent automatic override of manual decisions, work-level cover merging.
 - Follow-up: musical-work relationships and additional metadata providers after MVP evidence.

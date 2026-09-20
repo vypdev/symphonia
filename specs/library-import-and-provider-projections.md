@@ -6,7 +6,7 @@
 - Owners: Symphonia maintainers
 - Scope: import approved provider collections and ordered playlists into complete, provenance-rich provider projections without confusing them with provider-independent recordings.
 - Related requirements: `SYM-PROD-003`, `SYM-LIB-001`–`SYM-LIB-006`, `SYM-PROV-004`–`SYM-PROV-014`, `SYM-PROV-018`, `SYM-ARCH-004`–`SYM-ARCH-005`
-- Related decisions/research: [domain model](../docs/domain/domain-model.md), [provider specification](../docs/providers/provider-specification.md), [provider research](../docs/providers/provider-research.md), `RG-001`, `OQ-007`, `OQ-008`
+- Related decisions/research: [domain model](../docs/domain/domain-model.md), [provider specification](../docs/providers/provider-specification.md), [provider research](../docs/providers/provider-research.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `RG-001`, `OQ-007`, `OQ-008`
 - Required review gates: product UX, domain, architecture, provider feasibility/policy, testing, documentation, privacy/operations
 - Open decisions blocking readiness: proven collection semantics/completeness per MVP provider; retention/export policy; representative library sizes/import targets; provider-specific refresh/deletion obligations
 
@@ -183,6 +183,8 @@ Users cannot configure “ignore pagination errors,” “drop unavailable items
 
 ## 9. UI/UX and content contract
 
+Library, playlist, freshness, progress, and import-result views conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They use shared headings/toolbars, filters/fields, status/alerts, progress and empty states, cards/sections, result rows, and responsive data displays. Dense tables may switch to list/record layouts or scroll only inside bounded containers; a provider-like artwork grid cannot hide completeness, freshness, provenance, unavailable entries, or required recovery.
+
 ### 9.1 Information hierarchy
 
 Library/connection pages show current projection freshness and last complete import separately from the latest attempt. Progress is based on persisted counts and collection states, not transient events.
@@ -264,6 +266,8 @@ Minimum **72 distinct cases**:
 
 Fixtures include zero/one/boundary/multi-page collections, duplicate playlist occurrences, unavailable/deleted/local/non-music/unknown items, colliding IDs across types/instances, revision change mid-read, and provider-declared totals that lie. Live smoke is opt-in and verifies only dated documented behavior with dedicated data.
 
+The eight feature-specific UI cases supplement the UI-foundation budget and inherit its component-catalog, host-context, accessibility, responsive geometry, theme/localization, hostile-content, and dated visual-reference gates.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content | Validation/navigation |
@@ -285,6 +289,7 @@ Fixtures include zero/one/boundary/multi-page collections, duplicate playlist oc
 8. Given provider disappearance, user-authored resolution/audit data remains while provider payload retention transitions independently.
 9. Given hostile provider IDs/URLs/names/cursors, no path/egress/render/log injection or secret disclosure occurs.
 10. Given a completed import, only changed/new provider tracks are scheduled for separate resolution with no identity decision made by import.
+11. Given empty, importing, rate-limited, stale, partial, failed, and complete fixtures with long provider text and dense ordered entries, the shared Home Assistant-native components preserve textual completeness/freshness, keyboard access, bounded scrolling, and essential actions at narrow and wide widths.
 
 ## 17. Requirements traceability
 
@@ -322,6 +327,7 @@ Fixtures include zero/one/boundary/multi-page collections, duplicate playlist oc
 
 - Primary sources: [provider research](../docs/providers/provider-research.md) and provider links therein.
 - Related SDDs: [connections](provider-connections-and-authorization.md), [identity resolution](recording-identity-resolution.md), [durable operations](durable-operations-and-recovery.md).
+- Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: provider projections remain distinct from recordings; only complete results can infer missing items.
 - Rejected: silent truncation, skipping unavailable entries, delete-on-partial, matching during import.
 - Follow-up: incremental imports and persistent sync after official evidence and baseline semantics exist.

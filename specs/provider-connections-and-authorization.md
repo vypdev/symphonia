@@ -6,7 +6,7 @@
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
 - Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`
-- Related decisions/research: [provider specification](../docs/providers/provider-specification.md), [official API research](../docs/providers/provider-research.md), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), `OQ-001`, `OQ-004`, `RG-001`, `RG-002`
+- Related decisions/research: [provider specification](../docs/providers/provider-specification.md), [official API research](../docs/providers/provider-research.md), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `OQ-001`, `OQ-004`, `RG-001`, `RG-002`
 - Required review gates: product UX, architecture, provider feasibility, testing, documentation, security/privacy
 - Open decisions blocking readiness: direct App OAuth versus companion-integration authorization broker; per-provider registration/scopes/token lifecycle; unofficial YouTube Music MVP decision; secret key source and backup contract
 
@@ -194,6 +194,8 @@ No preference becomes accepted until `RG-002` records evidence and an ADR choose
 
 ## 9. UI/UX and content contract
 
+Connection, disclosure, credential, callback-result, status, and disconnect views conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They use the shared settings/list rows, cards/sections, fields/choices, buttons, status chips, adjacent alerts, adaptive confirmation dialogs, and loading/empty states. Provider branding identifies the provider but does not replace Home Assistant interaction hierarchy. Risk, unofficial access, permission scope, and reconnection remain textual and cannot be reduced to a colored badge.
+
 ### 9.1 Information hierarchy
 
 Before the primary `Connect` action, show access basis, maturity/support, account/subscription prerequisites, requested functional access, credential type, callback/remote-access needs, external dependencies, reauthorization expectation, and known limitations.
@@ -284,6 +286,8 @@ Minimum **82 distinct cases**:
 
 Provider contract tests are offline and deterministic. Live smoke tests are opt-in, use dedicated accounts/client registrations, bounded scopes/quota, and safe cleanup. Exact secrets are seeded as canaries and asserted absent from every non-secret boundary. Manual evidence reviews provider consent transitions and narrow/mobile disclosures.
 
+The twelve feature-specific UI cases supplement the UI-foundation budget and inherit its catalog, host-context, theme, accessibility, responsive, hostile-content, and dated visual-reference release gates.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content | Validation/navigation |
@@ -306,6 +310,7 @@ Provider contract tests are offline and deterministic. Live smoke tests are opt-
 9. Given hostile callback/provider/error content, no open redirect, path/egress injection, Markdown/HTML injection, or secret output occurs.
 10. Given App restart at every attempt phase, no callback is consumed twice and no orphan grant becomes an active connection.
 11. Given the broker alternative, a forged/replayed/local unauthenticated handoff is rejected and the integration cannot mutate the App database directly.
+12. Given official, unofficial, connected, degraded, action-required, authorizing, and disconnected fixtures, the shared Home Assistant-native component families preserve information hierarchy, keyboard/focus behavior, narrow layout, theme parity, and textual risk without exposing secret material.
 
 ## 17. Requirements traceability
 
@@ -343,6 +348,7 @@ Provider contract tests are offline and deterministic. Live smoke tests are opt-
 
 - Primary sources: official provider and Home Assistant sources in [provider research](../docs/providers/provider-research.md).
 - Related SDDs: [App runtime](home-assistant-app-runtime-and-ingress.md), [imports](library-import-and-provider-projections.md), [durable operations](durable-operations-and-recovery.md).
+- Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: capability and risk disclosure before authorization; opaque secret references; distinct unofficial adapters.
 - Open alternatives: direct App OAuth versus HA companion broker.
 - Rejected: tokens in App options; pasted callback URLs as tokens; generic retry of invalid grants; treating private APIs as official.

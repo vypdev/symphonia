@@ -29,6 +29,7 @@ Start with the [documentation map](docs/README.md). The horizontal specification
 | Capability readiness and implementation contracts | [SDD catalog](specs/CATALOG.md) |
 | SDD lifecycle, template, and readiness gate | [SDD standard](specs/README.md) |
 | Vision, scope, journeys, requirements | [Product specification](docs/product/product-specification.md) |
+| Home Assistant-native UI and component contract | [UI specification](docs/product/home-assistant-ui-specification.md) and [UI foundation SDD](specs/home-assistant-native-ui.md) |
 | Vocabulary, entities, identity, playlists | [Domain model](docs/domain/domain-model.md) |
 | System boundaries and operational qualities | [Architecture](docs/architecture/system-architecture.md) |
 | Provider contract and capability semantics | [Provider specification](docs/providers/provider-specification.md) |
