@@ -45,6 +45,15 @@ class AuthorizationAttemptRepository:
     def close(self) -> None:
         self._connection.close()
 
+    def healthcheck(self) -> bool:
+        """Return whether the migrated authorization store can be read."""
+
+        try:
+            row = self._connection.execute("SELECT 1 AS healthy").fetchone()
+        except sqlite3.Error:
+            return False
+        return row is not None and row["healthy"] == 1
+
     def _migrate(self) -> None:
         self._connection.executescript(
             """

@@ -83,7 +83,8 @@ class RuntimeResources:
                 self.projections,
                 self.resolutions,
             ):
-                repository._connection.execute("SELECT 1").fetchone()  # type: ignore[attr-defined]
+                if not repository.healthcheck():
+                    return False
         except Exception:
             return False
         return True

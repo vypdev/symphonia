@@ -38,6 +38,19 @@ class RuntimeResourcesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             RuntimeResources.open("   ")
 
+    def test_readiness_fails_closed_when_one_store_is_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            try:
+                resources.plans.close()
+                self.assertFalse(resources.healthcheck())
+            finally:
+                resources.resolutions.close()
+                resources.projections.close()
+                resources.authorization.close()
+                resources.connections.close()
+                resources.operations.close()
+
     def test_backup_to_copies_a_consistent_database(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source_path = str(Path(directory) / "symphonia.sqlite3")
