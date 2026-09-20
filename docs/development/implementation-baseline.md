@@ -18,6 +18,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
+- Copy plans bind target connection and effective write-capability evidence into their digest.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
 - Offline-testable official Spotify playlist reader with bounded pagination and normalized error categories.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.

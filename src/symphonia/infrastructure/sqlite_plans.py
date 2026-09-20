@@ -104,6 +104,9 @@ def _serialize(plan: CopyPlan) -> dict[str, Any]:
         "source_playlist_id": plan.source_playlist_id,
         "source_namespace": plan.source_namespace,
         "target_provider": plan.target_provider,
+        "target_connection_id": plan.target_connection_id,
+        "target_capabilities": list(plan.target_capabilities),
+        "target_capability_evidence_version": plan.target_capability_evidence_version,
         "target_playlist_name": plan.target_playlist_name,
         "target_visibility": plan.target_visibility,
         "policy": plan.policy.value,
@@ -146,4 +149,7 @@ def _deserialize(payload: dict[str, Any]) -> CopyPlan:
         ),
         digest=payload["digest"],
         source_namespace=payload.get("source_namespace", "default"),
+        target_connection_id=payload.get("target_connection_id", "default"),
+        target_capabilities=tuple(payload.get("target_capabilities", ())),
+        target_capability_evidence_version=payload.get("target_capability_evidence_version"),
     )

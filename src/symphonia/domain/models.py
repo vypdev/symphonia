@@ -132,6 +132,17 @@ class CopyPlan:
     entries: tuple[CopyPlanEntry, ...]
     digest: str
     source_namespace: str = "default"
+    target_connection_id: str = "default"
+    target_capabilities: tuple[str, ...] = ()
+    target_capability_evidence_version: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.target_connection_id.strip():
+            raise ValueError("target_connection_id must not be empty")
+        if any(not capability.strip() for capability in self.target_capabilities):
+            raise ValueError("target capabilities must not contain blank values")
+        if tuple(sorted(set(self.target_capabilities))) != self.target_capabilities:
+            raise ValueError("target capabilities must be sorted and unique")
 
     @property
     def blocked(self) -> bool:
@@ -170,6 +181,9 @@ def build_copy_plan(
     target_playlist_name: str,
     target_visibility: str = "private",
     policy: CopyPolicy = CopyPolicy.STRICT,
+    target_connection_id: str = "default",
+    target_capabilities: tuple[str, ...] = (),
+    target_capability_evidence_version: str | None = None,
 ) -> CopyPlan:
     """Build a non-mutating, deterministic copy plan.
 
@@ -213,6 +227,9 @@ def build_copy_plan(
         "target_playlist_name": target_playlist_name,
         "target_visibility": target_visibility,
         "policy": policy.value,
+        "target_connection_id": target_connection_id,
+        "target_capabilities": list(target_capabilities),
+        "target_capability_evidence_version": target_capability_evidence_version,
         "entries": [
             {
                 "occurrence_id": entry.occurrence_id,
@@ -239,6 +256,9 @@ def build_copy_plan(
         entries=tuple(plan_entries),
         digest=digest,
         source_namespace=snapshot.source_namespace,
+        target_connection_id=target_connection_id,
+        target_capabilities=target_capabilities,
+        target_capability_evidence_version=target_capability_evidence_version,
     )
 
 
