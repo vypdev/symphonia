@@ -30,6 +30,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.
 - Experimental official Apple Music library-playlist reader with separate developer/user token inputs.
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
+- Explicit runtime resource composition and reverse-order shutdown for all durable repositories.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
