@@ -16,6 +16,7 @@ from .authorization import AuthorizationAttempt, AuthorizationState
 from .registry import ProviderAlreadyRegistered, ProviderNotRegistered, ProviderRegistry
 from .errors import ProviderApiError, ProviderErrorCategory
 from .spotify import JsonResponse, SpotifyAdapter, UrllibJsonClient
+from .youtube import YouTubeDataAdapter
 from .importing import CollectionImportResult, ImportIssue, collect_playlist_pages, to_playlist_snapshot
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
@@ -43,6 +44,7 @@ __all__ = [
     "JsonResponse",
     "SpotifyAdapter",
     "UrllibJsonClient",
+    "YouTubeDataAdapter",
     "ProviderWriteError",
     "PlaylistWriter",
     "TargetPlaylist",
