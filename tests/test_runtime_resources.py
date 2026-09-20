@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from datetime import datetime, timezone
+import sqlite3
 
 from symphonia.infrastructure import OperationRepository
 from symphonia.runtime import RuntimeResources
@@ -150,6 +151,23 @@ class RuntimeResourcesTests(unittest.TestCase):
             self.assertFalse(RuntimeResources.validate_backup(str(corrupt)))
             with self.assertRaises(ValueError):
                 RuntimeResources.validate_backup("   ")
+
+    def test_validate_backup_rejects_schema_shaped_but_incompatible_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "partial.sqlite3"
+            connection = sqlite3.connect(path)
+            try:
+                for table in (
+                    "operations", "operation_events", "copy_plans", "provider_connections",
+                    "authorization_attempts", "playlist_snapshots", "playlist_snapshot_entries",
+                    "current_playlist_snapshots", "resolution_decisions",
+                ):
+                    connection.execute(f"CREATE TABLE {table} (placeholder TEXT)")
+                connection.commit()
+            finally:
+                connection.close()
+
+            self.assertFalse(RuntimeResources.validate_backup(str(path)))
 
     def test_diagnostics_combine_safe_queue_and_operation_views(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

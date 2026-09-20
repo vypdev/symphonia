@@ -165,6 +165,40 @@ class RuntimeResources:
             "current_playlist_snapshots",
             "resolution_decisions",
         }
+        required_columns = {
+            "operations": {
+                "operation_id", "operation_type", "state", "idempotency_key",
+                "payload_json", "checkpoint_json", "worker_id", "lease_expires_at",
+                "next_run_at", "cancel_requested", "created_at", "updated_at",
+            },
+            "operation_events": {
+                "sequence", "operation_id", "event_type", "state", "worker_id",
+                "payload_json", "created_at",
+            },
+            "copy_plans": {"digest", "plan_json", "created_at", "accepted_at"},
+            "provider_connections": {
+                "connection_id", "provider", "provider_account_id", "state",
+                "manifest_version", "secret_ref", "capabilities_json", "expires_at",
+                "health_code", "created_at", "updated_at",
+            },
+            "authorization_attempts": {
+                "attempt_id", "provider", "actor_id", "redirect_uri", "state_digest",
+                "state", "created_at", "expires_at", "completed_at", "failure_code",
+            },
+            "playlist_snapshots": {
+                "snapshot_id", "provider", "namespace", "playlist_id", "revision", "published_at",
+            },
+            "playlist_snapshot_entries": {
+                "snapshot_id", "occurrence_id", "position", "provider_track_id",
+                "provider_track_object_type", "provider_track_title", "source_added_at",
+                "provider_track_namespace", "media_kind", "available",
+            },
+            "current_playlist_snapshots": {"provider", "namespace", "playlist_id", "snapshot_id"},
+            "resolution_decisions": {
+                "sequence", "decision_id", "provider_track_key", "candidate_recording_id",
+                "action", "actor_id", "reason", "created_at", "payload_json",
+            },
+        }
         connection: sqlite3.Connection | None = None
         try:
             connection = sqlite3.connect(uri, uri=True)
@@ -177,7 +211,18 @@ class RuntimeResources:
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 ).fetchall()
             }
-            return required_tables.issubset(tables)
+            if not required_tables.issubset(tables):
+                return False
+            if connection.execute("PRAGMA foreign_key_check").fetchall():
+                return False
+            for table, columns in required_columns.items():
+                actual_columns = {
+                    row[1]
+                    for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
+                }
+                if not columns.issubset(actual_columns):
+                    return False
+            return True
         except sqlite3.Error:
             return False
         finally:
