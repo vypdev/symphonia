@@ -212,6 +212,9 @@ class OperationRepositoryTests(unittest.TestCase):
             now=self.now + timedelta(seconds=6),
         )
         self.assertEqual(reclaimed.worker_id, "worker-b")
+        events = self.repository.events(operation.operation_id)
+        self.assertEqual(events[-1].event_type, "lease_reclaimed")
+        self.assertEqual(events[-1].payload["previous_worker_id"], "worker-a")
 
     def test_claim_next_selects_queued_and_due_retry_work(self) -> None:
         queued = self.repository.create(
@@ -270,6 +273,7 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertIsNotNone(recovered)
         self.assertEqual(recovered.operation_id, operation.operation_id)
         self.assertEqual(recovered.worker_id, "worker-b")
+        self.assertEqual(self.repository.events(operation.operation_id)[-1].event_type, "lease_reclaimed")
 
     def test_retry_cannot_be_claimed_before_its_scheduled_time(self) -> None:
         operation = self.repository.create(

@@ -290,6 +290,10 @@ class OperationRepository:
             )
             if not eligible and not expired:
                 raise LeaseConflict(f"operation {operation_id} is not eligible for claim")
+            event_type = "lease_reclaimed" if expired else "claimed"
+            event_payload = {"lease_expires_at": expires_text}
+            if expired and row["worker_id"]:
+                event_payload["previous_worker_id"] = row["worker_id"]
             self._connection.execute(
                 """
                 UPDATE operations
@@ -301,10 +305,10 @@ class OperationRepository:
             )
             self._append_event(
                 operation_id=operation_id,
-                event_type="claimed",
+                event_type=event_type,
                 state="running",
                 worker_id=worker_id,
-                payload={"lease_expires_at": expires_text},
+                payload=event_payload,
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
@@ -363,6 +367,11 @@ class OperationRepository:
                 self._connection.execute("COMMIT")
                 return None
             operation_id = row["operation_id"]
+            recovered = row["state"] == "running"
+            event_type = "lease_reclaimed" if recovered else "claimed"
+            event_payload = {"lease_expires_at": expires_text}
+            if recovered and row["worker_id"]:
+                event_payload["previous_worker_id"] = row["worker_id"]
             self._connection.execute(
                 """
                 UPDATE operations
@@ -374,10 +383,10 @@ class OperationRepository:
             )
             self._append_event(
                 operation_id=operation_id,
-                event_type="claimed",
+                event_type=event_type,
                 state="running",
                 worker_id=worker_id,
-                payload={"lease_expires_at": expires_text},
+                payload=event_payload,
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")

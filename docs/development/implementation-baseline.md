@@ -16,6 +16,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Bounded recent-operation diagnostics listing that exposes only redacted support views.
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Bounded transient retry budgets for copy and import handlers with durable exhaustion outcomes.
+- Lease-expiry recovery is audited distinctly from first claims, with prior worker identity retained only as metadata.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
