@@ -246,11 +246,34 @@ class OperationRepository:
                 """
                 UPDATE operations
                    SET state = ?, checkpoint_json = ?, updated_at = ?,
-                       worker_id = CASE WHEN ? IN ('running', 'waiting_user') THEN worker_id ELSE NULL END,
-                       lease_expires_at = CASE WHEN ? IN ('running', 'waiting_user') THEN lease_expires_at ELSE NULL END
+                       worker_id = CASE WHEN ? = 'running' THEN worker_id ELSE NULL END,
+                       lease_expires_at = CASE WHEN ? = 'running' THEN lease_expires_at ELSE NULL END
                  WHERE operation_id = ?
                 """,
                 (state, checkpoint_json, now_text, state, state, operation_id),
+            )
+            self._connection.execute("COMMIT")
+        except Exception:
+            self._connection.execute("ROLLBACK")
+            raise
+        return self.get(operation_id)
+
+    def resume(self, operation_id: str, *, now: datetime) -> OperationRecord:
+        """Re-admit a user-action operation after its external issue is resolved."""
+
+        now_text = _utc(now)
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self._connection.execute(
+                "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
+            ).fetchone()
+            if row is None:
+                raise OperationNotFound(operation_id)
+            if row["state"] != "waiting_user":
+                raise LeaseConflict("only waiting_user operations can be resumed")
+            self._connection.execute(
+                "UPDATE operations SET state = 'queued', updated_at = ? WHERE operation_id = ?",
+                (now_text, operation_id),
             )
             self._connection.execute("COMMIT")
         except Exception:

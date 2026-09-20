@@ -14,6 +14,7 @@ The first implementation increment is intentionally narrower than any provider o
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
+- A copy executor that creates target playlists through a semantic writer port, checkpoints each occurrence, and reconciles unknown writes before retry.
 
 ## Local container profile
 

@@ -12,6 +12,7 @@ from .contracts import (
     ProviderPlaylistPage,
 )
 from .importing import CollectionImportResult, ImportIssue, collect_playlist_pages, to_playlist_snapshot
+from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
 __all__ = [
     "AccessBasis",
@@ -25,7 +26,11 @@ __all__ = [
     "ProviderObjectRef",
     "ProviderPlaylistEntry",
     "ProviderPlaylistPage",
+    "ProviderWriteError",
+    "PlaylistWriter",
+    "TargetPlaylist",
+    "WriteOutcome",
+    "WriteResult",
     "collect_playlist_pages",
     "to_playlist_snapshot",
 ]
-

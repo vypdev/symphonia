@@ -165,6 +165,26 @@ class OperationRepositoryTests(unittest.TestCase):
         )
         self.assertGreater(renewed.lease_expires_at, claimed.lease_expires_at)
 
+    def test_waiting_user_operation_releases_lease_and_can_resume(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        waiting = self.repository.checkpoint(
+            operation.operation_id,
+            worker_id="worker-a",
+            checkpoint={"unknown_step": "occ-1"},
+            now=self.now + timedelta(seconds=1),
+            state="waiting_user",
+        )
+        self.assertEqual(waiting.state, "waiting_user")
+        self.assertIsNone(waiting.worker_id)
+        resumed = self.repository.resume(operation.operation_id, now=self.now + timedelta(seconds=2))
+        self.assertEqual(resumed.state, "queued")
+
 
 if __name__ == "__main__":
     unittest.main()
