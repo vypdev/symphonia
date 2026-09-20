@@ -28,7 +28,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Authorization callback binding rejects unsafe schemes, fragments, credentials, whitespace, and non-loopback HTTP hosts.
-- Normalized provider errors redact common bearer/token/secret/password/cookie forms at the provider boundary.
+- Normalized provider errors and provider codes redact common bearer/token/secret/password/cookie forms at the provider boundary.
 - Operation persistence recursively rejects credential-shaped payload keys and cyclic structures before SQLite writes.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Copy plans bind target connection and effective write-capability evidence into their digest.

@@ -41,11 +41,16 @@ class FakeAdapter:
 class ProviderConnectionServiceTests(unittest.TestCase):
     def test_provider_error_detail_redacts_common_credentials(self) -> None:
         detail = redact_error_detail("Bearer abc123 token=secret refresh_token=refresh-value")
-        error = ProviderApiError(ProviderErrorCategory.NETWORK_ERROR, detail)
+        error = ProviderApiError(
+            ProviderErrorCategory.NETWORK_ERROR,
+            detail,
+            provider_code="authorization=header-secret",
+        )
 
         self.assertNotIn("abc123", str(error))
         self.assertNotIn("secret", str(error))
         self.assertNotIn("refresh-value", str(error))
+        self.assertNotIn("header-secret", error.provider_code)
         self.assertIn("[REDACTED]", str(error))
 
     def setUp(self) -> None:

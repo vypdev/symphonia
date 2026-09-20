@@ -37,6 +37,8 @@ class WriteResult:
     def __post_init__(self) -> None:
         if self.detail is not None:
             object.__setattr__(self, "detail", redact_error_detail(self.detail))
+        if self.provider_code is not None:
+            object.__setattr__(self, "provider_code", redact_error_detail(self.provider_code))
 
 
 class ProviderWriteError(RuntimeError):
@@ -53,7 +55,7 @@ class ProviderWriteError(RuntimeError):
         super().__init__(redacted_detail)
         self.outcome = outcome
         self.detail = redacted_detail
-        self.provider_code = provider_code
+        self.provider_code = None if provider_code is None else redact_error_detail(provider_code)
         self.retry_at = retry_at
 
 

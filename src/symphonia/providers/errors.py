@@ -51,6 +51,8 @@ class ProviderApiError(RuntimeError):
     def __post_init__(self) -> None:
         redacted_detail = redact_error_detail(self.detail)
         object.__setattr__(self, "detail", redacted_detail)
+        if self.provider_code is not None:
+            object.__setattr__(self, "provider_code", redact_error_detail(self.provider_code))
         RuntimeError.__init__(self, redacted_detail)
         if not self.detail.strip():
             raise ValueError("provider error detail must not be empty")

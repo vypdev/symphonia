@@ -165,6 +165,7 @@ class CopyExecutionTests(unittest.TestCase):
         )
         result = WriteResult(
             WriteOutcome.PERMANENT_FAILURE,
+            provider_code="token=provider-secret",
             detail="authorization=header-value password=hunter2",
         )
 
@@ -174,8 +175,10 @@ class CopyExecutionTests(unittest.TestCase):
             self.assertNotIn("refresh-value", value)
             self.assertNotIn("header-value", value)
             self.assertNotIn("hunter2", value)
+            self.assertNotIn("provider-secret", value)
         self.assertIn("[REDACTED]", str(error))
         self.assertIn("[REDACTED]", result.detail)
+        self.assertIn("[REDACTED]", result.provider_code)
 
 
 if __name__ == "__main__":
