@@ -130,7 +130,14 @@ class AppleMusicAdapter(ProviderAdapter):
             raise ValueError("Apple Music adapter requires an apple_music library-playlists reference")
         offset = self._parse_offset(cursor)
         pages: list[ProviderPlaylistPage] = []
+        seen_offsets: set[int] = set()
         while True:
+            if offset in seen_offsets:
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "Apple Music pagination repeated an offset",
+                )
+            seen_offsets.add(offset)
             response = self._request(
                 connection_id,
                 f"/me/library/playlists/{playlist.object_id}/tracks",
@@ -235,4 +242,3 @@ class AppleMusicAdapter(ProviderAdapter):
             title=attributes.get("name") if isinstance(attributes.get("name"), str) else None,
             available=available,
         )
-

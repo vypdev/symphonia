@@ -7,6 +7,8 @@ from symphonia.providers import (
     JsonResponse,
     MediaKind,
     ProviderObjectRef,
+    ProviderApiError,
+    ProviderErrorCategory,
     YouTubeDataAdapter,
 )
 
@@ -77,6 +79,31 @@ class YouTubeDataAdapterTests(unittest.TestCase):
         adapter = YouTubeDataAdapter(FakeClient(), lambda connection_id: "access-token")
         capabilities = adapter.capabilities("google-connection-1")
         self.assertEqual(capabilities.enabled, frozenset({Capability.READ_PLAYLISTS}))
+
+    def test_repeated_page_token_is_a_provider_contract_failure(self) -> None:
+        class LoopingClient(FakeClient):
+            def request(self, method: str, path: str, *, token: str, query: dict[str, str], body=None) -> JsonResponse:
+                self.calls.append((method, path, token, query))
+                return JsonResponse(
+                    200,
+                    {
+                        "items": [
+                            {
+                                "id": "playlist-item-1",
+                                "snippet": {"resourceId": {"videoId": "video-1"}},
+                            }
+                        ],
+                        "nextPageToken": "same-token",
+                    },
+                    {},
+                )
+
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist-1", "connection-1")
+        with self.assertRaises(ProviderApiError) as context:
+            YouTubeDataAdapter(LoopingClient(), lambda connection_id: "access-token").read_playlist_pages(
+                "connection-1", playlist
+            )
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
 
 
 if __name__ == "__main__":

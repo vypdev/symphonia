@@ -75,7 +75,14 @@ class YouTubeDataAdapter(ProviderAdapter):
         page_token = cursor
         pages: list[ProviderPlaylistPage] = []
         position = 0
+        seen_tokens: set[str | None] = set()
         while True:
+            if page_token in seen_tokens:
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "YouTube pagination repeated a page token",
+                )
+            seen_tokens.add(page_token)
             query = {
                 "part": "snippet,contentDetails",
                 "playlistId": playlist.object_id,
@@ -163,4 +170,3 @@ class YouTubeDataAdapter(ProviderAdapter):
             available=available,
             source_added_at=snippet.get("publishedAt") if isinstance(snippet.get("publishedAt"), str) else None,
         )
-

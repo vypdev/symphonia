@@ -86,6 +86,26 @@ class AppleMusicAdapterTests(unittest.TestCase):
 
         self.assertEqual(context.exception.category, ProviderErrorCategory.AUTHENTICATION_REQUIRED)
 
+    def test_repeated_offset_is_a_provider_contract_failure(self) -> None:
+        class LoopingClient(FakeAppleClient):
+            def request(self, method, path, *, developer_token, user_token, query):
+                self.calls.append((method, path, developer_token, user_token, query))
+                return AppleJsonResponse(
+                    200,
+                    {
+                        "data": [{"id": "song-1", "type": "songs", "attributes": {"name": "One"}}],
+                        "next": "https://api.music.apple.com/v1/me/library/playlists/playlist-1/tracks?offset=0",
+                    },
+                    {},
+                )
+
+        with self.assertRaises(ProviderApiError) as context:
+            AppleMusicAdapter(
+                LoopingClient(), lambda connection_id: ("developer-token", "user-token"), page_size=1
+            ).read_playlist_pages("apple-connection-1", self.playlist())
+
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
 
 if __name__ == "__main__":
     unittest.main()
