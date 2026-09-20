@@ -53,6 +53,8 @@ class SourcePlaylistEntry:
     evidence: tuple[str, ...] = ()
     reason: str | None = None
     provider_track_object_type: str = "track"
+    provider_track_title: str | None = None
+    source_added_at: str | None = None
 
     def __post_init__(self) -> None:
         if not self.occurrence_id.strip():
@@ -63,6 +65,8 @@ class SourcePlaylistEntry:
             raise ValueError("provider_track_id must not be empty")
         if not self.provider_track_object_type.strip():
             raise ValueError("provider_track_object_type must not be empty")
+        if self.provider_track_title is not None and not self.provider_track_title.strip():
+            raise ValueError("provider_track_title must not be blank")
         if self.classification is EntryClassification.READY and not self.target_track_id:
             raise ValueError("ready entries require a target_track_id")
         if self.target_track_id is not None and not self.target_track_id.strip():

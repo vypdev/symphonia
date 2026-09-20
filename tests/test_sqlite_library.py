@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import sqlite3
+import tempfile
 import unittest
 
 from symphonia.domain import EntryClassification
@@ -42,6 +44,68 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
         self.assertEqual(stored.snapshot_id, "snapshot-1")
         self.assertEqual(current.snapshot.source_namespace, "connection-1")
         self.assertEqual(current.snapshot.entries[0].classification, EntryClassification.UNAVAILABLE)
+
+    def test_complete_result_retains_provider_metadata_for_future_resolution(self) -> None:
+        playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
+        track = ProviderObjectRef("spotify", "track", "track-1", "connection-1")
+        item = ProviderPlaylistEntry(
+            "occ-1",
+            0,
+            track,
+            MediaKind.TRACK,
+            title="Song title",
+            source_added_at="2026-09-20T12:00:00Z",
+        )
+        result = collect_playlist_pages([ProviderPlaylistPage(playlist, (item,), None, None, True)])
+
+        stored = self.repository.publish(result, snapshot_id="snapshot-metadata", published_at=NOW)
+
+        self.assertEqual(stored.snapshot.entries[0].provider_track_title, "Song title")
+        self.assertEqual(stored.snapshot.entries[0].source_added_at, "2026-09-20T12:00:00Z")
+
+    def test_legacy_projection_schema_gets_metadata_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/legacy.sqlite3"
+            connection = sqlite3.connect(path)
+            connection.executescript(
+                """
+                CREATE TABLE playlist_snapshots (
+                    snapshot_id TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    namespace TEXT NOT NULL,
+                    playlist_id TEXT NOT NULL,
+                    revision TEXT,
+                    published_at TEXT NOT NULL
+                );
+                CREATE TABLE playlist_snapshot_entries (
+                    snapshot_id TEXT NOT NULL,
+                    occurrence_id TEXT NOT NULL,
+                    position INTEGER NOT NULL,
+                    provider_track_id TEXT NOT NULL,
+                    provider_track_namespace TEXT NOT NULL,
+                    media_kind TEXT NOT NULL,
+                    available INTEGER NOT NULL
+                );
+                CREATE TABLE current_playlist_snapshots (
+                    provider TEXT NOT NULL,
+                    namespace TEXT NOT NULL,
+                    playlist_id TEXT NOT NULL,
+                    snapshot_id TEXT NOT NULL
+                );
+                """
+            )
+            connection.close()
+
+            migrated = PlaylistProjectionRepository(path)
+            columns = {
+                row[1]
+                for row in migrated._connection.execute("PRAGMA table_info(playlist_snapshot_entries)").fetchall()
+            }
+            migrated.close()
+
+        self.assertIn("provider_track_object_type", columns)
+        self.assertIn("provider_track_title", columns)
+        self.assertIn("source_added_at", columns)
 
     def test_incomplete_result_cannot_replace_current_projection(self) -> None:
         complete = collect_playlist_pages([page()])
