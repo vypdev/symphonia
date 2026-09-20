@@ -107,6 +107,7 @@ def to_playlist_snapshot(result: CollectionImportResult, snapshot_id: str) -> Pl
             provider_track_id=entry.track.object_id,
             classification=EntryClassification.UNMATCHED if entry.available else EntryClassification.UNAVAILABLE,
             reason=None if entry.available else "provider reported item unavailable",
+            provider_track_object_type=entry.track.object_type,
         )
         for entry in result.entries
     )

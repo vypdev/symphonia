@@ -68,6 +68,7 @@ class PlaylistProjectionRepository:
                 occurrence_id TEXT NOT NULL,
                 position INTEGER NOT NULL,
                 provider_track_id TEXT NOT NULL,
+                provider_track_object_type TEXT NOT NULL DEFAULT 'track',
                 provider_track_namespace TEXT NOT NULL,
                 media_kind TEXT NOT NULL,
                 available INTEGER NOT NULL,
@@ -83,6 +84,14 @@ class PlaylistProjectionRepository:
             );
             """
         )
+        columns = {
+            row[1]
+            for row in self._connection.execute("PRAGMA table_info(playlist_snapshot_entries)").fetchall()
+        }
+        if "provider_track_object_type" not in columns:
+            self._connection.execute(
+                "ALTER TABLE playlist_snapshot_entries ADD COLUMN provider_track_object_type TEXT NOT NULL DEFAULT 'track'"
+            )
 
     def publish(
         self,
@@ -123,8 +132,8 @@ class PlaylistProjectionRepository:
                 """
                 INSERT INTO playlist_snapshot_entries (
                     snapshot_id, occurrence_id, position, provider_track_id,
-                    provider_track_namespace, media_kind, available
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    provider_track_object_type, provider_track_namespace, media_kind, available
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -132,6 +141,7 @@ class PlaylistProjectionRepository:
                         entry.occurrence_id,
                         entry.position,
                         entry.track.object_id,
+                        entry.track.object_type,
                         entry.track.namespace,
                         entry.media_kind.value,
                         int(entry.available),
@@ -165,7 +175,7 @@ class PlaylistProjectionRepository:
         rows = self._connection.execute(
             """
             SELECT occurrence_id, position, provider_track_id,
-                   provider_track_namespace, media_kind, available
+                   provider_track_object_type, provider_track_namespace, media_kind, available
               FROM playlist_snapshot_entries
              WHERE snapshot_id = ?
              ORDER BY position
@@ -179,6 +189,7 @@ class PlaylistProjectionRepository:
             row["occurrence_id"] == entry.occurrence_id
             and row["position"] == entry.position
             and row["provider_track_id"] == entry.track.object_id
+            and row["provider_track_object_type"] == entry.track.object_type
             and row["provider_track_namespace"] == entry.track.namespace
             and row["media_kind"] == entry.media_kind.value
             and bool(row["available"]) == entry.available
@@ -231,6 +242,7 @@ class PlaylistProjectionRepository:
                 occurrence_id=row["occurrence_id"],
                 position=row["position"],
                 provider_track_id=row["provider_track_id"],
+                provider_track_object_type=row["provider_track_object_type"],
                 classification=EntryClassification.UNMATCHED if row["available"] else EntryClassification.UNAVAILABLE,
                 reason=None if row["available"] else "provider reported item unavailable",
             )

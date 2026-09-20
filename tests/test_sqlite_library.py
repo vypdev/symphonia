@@ -90,6 +90,30 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
         with self.assertRaises(SnapshotConflictError):
             self.repository.publish(changed, snapshot_id="snapshot-1", published_at=NOW)
 
+    def test_reusing_snapshot_id_with_different_provider_object_type_is_rejected(self) -> None:
+        self.repository.publish(collect_playlist_pages([page()]), snapshot_id="snapshot-1", published_at=NOW)
+        changed = collect_playlist_pages(
+            [
+                ProviderPlaylistPage(
+                    ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1"),
+                    (
+                        ProviderPlaylistEntry(
+                            "occ-1",
+                            0,
+                            ProviderObjectRef("spotify", "episode", "track-1", "connection-1"),
+                            MediaKind.PODCAST,
+                        ),
+                    ),
+                    None,
+                    None,
+                    True,
+                    revision="rev-1",
+                )
+            ]
+        )
+        with self.assertRaises(SnapshotConflictError):
+            self.repository.publish(changed, snapshot_id="snapshot-1", published_at=NOW)
+
     def test_same_external_playlist_id_isolated_by_namespace(self) -> None:
         first = collect_playlist_pages([page(namespace="connection-1")])
         second = collect_playlist_pages([page(namespace="connection-2")])
