@@ -14,6 +14,17 @@ The first implementation increment is intentionally narrower than any provider o
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
+
+## Local container profile
+
+`Dockerfile` packages the dependency-free runtime as a non-root service with the durable volume mounted at `/data`. It is a standalone development/container profile, not yet the published Home Assistant App artifact.
+
+```text
+docker build -t symphonia:dev .
+docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
+```
+
+The container exposes only the current health/readiness/version surface. A future App manifest must add Ingress, Supervisor metadata, supported architectures, backup declarations, and any direct callback policy only after the runtime SDD blockers are resolved.
 - Deterministic `unittest` coverage under `tests/`.
 
 The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, provider API adapters, user authentication, Ingress, UI, migrations beyond the initial schema, backup/restore, and operation handlers remain unimplemented and blocked by their SDD decisions.
