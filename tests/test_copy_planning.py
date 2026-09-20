@@ -93,7 +93,25 @@ class CopyPlanningTests(unittest.TestCase):
                 SourcePlaylistEntry("occ-2", 0, "sp-2", EntryClassification.READY, "yt-2"),
             )
 
+    def test_source_namespace_is_part_of_plan_digest(self) -> None:
+        first = PlaylistSnapshot(
+            "snapshot-1",
+            "spotify",
+            "playlist-1",
+            (SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1"),),
+            "connection-a",
+        )
+        second = PlaylistSnapshot(
+            "snapshot-1",
+            "spotify",
+            "playlist-1",
+            (SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1"),),
+            "connection-b",
+        )
+        first_plan = self.service.plan(first, target_provider="youtube", target_playlist_name="Rock")
+        second_plan = self.service.plan(second, target_provider="youtube", target_playlist_name="Rock")
+        self.assertNotEqual(first_plan.digest, second_plan.digest)
+
 
 if __name__ == "__main__":
     unittest.main()
-

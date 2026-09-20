@@ -102,6 +102,7 @@ def _serialize(plan: CopyPlan) -> dict[str, Any]:
         "source_snapshot_id": plan.source_snapshot_id,
         "source_provider": plan.source_provider,
         "source_playlist_id": plan.source_playlist_id,
+        "source_namespace": plan.source_namespace,
         "target_provider": plan.target_provider,
         "target_playlist_name": plan.target_playlist_name,
         "target_visibility": plan.target_visibility,
@@ -144,5 +145,5 @@ def _deserialize(payload: dict[str, Any]) -> CopyPlan:
             for entry in payload["entries"]
         ),
         digest=payload["digest"],
+        source_namespace=payload.get("source_namespace", "default"),
     )
-

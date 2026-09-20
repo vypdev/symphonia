@@ -27,6 +27,7 @@ class CollectionImportResult:
     complete: bool
     issues: tuple[ImportIssue, ...]
     revision: str | None
+    namespace: str = "default"
 
 
 def collect_playlist_pages(pages: list[ProviderPlaylistPage] | tuple[ProviderPlaylistPage, ...]) -> CollectionImportResult:
@@ -38,7 +39,7 @@ def collect_playlist_pages(pages: list[ProviderPlaylistPage] | tuple[ProviderPla
     """
 
     if not pages:
-        return CollectionImportResult("", "", (), False, (ImportIssue.NO_PAGES,), None)
+        return CollectionImportResult("", "", (), False, (ImportIssue.NO_PAGES,), None, "default")
 
     first = pages[0].playlist
     issues: list[ImportIssue] = []
@@ -88,6 +89,7 @@ def collect_playlist_pages(pages: list[ProviderPlaylistPage] | tuple[ProviderPla
         complete=complete and not any(issue in {ImportIssue.CONFLICTING_OCCURRENCE, ImportIssue.REPEATED_CURSOR} for issue in issues),
         issues=tuple(dict.fromkeys(issues)),
         revision=pages[-1].revision,
+        namespace=first.namespace,
     )
 
 
@@ -113,4 +115,5 @@ def to_playlist_snapshot(result: CollectionImportResult, snapshot_id: str) -> Pl
         source_provider=result.provider,
         source_playlist_id=result.playlist,
         entries=entries,
+        source_namespace=result.namespace,
     )

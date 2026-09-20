@@ -81,8 +81,8 @@ class ProviderContractTests(unittest.TestCase):
         snapshot = to_playlist_snapshot(result, "snapshot-1")
         self.assertEqual(snapshot.entries[0].classification, EntryClassification.UNAVAILABLE)
         self.assertEqual(snapshot.entries[0].occurrence_id, "occ-1")
+        self.assertEqual(snapshot.source_namespace, "connection-1")
 
 
 if __name__ == "__main__":
     unittest.main()
-

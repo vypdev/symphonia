@@ -74,6 +74,7 @@ class PlaylistSnapshot:
     source_provider: str
     source_playlist_id: str
     entries: tuple[SourcePlaylistEntry, ...]
+    source_namespace: str = ""
 
     def __post_init__(self) -> None:
         for value, field_name in (
@@ -83,6 +84,10 @@ class PlaylistSnapshot:
         ):
             if not value.strip():
                 raise ValueError(f"{field_name} must not be empty")
+        if not self.source_namespace.strip():
+            # Kept optional for legacy in-memory callers; provider-backed
+            # snapshots should always provide the connection/catalog namespace.
+            object.__setattr__(self, "source_namespace", "default")
 
         positions = [entry.position for entry in self.entries]
         occurrence_ids = [entry.occurrence_id for entry in self.entries]
@@ -126,6 +131,7 @@ class CopyPlan:
     policy: CopyPolicy
     entries: tuple[CopyPlanEntry, ...]
     digest: str
+    source_namespace: str = "default"
 
     @property
     def blocked(self) -> bool:
@@ -202,6 +208,7 @@ def build_copy_plan(
         "source_snapshot_id": snapshot.snapshot_id,
         "source_provider": snapshot.source_provider,
         "source_playlist_id": snapshot.source_playlist_id,
+        "source_namespace": snapshot.source_namespace,
         "target_provider": target_provider,
         "target_playlist_name": target_playlist_name,
         "target_visibility": target_visibility,
@@ -231,6 +238,7 @@ def build_copy_plan(
         policy=policy,
         entries=tuple(plan_entries),
         digest=digest,
+        source_namespace=snapshot.source_namespace,
     )
 
 
@@ -238,4 +246,3 @@ def source_entries(entries: Iterable[SourcePlaylistEntry]) -> tuple[SourcePlayli
     """Convenience helper for callers constructing a snapshot."""
 
     return tuple(entries)
-
