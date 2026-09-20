@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Protocol
 
@@ -10,6 +11,7 @@ from typing import Protocol
 class WriteOutcome(str, Enum):
     CONFIRMED_SUCCESS = "confirmed_success"
     RETRYABLE = "retryable"
+    RATE_LIMITED = "rate_limited"
     UNKNOWN_OUTCOME = "unknown_outcome"
     PERMANENT_FAILURE = "permanent_failure"
 
@@ -28,16 +30,24 @@ class WriteResult:
     outcome: WriteOutcome
     provider_code: str | None = None
     detail: str | None = None
+    retry_at: datetime | None = None
 
 
 class ProviderWriteError(RuntimeError):
     """A target-creation failure with an explicit retry/reconciliation class."""
 
-    def __init__(self, outcome: WriteOutcome, detail: str, provider_code: str | None = None) -> None:
+    def __init__(
+        self,
+        outcome: WriteOutcome,
+        detail: str,
+        provider_code: str | None = None,
+        retry_at: datetime | None = None,
+    ) -> None:
         super().__init__(detail)
         self.outcome = outcome
         self.detail = detail
         self.provider_code = provider_code
+        self.retry_at = retry_at
 
 
 class PlaylistWriter(Protocol):
@@ -69,4 +79,3 @@ class PlaylistWriter(Protocol):
         provider_track_id: str,
         idempotency_key: str,
     ) -> bool: ...
-

@@ -263,7 +263,7 @@ class OperationRepository:
             if row["cancel_requested"]:
                 raise LeaseConflict("operation cancellation has been requested")
             eligible = row["state"] == "queued" or (
-                row["state"] == "retry_scheduled"
+                row["state"] in {"retry_scheduled", "waiting_rate_limit"}
                 and row["next_run_at"] is not None
                 and row["next_run_at"] <= now_text
             )
@@ -326,7 +326,8 @@ class OperationRepository:
                  WHERE cancel_requested = 0
                    AND (
                         state = 'queued'
-                        OR (state = 'retry_scheduled' AND next_run_at IS NOT NULL AND next_run_at <= ?)
+                        OR (state IN ('retry_scheduled', 'waiting_rate_limit')
+                            AND next_run_at IS NOT NULL AND next_run_at <= ?)
                         OR (state = 'running' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
                    )
                    {type_clause}
@@ -588,6 +589,52 @@ class OperationRepository:
                 operation_id=operation_id,
                 event_type="retry_scheduled",
                 state="retry_scheduled",
+                worker_id=None,
+                payload={"next_run_at": next_run_text, **self._checkpoint_summary(checkpoint)},
+                created_at=now_text,
+            )
+            self._connection.execute("COMMIT")
+        except Exception:
+            self._connection.execute("ROLLBACK")
+            raise
+        return self.get(operation_id)
+
+    def schedule_rate_limit(
+        self,
+        operation_id: str,
+        *,
+        worker_id: str,
+        next_run_at: datetime,
+        checkpoint: dict[str, Any],
+        now: datetime,
+    ) -> OperationRecord:
+        """Release a lease until an absolute provider rate-limit time."""
+
+        now_text = _utc(now)
+        next_run_text = _utc(next_run_at)
+        checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self._connection.execute(
+                "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
+            ).fetchone()
+            if row is None:
+                raise OperationNotFound(operation_id)
+            if row["state"] != "running" or row["worker_id"] != worker_id:
+                raise LeaseConflict("worker does not own a running operation")
+            self._connection.execute(
+                """
+                UPDATE operations
+                   SET state = 'waiting_rate_limit', checkpoint_json = ?, next_run_at = ?,
+                       worker_id = NULL, lease_expires_at = NULL, updated_at = ?
+                 WHERE operation_id = ?
+                """,
+                (checkpoint_json, next_run_text, now_text, operation_id),
+            )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="rate_limit_wait",
+                state="waiting_rate_limit",
                 worker_id=None,
                 payload={"next_run_at": next_run_text, **self._checkpoint_summary(checkpoint)},
                 created_at=now_text,

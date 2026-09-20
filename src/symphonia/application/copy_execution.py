@@ -65,6 +65,8 @@ class CopyExecutionService:
             except ProviderWriteError as error:
                 if error.outcome is WriteOutcome.RETRYABLE:
                     return self._schedule_retry(operation, worker_id, checkpoint, now)
+                if error.outcome is WriteOutcome.RATE_LIMITED:
+                    return self._schedule_rate_limit(operation, worker_id, checkpoint, now, error.retry_at)
                 if error.outcome is WriteOutcome.UNKNOWN_OUTCOME:
                     target = writer.reconcile_target_playlist(idempotency_key=target_key)
                     if target is None:
@@ -119,6 +121,8 @@ class CopyExecutionService:
                     )
             if result.outcome is WriteOutcome.RETRYABLE:
                 return self._schedule_retry(operation, worker_id, checkpoint, now)
+            if result.outcome is WriteOutcome.RATE_LIMITED:
+                return self._schedule_rate_limit(operation, worker_id, checkpoint, now, result.retry_at)
             if result.outcome is WriteOutcome.PERMANENT_FAILURE:
                 issues.append(
                     {
@@ -179,6 +183,23 @@ class CopyExecutionService:
             operation.operation_id,
             worker_id=worker_id,
             next_run_at=now + timedelta(seconds=self.retry_delay_seconds),
+            checkpoint=checkpoint,
+            now=now,
+        )
+
+    def _schedule_rate_limit(
+        self,
+        operation: OperationRecord,
+        worker_id: str,
+        checkpoint: dict[str, Any],
+        now: datetime,
+        retry_at: datetime | None,
+    ) -> OperationRecord:
+        next_run_at = retry_at if retry_at is not None and retry_at > now else now + timedelta(seconds=self.retry_delay_seconds)
+        return self.operations.schedule_rate_limit(
+            operation.operation_id,
+            worker_id=worker_id,
+            next_run_at=next_run_at,
             checkpoint=checkpoint,
             now=now,
         )

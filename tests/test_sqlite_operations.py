@@ -274,6 +274,34 @@ class OperationRepositoryTests(unittest.TestCase):
                 now=self.now + timedelta(seconds=30),
             )
 
+    def test_rate_limit_wait_is_durable_and_claimable_after_deadline(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        waiting = self.repository.schedule_rate_limit(
+            operation.operation_id,
+            worker_id="worker-a",
+            next_run_at=self.now + timedelta(minutes=2),
+            checkpoint={"confirmed_occurrences": ["occ-1"]},
+            now=self.now + timedelta(seconds=1),
+        )
+        self.assertEqual(waiting.state, "waiting_rate_limit")
+        with self.assertRaises(LeaseConflict):
+            self.repository.claim(operation.operation_id, worker_id="worker-b", now=self.now + timedelta(minutes=1))
+        claimed = self.repository.claim_next(
+            worker_id="worker-b",
+            now=self.now + timedelta(minutes=2),
+        )
+        self.assertEqual(claimed.operation_id, operation.operation_id)
+        self.assertEqual(
+            [event.event_type for event in self.repository.events(operation.operation_id)],
+            ["created", "claimed", "rate_limit_wait", "claimed"],
+        )
+
     def test_healthy_worker_can_renew_lease(self) -> None:
         operation = self.repository.create(
             operation_type="copy",

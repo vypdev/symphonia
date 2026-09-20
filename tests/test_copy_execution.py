@@ -115,7 +115,19 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(operation.state, "retry_scheduled")
         self.assertEqual(operation.next_run_at, NOW + timedelta(seconds=30))
 
+    def test_rate_limited_write_waits_until_provider_deadline(self) -> None:
+        digest = self.accepted_digest()
+        step_key = f"{digest}:entry:occ-1"
+        self.writer.results[step_key] = WriteResult(
+            WriteOutcome.RATE_LIMITED,
+            provider_code="429",
+            retry_at=NOW + timedelta(minutes=2),
+        )
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(operation.state, "waiting_rate_limit")
+        self.assertEqual(operation.next_run_at, NOW + timedelta(minutes=2))
+
 
 if __name__ == "__main__":
     unittest.main()
-
