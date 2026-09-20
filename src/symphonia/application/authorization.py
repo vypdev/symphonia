@@ -9,7 +9,7 @@ import uuid
 from typing import Callable
 
 from symphonia.infrastructure.sqlite_authorization import AuthorizationAttemptRepository
-from symphonia.providers.authorization import AuthorizationAttempt
+from symphonia.providers.authorization import AuthorizationAttempt, validate_redirect_uri
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +35,7 @@ class AuthorizationService:
         now: datetime,
         ttl: timedelta = timedelta(minutes=10),
     ) -> AuthorizationStart:
+        validate_redirect_uri(redirect_uri)
         raw_state = self.state_factory()
         attempt = self.attempts.create(
             attempt_id=self.id_factory(),
@@ -52,4 +53,3 @@ class AuthorizationService:
 
     def deny(self, attempt_id: str, *, now: datetime, failure_code: str = "consent_denied") -> AuthorizationAttempt:
         return self.attempts.deny(attempt_id, now=now, failure_code=failure_code)
-

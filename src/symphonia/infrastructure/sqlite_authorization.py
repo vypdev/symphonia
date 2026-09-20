@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import sqlite3
 
-from symphonia.providers.authorization import AuthorizationAttempt, AuthorizationState
+from symphonia.providers.authorization import AuthorizationAttempt, AuthorizationState, validate_redirect_uri
 
 
 def _utc(value: datetime) -> str:
@@ -78,6 +78,7 @@ class AuthorizationAttemptRepository:
     ) -> AuthorizationAttempt:
         if ttl <= timedelta(0):
             raise ValueError("authorization attempt ttl must be positive")
+        validate_redirect_uri(redirect_uri)
         created_at = _utc(now)
         expires_at = _utc(now + ttl)
         self._connection.execute(
@@ -202,4 +203,3 @@ class AuthorizationAttemptRepository:
             completed_at=None if row["completed_at"] is None else _parse_utc(row["completed_at"]),
             failure_code=row["failure_code"],
         )
-

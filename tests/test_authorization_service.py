@@ -63,6 +63,21 @@ class AuthorizationServiceTests(unittest.TestCase):
         denied = self.service.deny("attempt-2", now=NOW)
         self.assertEqual(denied.state, AuthorizationState.DENIED)
 
+    def test_redirect_uri_rejects_unsafe_callback_forms(self) -> None:
+        for redirect_uri in (
+            "javascript:alert(1)",
+            "https://ha.example/callback#fragment",
+            "https://user:password@ha.example/callback",
+            "http://remote.example/callback",
+        ):
+            with self.subTest(redirect_uri=redirect_uri), self.assertRaises(ValueError):
+                self.service.begin(
+                    provider="spotify",
+                    actor_id="ha-user-1",
+                    redirect_uri=redirect_uri,
+                    now=NOW,
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

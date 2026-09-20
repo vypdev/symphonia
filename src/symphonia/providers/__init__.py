@@ -13,6 +13,7 @@ from .contracts import (
 )
 from .connections import ConnectionState, ProviderConnection
 from .authorization import AuthorizationAttempt, AuthorizationState
+from .authorization import validate_redirect_uri
 from .registry import ProviderAlreadyRegistered, ProviderNotRegistered, ProviderRegistry
 from .errors import ProviderApiError, ProviderErrorCategory
 from .spotify import JsonResponse, SpotifyAdapter, UrllibJsonClient
@@ -26,6 +27,7 @@ __all__ = [
     "AccessBasis",
     "AuthorizationAttempt",
     "AuthorizationState",
+    "validate_redirect_uri",
     "Capability",
     "CapabilityError",
     "CapabilityLayers",
