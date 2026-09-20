@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import sqlite3
+from typing import Any
 
 from symphonia.providers.connections import ConnectionState, ProviderConnection
 from symphonia.providers.contracts import Capability, ProviderCapabilities
@@ -132,6 +133,26 @@ class ProviderConnectionRepository:
                 (provider,),
             ).fetchall()
         return tuple(self._record(row) for row in rows)
+
+    def health_summary(self) -> dict[str, Any]:
+        """Return provider/state counts without account or credential data."""
+
+        rows = self._connection.execute(
+            """
+            SELECT provider, state, COUNT(*) AS count
+              FROM provider_connections
+             GROUP BY provider, state
+             ORDER BY provider, state
+            """
+        ).fetchall()
+        by_provider: dict[str, dict[str, int]] = {}
+        total = 0
+        for row in rows:
+            provider = str(row["provider"])
+            count = int(row["count"])
+            by_provider.setdefault(provider, {})[str(row["state"])] = count
+            total += count
+        return {"total": total, "by_provider": by_provider}
 
     def record_probe(
         self,

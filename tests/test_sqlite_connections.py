@@ -85,6 +85,28 @@ class ProviderConnectionRepositoryTests(unittest.TestCase):
         self.assertIsNone(disconnected.capabilities)
         self.assertEqual(self.repository.list(provider="spotify")[0].health_code, "disconnected")
 
+    def test_health_summary_contains_only_provider_state_counts(self) -> None:
+        self.repository.create(connection())
+        self.repository.create(
+            ProviderConnection(
+                connection_id="spotify-2",
+                provider="spotify",
+                provider_account_id="account-2",
+                state=ConnectionState.ACTION_REQUIRED,
+                manifest_version="v1",
+                secret_ref="opaque-secret-2",
+                capabilities=None,
+                created_at=NOW,
+                updated_at=NOW,
+            )
+        )
+
+        summary = self.repository.health_summary()
+
+        self.assertEqual(summary, {"total": 2, "by_provider": {"spotify": {"action_required": 1, "connected": 1}}})
+        self.assertNotIn("account-1", str(summary))
+        self.assertNotIn("opaque-secret", str(summary))
+
     def test_missing_connection_is_explicit(self) -> None:
         with self.assertRaises(ConnectionNotFound):
             self.repository.get("missing")
