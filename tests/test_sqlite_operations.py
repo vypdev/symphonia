@@ -165,6 +165,64 @@ class OperationRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(reclaimed.worker_id, "worker-b")
 
+    def test_claim_next_selects_queued_and_due_retry_work(self) -> None:
+        queued = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-queued",
+            payload={},
+            now=self.now,
+        )
+        retry = self.repository.create(
+            operation_type="import",
+            idempotency_key="import-retry",
+            payload={},
+            now=self.now + timedelta(seconds=1),
+        )
+        self.repository.claim(retry.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.schedule_retry(
+            retry.operation_id,
+            worker_id="worker-a",
+            next_run_at=self.now + timedelta(minutes=1),
+            checkpoint={},
+            now=self.now + timedelta(seconds=1),
+        )
+
+        claimed = self.repository.claim_next(worker_id="worker-b", now=self.now + timedelta(seconds=2))
+        self.assertIsNotNone(claimed)
+        self.assertEqual(claimed.operation_id, queued.operation_id)
+        self.assertIsNone(
+            self.repository.claim_next(
+                worker_id="worker-b",
+                now=self.now + timedelta(seconds=30),
+                operation_type="import",
+            )
+        )
+
+        due = self.repository.claim_next(
+            worker_id="worker-c",
+            now=self.now + timedelta(minutes=2),
+            operation_type="import",
+        )
+        self.assertIsNotNone(due)
+        self.assertEqual(due.operation_id, retry.operation_id)
+
+    def test_claim_next_recovers_an_expired_running_lease(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now, lease_seconds=5)
+
+        recovered = self.repository.claim_next(
+            worker_id="worker-b",
+            now=self.now + timedelta(seconds=6),
+        )
+        self.assertIsNotNone(recovered)
+        self.assertEqual(recovered.operation_id, operation.operation_id)
+        self.assertEqual(recovered.worker_id, "worker-b")
+
     def test_retry_cannot_be_claimed_before_its_scheduled_time(self) -> None:
         operation = self.repository.create(
             operation_type="copy",

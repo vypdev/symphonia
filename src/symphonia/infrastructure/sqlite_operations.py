@@ -262,6 +262,78 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    def claim_next(
+        self,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_seconds: int = 30,
+        operation_type: str | None = None,
+    ) -> OperationRecord | None:
+        """Atomically claim the oldest queued, due, or expired operation.
+
+        This is the scheduler-facing primitive. It deliberately selects only
+        durable eligibility; handler dispatch remains an application concern.
+        """
+
+        if lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive")
+        now_text = _utc(now)
+        expires_text = _utc(now + timedelta(seconds=lease_seconds))
+        type_clause = " AND operation_type = ?" if operation_type is not None else ""
+        parameters: tuple[Any, ...] = (now_text, now_text)
+        if operation_type is not None:
+            parameters += (operation_type,)
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self._connection.execute(
+                f"""
+                SELECT *
+                  FROM operations
+                 WHERE cancel_requested = 0
+                   AND (
+                        state = 'queued'
+                        OR (state = 'retry_scheduled' AND next_run_at IS NOT NULL AND next_run_at <= ?)
+                        OR (state = 'running' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
+                   )
+                   {type_clause}
+                 ORDER BY
+                   CASE WHEN state = 'running' THEN COALESCE(lease_expires_at, created_at)
+                        ELSE COALESCE(next_run_at, created_at)
+                   END ASC,
+                   created_at ASC,
+                   operation_id ASC
+                 LIMIT 1
+                """,
+                parameters,
+            ).fetchone()
+            if row is None:
+                self._connection.execute("COMMIT")
+                return None
+            operation_id = row["operation_id"]
+            self._connection.execute(
+                """
+                UPDATE operations
+                   SET state = 'running', worker_id = ?, lease_expires_at = ?,
+                       next_run_at = NULL, updated_at = ?
+                 WHERE operation_id = ?
+                """,
+                (worker_id, expires_text, now_text, operation_id),
+            )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="claimed",
+                state="running",
+                worker_id=worker_id,
+                payload={"lease_expires_at": expires_text},
+                created_at=now_text,
+            )
+            self._connection.execute("COMMIT")
+        except Exception:
+            self._connection.execute("ROLLBACK")
+            raise
+        return self.get(operation_id)
+
     def renew_lease(
         self,
         operation_id: str,
