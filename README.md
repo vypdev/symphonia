@@ -8,9 +8,17 @@ Symphonia is a library-management and interoperability project, not a new music 
 
 ## Project status
 
-**Implementation foundation stage. Provider adapters and an experimental Home Assistant App metadata scaffold exist; no published App image, complete UI, or OAuth flow is available yet.**
+**Implementation foundation stage. Provider adapters, durable import/copy execution, and an experimental Home Assistant App metadata scaffold exist; no published App image, complete UI, or OAuth flow is available yet.**
 
 The current work combines a reviewable source of truth with the first owner-approved, dependency-free domain/persistence slice. Official provider feasibility still needs validation: Google's public YouTube Data API can manage YouTube video playlists, but the research performed for this specification did not identify an official API exposing the complete YouTube Music library model.
+
+### Current adapter boundaries
+
+- Spotify: official playlist reads plus confirmed playlist creation and entry append operations, subject to connection capabilities and provider policy.
+- YouTube Data API: official video-playlist reads only; this is deliberately not represented as YouTube Music.
+- Apple Music: experimental official library-playlist reads using separate developer and Music User Token inputs; writes and OAuth wiring remain out of scope until their feasibility gates are closed.
+
+All adapters expose normalized identities and preserve unavailable/duplicate occurrences. Provider credentials are injected behind ports and are not accepted through App options, logs, or ordinary operation payloads.
 
 ## Documentation
 
