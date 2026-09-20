@@ -13,6 +13,7 @@ from .contracts import (
 )
 from .connections import ConnectionState, ProviderConnection
 from .authorization import AuthorizationAttempt, AuthorizationState
+from .registry import ProviderAlreadyRegistered, ProviderNotRegistered, ProviderRegistry
 from .importing import CollectionImportResult, ImportIssue, collect_playlist_pages, to_playlist_snapshot
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
@@ -26,12 +27,15 @@ __all__ = [
     "ImportIssue",
     "MediaKind",
     "ProviderAdapter",
+    "ProviderAlreadyRegistered",
     "ProviderCapabilities",
     "ProviderConnection",
     "ProviderManifest",
     "ProviderObjectRef",
+    "ProviderNotRegistered",
     "ProviderPlaylistEntry",
     "ProviderPlaylistPage",
+    "ProviderRegistry",
     "ProviderWriteError",
     "PlaylistWriter",
     "TargetPlaylist",

@@ -11,6 +11,9 @@ from symphonia.providers import (
     ProviderObjectRef,
     ProviderPlaylistEntry,
     ProviderPlaylistPage,
+    ProviderAlreadyRegistered,
+    ProviderNotRegistered,
+    ProviderRegistry,
     collect_playlist_pages,
     to_playlist_snapshot,
 )
@@ -31,6 +34,26 @@ def entry(occurrence_id: str, position: int, track_id: str, available: bool = Tr
 
 
 class ProviderContractTests(unittest.TestCase):
+    def test_provider_registry_discovers_sorted_manifests_and_rejects_duplicates(self) -> None:
+        class FakeAdapter:
+            def __init__(self, provider: str) -> None:
+                self.manifest = ProviderManifest(provider, provider.title(), AccessBasis.OFFICIAL, "beta", "limited")
+
+            def capabilities(self, connection_id: str):
+                raise NotImplementedError
+
+            def read_playlist_pages(self, connection_id: str, playlist: ProviderObjectRef, cursor: str | None = None):
+                raise NotImplementedError
+
+        registry = ProviderRegistry()
+        registry.register(FakeAdapter("youtube"))
+        registry.register(FakeAdapter("spotify"))
+        self.assertEqual([manifest.provider for manifest in registry.manifests()], ["spotify", "youtube"])
+        with self.assertRaises(ProviderAlreadyRegistered):
+            registry.register(FakeAdapter("spotify"))
+        with self.assertRaises(ProviderNotRegistered):
+            registry.get("apple")
+
     def test_external_identity_is_namespaced_by_type_and_connection(self) -> None:
         same_upstream_id = ProviderObjectRef("spotify", "track", "same", "connection-a")
         another_connection = ProviderObjectRef("spotify", "track", "same", "connection-b")
