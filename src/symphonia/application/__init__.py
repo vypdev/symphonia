@@ -7,6 +7,7 @@ from .library_import import ImportPublication, LibraryImportService
 from .authorization import AuthorizationService, AuthorizationStart
 from .provider_connections import ProviderConnectionService
 from .operation_runner import OperationRunner
+from .operation_worker import OperationWorker
 
 __all__ = [
     "CopyExecutionService",
@@ -19,4 +20,5 @@ __all__ = [
     "LibraryImportService",
     "ProviderConnectionService",
     "OperationRunner",
+    "OperationWorker",
 ]
