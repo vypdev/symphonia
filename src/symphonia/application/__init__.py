@@ -5,6 +5,7 @@ from .copy_workflow import CapabilityUnavailableError, CopyWorkflowService
 from .copy_execution import CopyExecutionService
 from .library_import import ImportPublication, LibraryImportService
 from .authorization import AuthorizationService, AuthorizationStart
+from .provider_connections import ProviderConnectionService
 
 __all__ = [
     "CopyExecutionService",
@@ -15,4 +16,5 @@ __all__ = [
     "CopyWorkflowService",
     "ImportPublication",
     "LibraryImportService",
+    "ProviderConnectionService",
 ]
