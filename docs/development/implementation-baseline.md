@@ -18,7 +18,9 @@ The first implementation increment is intentionally narrower than any provider o
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Durable operation runner that atomically claims eligible work and fails unwired operation types before side effects.
+- Cooperative single-process operation worker with interruptible polling and injected clock support.
 - Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
+- Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
@@ -52,7 +54,7 @@ docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 The container exposes only the current health/readiness/version surface. A future App manifest must add Ingress, Supervisor metadata, supported architectures, backup declarations, and any direct callback policy only after the runtime SDD blockers are resolved.
 - Deterministic `unittest` coverage under `tests/`.
 
-The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, provider API adapters, user authentication, Ingress, UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup/restore, and operation handlers remain unimplemented and blocked by their SDD decisions.
+The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, secret storage, user authentication, Ingress UI, a complete migration ledger beyond the current forward-compatible SQLite path, backup/restore, and production runtime handler wiring remain unimplemented and blocked by their SDD decisions.
 
 ## Local verification
 
