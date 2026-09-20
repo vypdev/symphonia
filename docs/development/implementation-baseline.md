@@ -13,6 +13,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
+- An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
 - Deterministic `unittest` coverage under `tests/`.
 
 The package is an implementation foundation, not a claim that the corresponding capability SDDs are complete. Provider OAuth, provider API adapters, user authentication, Ingress, UI, migrations beyond the initial schema, backup/restore, and operation handlers remain unimplemented and blocked by their SDD decisions.
