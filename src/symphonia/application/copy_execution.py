@@ -8,7 +8,7 @@ from typing import Any
 
 from symphonia.domain.models import PlanAcceptanceError
 from symphonia.infrastructure.sqlite_operations import OperationRecord, OperationRepository
-from symphonia.infrastructure.sqlite_plans import CopyPlanRepository
+from symphonia.infrastructure.sqlite_plans import CopyPlanRepository, StoredCopyPlan
 from symphonia.providers.writing import PlaylistWriter, ProviderWriteError, WriteOutcome
 
 
@@ -44,6 +44,54 @@ class CopyExecutionService:
             now=now,
             lease_seconds=lease_seconds,
         )
+        return self._execute_claimed(
+            stored,
+            operation,
+            writer=writer,
+            worker_id=worker_id,
+            now=now,
+            lease_seconds=lease_seconds,
+        )
+
+    def execute_claimed(
+        self,
+        operation: OperationRecord,
+        *,
+        writer: PlaylistWriter,
+        worker_id: str,
+        now: datetime,
+        lease_seconds: int = 30,
+    ) -> OperationRecord:
+        """Continue a copy operation already claimed by an operation runner."""
+
+        if operation.state != "running" or operation.worker_id != worker_id:
+            raise ValueError("copy operation must be running under the supplied worker")
+        digest = operation.payload.get("plan_digest")
+        if not isinstance(digest, str) or not digest.strip():
+            raise PlanAcceptanceError("copy operation payload has no plan digest")
+        stored = self.plans.get(digest)
+        if stored.accepted_at is None:
+            raise PlanAcceptanceError("copy plan must be accepted before execution")
+        return self._execute_claimed(
+            stored,
+            operation,
+            writer=writer,
+            worker_id=worker_id,
+            now=now,
+            lease_seconds=lease_seconds,
+        )
+
+    def _execute_claimed(
+        self,
+        stored: StoredCopyPlan,
+        operation: OperationRecord,
+        *,
+        writer: PlaylistWriter,
+        worker_id: str,
+        now: datetime,
+        lease_seconds: int,
+    ) -> OperationRecord:
+        digest = stored.plan.digest
         checkpoint = dict(operation.checkpoint)
         if operation.cancel_requested:
             return self._finish(operation, worker_id, checkpoint, now, "cancelled")

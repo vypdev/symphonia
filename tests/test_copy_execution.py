@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService
+from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
 from symphonia.domain import CopyPolicy, EntryClassification, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.infrastructure import CopyPlanRepository, OperationRepository
 from symphonia.providers import TargetPlaylist, WriteOutcome, WriteResult
@@ -114,6 +114,24 @@ class CopyExecutionTests(unittest.TestCase):
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "retry_scheduled")
         self.assertEqual(operation.next_run_at, NOW + timedelta(seconds=30))
+
+    def test_operation_runner_can_dispatch_claimed_copy_execution(self) -> None:
+        digest = self.accepted_digest()
+        self.workflow.enqueue_accepted_plan(digest, now=NOW)
+        runner = OperationRunner(
+            self.operations,
+            {
+                "copy_playlist": lambda operation, worker_id, now: self.executor.execute_claimed(
+                    operation,
+                    writer=self.writer,
+                    worker_id=worker_id,
+                    now=now,
+                )
+            },
+        )
+        operation = runner.run_once(worker_id="worker-a", now=NOW)
+        self.assertEqual(operation.state, "succeeded")
+        self.assertEqual([track for _, track in self.writer.added], ["target-1"])
 
     def test_rate_limited_write_waits_until_provider_deadline(self) -> None:
         digest = self.accepted_digest()

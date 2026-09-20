@@ -18,6 +18,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Durable operation runner that atomically claims eligible work and fails unwired operation types before side effects.
+- Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
