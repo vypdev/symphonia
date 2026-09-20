@@ -16,6 +16,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
+- Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
