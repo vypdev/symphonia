@@ -302,6 +302,31 @@ class OperationRepositoryTests(unittest.TestCase):
             ["created", "claimed", "rate_limit_wait", "claimed"],
         )
 
+    def test_cancellation_race_does_not_schedule_retry(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-cancel-race",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=1))
+
+        cancelled = self.repository.schedule_retry(
+            operation.operation_id,
+            worker_id="worker-a",
+            next_run_at=self.now + timedelta(minutes=1),
+            checkpoint={"failure_code": "timeout"},
+            now=self.now + timedelta(seconds=2),
+        )
+
+        self.assertEqual(cancelled.state, "cancelled")
+        self.assertIsNone(cancelled.next_run_at)
+        self.assertEqual(
+            [event.event_type for event in self.repository.events(operation.operation_id)],
+            ["created", "claimed", "cancellation_requested", "cancelled"],
+        )
+
     def test_healthy_worker_can_renew_lease(self) -> None:
         operation = self.repository.create(
             operation_type="copy",

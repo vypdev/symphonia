@@ -576,6 +576,27 @@ class OperationRepository:
                 raise OperationNotFound(operation_id)
             if row["state"] != "running" or row["worker_id"] != worker_id:
                 raise LeaseConflict("worker does not own a running operation")
+            if row["cancel_requested"]:
+                self._connection.execute(
+                    """
+                    UPDATE operations
+                       SET state = 'cancelled', checkpoint_json = ?, next_run_at = NULL,
+                           worker_id = NULL, lease_expires_at = NULL,
+                           cancel_requested = 0, updated_at = ?
+                     WHERE operation_id = ?
+                    """,
+                    (checkpoint_json, now_text, operation_id),
+                )
+                self._append_event(
+                    operation_id=operation_id,
+                    event_type="cancelled",
+                    state="cancelled",
+                    worker_id=None,
+                    payload=self._checkpoint_summary(checkpoint),
+                    created_at=now_text,
+                )
+                self._connection.execute("COMMIT")
+                return self.get(operation_id)
             self._connection.execute(
                 """
                 UPDATE operations
@@ -622,6 +643,27 @@ class OperationRepository:
                 raise OperationNotFound(operation_id)
             if row["state"] != "running" or row["worker_id"] != worker_id:
                 raise LeaseConflict("worker does not own a running operation")
+            if row["cancel_requested"]:
+                self._connection.execute(
+                    """
+                    UPDATE operations
+                       SET state = 'cancelled', checkpoint_json = ?, next_run_at = NULL,
+                           worker_id = NULL, lease_expires_at = NULL,
+                           cancel_requested = 0, updated_at = ?
+                     WHERE operation_id = ?
+                    """,
+                    (checkpoint_json, now_text, operation_id),
+                )
+                self._append_event(
+                    operation_id=operation_id,
+                    event_type="cancelled",
+                    state="cancelled",
+                    worker_id=None,
+                    payload=self._checkpoint_summary(checkpoint),
+                    created_at=now_text,
+                )
+                self._connection.execute("COMMIT")
+                return self.get(operation_id)
             self._connection.execute(
                 """
                 UPDATE operations
