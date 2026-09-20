@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
+import re
 import sqlite3
 from typing import Any
 import uuid
@@ -35,6 +36,21 @@ class IdempotencyConflict(ValueError):
 
 class LeaseConflict(RuntimeError):
     pass
+
+
+_SECRET_PAYLOAD_KEY = re.compile(
+    r"(?i)(?:^|[_-])(access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|password|cookie|authorization|secret[_-]?token)(?:$|[_-])|^(?:secret|token)$"
+)
+
+
+def _validate_payload_keys(payload: dict[str, Any]) -> None:
+    forbidden = sorted(
+        str(key)
+        for key in payload
+        if _SECRET_PAYLOAD_KEY.search(str(key))
+    )
+    if forbidden:
+        raise ValueError(f"operation payload contains forbidden credential keys: {', '.join(forbidden)}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +163,7 @@ class OperationRepository:
 
         if not operation_type.strip() or not idempotency_key.strip():
             raise ValueError("operation_type and idempotency_key must not be empty")
+        _validate_payload_keys(payload)
         operation_id = operation_id or str(uuid.uuid4())
         timestamp = _utc(now)
         payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

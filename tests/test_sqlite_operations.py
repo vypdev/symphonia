@@ -110,9 +110,9 @@ class OperationRepositoryTests(unittest.TestCase):
 
     def test_diagnostic_export_is_bounded_and_redacted(self) -> None:
         operation = self.repository.create(
-            operation_type="copy",
-            idempotency_key="copy-1",
-            payload={"plan_digest": "secret-plan", "access_token": "secret-token"},
+                operation_type="copy",
+                idempotency_key="copy-1",
+                payload={"plan_digest": "secret-plan", "private_value": "secret-token"},
             now=self.now,
         )
         self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
@@ -128,7 +128,7 @@ class OperationRepositoryTests(unittest.TestCase):
 
         diagnostic = self.repository.diagnostic(operation.operation_id, event_limit=2)
         self.assertEqual(diagnostic["operation_id"], operation.operation_id)
-        self.assertEqual(diagnostic["payload_keys"], ["access_token", "plan_digest"])
+        self.assertEqual(diagnostic["payload_keys"], ["plan_digest", "private_value"])
         self.assertEqual(diagnostic["checkpoint"]["confirmed_occurrences_count"], 1)
         self.assertTrue(diagnostic["events_truncated"])
         self.assertEqual(len(diagnostic["events"]), 2)
@@ -142,7 +142,7 @@ class OperationRepositoryTests(unittest.TestCase):
             self.repository.create(
                 operation_type="copy",
                 idempotency_key=f"diagnostic-{index}",
-                payload={"access_token": f"secret-{index}"},
+                payload={"private_value": f"secret-{index}"},
                 now=self.now + timedelta(seconds=index),
             )
 
@@ -150,11 +150,20 @@ class OperationRepositoryTests(unittest.TestCase):
 
         self.assertEqual(len(diagnostics), 2)
         self.assertTrue(all("payload_keys" in item for item in diagnostics))
-        self.assertTrue(all("access_token" in item["payload_keys"] for item in diagnostics))
+        self.assertTrue(all("private_value" in item["payload_keys"] for item in diagnostics))
         self.assertNotIn("secret-", str(diagnostics))
 
         with self.assertRaises(ValueError):
             self.repository.diagnostics(limit=0)
+
+    def test_operation_payload_rejects_credential_named_fields(self) -> None:
+        with self.assertRaises(ValueError):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key="credential-payload",
+                payload={"access_token": "must-not-persist"},
+                now=self.now,
+            )
 
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
