@@ -89,6 +89,20 @@ class ProviderConnectionRepositoryTests(unittest.TestCase):
         with self.assertRaises(ConnectionNotFound):
             self.repository.get("missing")
 
+    def test_disconnected_model_rejects_a_secret_reference(self) -> None:
+        with self.assertRaises(ValueError):
+            ProviderConnection(
+                connection_id="spotify-disconnected",
+                provider="spotify",
+                provider_account_id="account-1",
+                state=ConnectionState.DISCONNECTED,
+                manifest_version="spotify-2026-09",
+                secret_ref="must-not-remain",
+                capabilities=None,
+                created_at=NOW,
+                updated_at=NOW,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

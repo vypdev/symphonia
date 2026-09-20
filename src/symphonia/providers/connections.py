@@ -46,6 +46,8 @@ class ProviderConnection:
                 raise ValueError(f"{field_name} must not be empty")
         if self.state is not ConnectionState.DISCONNECTED and not self.secret_ref:
             raise ValueError("active connections require an opaque secret_ref")
+        if self.state is ConnectionState.DISCONNECTED and self.secret_ref is not None:
+            raise ValueError("disconnected connections must not retain a secret_ref")
         if self.secret_ref is not None and not self.secret_ref.strip():
             raise ValueError("secret_ref must not be blank")
         for value, field_name in ((self.created_at, "created_at"), (self.updated_at, "updated_at")):
@@ -53,4 +55,3 @@ class ProviderConnection:
                 raise ValueError(f"{field_name} must be timezone-aware")
         if self.expires_at is not None and self.expires_at.tzinfo is None:
             raise ValueError("expires_at must be timezone-aware")
-
