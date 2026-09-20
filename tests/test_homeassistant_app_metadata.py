@@ -24,6 +24,14 @@ class HomeAssistantAppMetadataTests(unittest.TestCase):
         self.assertIn("  - aarch64", config)
         self.assertNotIn("  - armv7", config)
 
+    def test_container_contract_is_persistent_non_root_and_probeable(self) -> None:
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("SYMPHONIA_DATABASE=/data/symphonia.sqlite3", dockerfile)
+        self.assertIn("USER symphonia", dockerfile)
+        self.assertIn('VOLUME ["/data"]', dockerfile)
+        self.assertIn("HEALTHCHECK", dockerfile)
+        self.assertIn("/ready", dockerfile)
+
 
 if __name__ == "__main__":
     unittest.main()
