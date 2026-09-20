@@ -224,6 +224,26 @@ class OperationRepositoryTests(unittest.TestCase):
                 now=self.now,
             )
 
+    def test_operation_payload_rejects_nested_credentials(self) -> None:
+        with self.assertRaisesRegex(ValueError, r"provider.credentials\[0\]\.access_token"):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key="nested-credential-payload",
+                payload={"provider": {"credentials": [{"access_token": "must-not-persist"}]}},
+                now=self.now,
+            )
+
+    def test_operation_payload_rejects_cyclic_structures_before_json_encoding(self) -> None:
+        payload: dict[str, object] = {}
+        payload["nested"] = payload
+        with self.assertRaisesRegex(ValueError, "cyclic"):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key="cyclic-payload",
+                payload=payload,
+                now=self.now,
+            )
+
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
             operation_type="import",

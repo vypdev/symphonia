@@ -7,6 +7,7 @@ are introduced. The database is the authority; worker memory is not.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
@@ -43,14 +44,43 @@ _SECRET_PAYLOAD_KEY = re.compile(
 )
 
 
-def _validate_payload_keys(payload: dict[str, Any]) -> None:
-    forbidden = sorted(
-        str(key)
-        for key in payload
-        if _SECRET_PAYLOAD_KEY.search(str(key))
-    )
+def _validate_payload_keys(payload: Any) -> None:
+    forbidden: list[str] = []
+    active_containers: set[int] = set()
+
+    def walk(value: Any, path: str = "") -> None:
+        if isinstance(value, Mapping):
+            identity = id(value)
+            if identity in active_containers:
+                raise ValueError("operation payload must not contain cyclic structures")
+            active_containers.add(identity)
+            try:
+                for key, nested in value.items():
+                    key_text = str(key)
+                    key_path = key_text if not path else f"{path}.{key_text}"
+                    if _SECRET_PAYLOAD_KEY.search(key_text):
+                        forbidden.append(key_path)
+                    walk(nested, key_path)
+            finally:
+                active_containers.remove(identity)
+            return
+        if isinstance(value, (list, tuple)):
+            identity = id(value)
+            if identity in active_containers:
+                raise ValueError("operation payload must not contain cyclic structures")
+            active_containers.add(identity)
+            try:
+                for index, nested in enumerate(value):
+                    walk(nested, f"{path}[{index}]")
+            finally:
+                active_containers.remove(identity)
+
+    walk(payload)
     if forbidden:
-        raise ValueError(f"operation payload contains forbidden credential keys: {', '.join(forbidden)}")
+        raise ValueError(
+            "operation payload contains forbidden credential keys: "
+            + ", ".join(sorted(forbidden))
+        )
 
 
 @dataclass(frozen=True, slots=True)
