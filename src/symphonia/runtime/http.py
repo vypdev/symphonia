@@ -9,16 +9,32 @@ from urllib.parse import urlsplit
 
 from symphonia import __version__
 from symphonia.infrastructure.sqlite_operations import OperationRepository
+from .resources import RuntimeResources
 
 
 class SymphoniaHTTPServer(HTTPServer):
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], repository: OperationRepository, ingress_path: str = "/") -> None:
+    def __init__(
+        self,
+        address: tuple[str, int],
+        repository: OperationRepository | None = None,
+        ingress_path: str = "/",
+        *,
+        resources: RuntimeResources | None = None,
+    ) -> None:
+        if repository is None and resources is None:
+            raise ValueError("repository or resources must be supplied")
         super().__init__(address, SymphoniaRequestHandler)
-        self.repository = repository
+        self.resources = resources
+        self.repository = resources.operations if resources is not None else repository
         self.service_version = __version__
         self.ingress_path = _normalize_base_path(ingress_path)
+
+    def close_resources(self) -> None:
+        if self.resources is not None:
+            self.resources.close()
+            self.resources = None
 
 
 class SymphoniaRequestHandler(BaseHTTPRequestHandler):
@@ -57,8 +73,12 @@ def create_server(
 ) -> SymphoniaHTTPServer:
     """Create a server with an already-migrated durable operation store."""
 
-    repository = OperationRepository(database_path)
-    return SymphoniaHTTPServer((host, port), repository, ingress_path)
+    resources = RuntimeResources.open(database_path)
+    try:
+        return SymphoniaHTTPServer((host, port), ingress_path=ingress_path, resources=resources)
+    except Exception:
+        resources.close()
+        raise
 
 
 def route_get(

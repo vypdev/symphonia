@@ -30,7 +30,7 @@ def main() -> None:
         pass
     finally:
         server.server_close()
-        server.repository.close()
+        server.close_resources()
 
 
 if __name__ == "__main__":
