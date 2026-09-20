@@ -14,6 +14,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Append-only SQLite operation event history for auditable transitions with sanitized checkpoint summaries.
 - Bounded redacted operation diagnostics for support and a future authenticated operations view.
 - Bounded recent-operation diagnostics listing that exposes only redacted support views.
+- Aggregate operation queue summaries expose state counts and eligibility without payload data.
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Bounded transient retry budgets for copy and import handlers with durable exhaustion outcomes.
 - Lease-expiry recovery is audited distinctly from first claims, with prior worker identity retained only as metadata.

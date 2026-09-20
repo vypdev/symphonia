@@ -274,6 +274,39 @@ class OperationRepository:
         ).fetchall()
         return tuple(self.diagnostic(row["operation_id"], event_limit=event_limit) for row in rows)
 
+    def queue_summary(self, *, now: datetime) -> dict[str, Any]:
+        """Return aggregate queue health without exposing operation payloads."""
+
+        now_text = _utc(now)
+        state_rows = self._connection.execute(
+            "SELECT state, COUNT(*) AS count FROM operations GROUP BY state"
+        ).fetchall()
+        states = {str(row["state"]): int(row["count"]) for row in state_rows}
+        eligible = self._connection.execute(
+            """
+            SELECT COUNT(*) AS count
+              FROM operations
+             WHERE cancel_requested = 0
+               AND (
+                    state = 'queued'
+                    OR (state IN ('retry_scheduled', 'waiting_rate_limit')
+                        AND next_run_at IS NOT NULL AND next_run_at <= ?)
+                    OR (state = 'running'
+                        AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
+               )
+            """,
+            (now_text, now_text),
+        ).fetchone()
+        cancellation_rows = self._connection.execute(
+            "SELECT COUNT(*) AS count FROM operations WHERE cancel_requested = 1"
+        ).fetchone()
+        return {
+            "total": sum(states.values()),
+            "states": states,
+            "eligible_count": int(eligible["count"]),
+            "cancellation_requested_count": int(cancellation_rows["count"]),
+        }
+
     def claim(
         self,
         operation_id: str,

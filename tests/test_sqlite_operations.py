@@ -156,6 +156,44 @@ class OperationRepositoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.repository.diagnostics(limit=0)
 
+    def test_queue_summary_is_aggregate_and_counts_only_eligible_work(self) -> None:
+        queued = self.repository.create(
+            operation_type="copy",
+            idempotency_key="summary-queued",
+            payload={"plan_digest": "opaque"},
+            now=self.now,
+        )
+        running = self.repository.create(
+            operation_type="copy",
+            idempotency_key="summary-running",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(running.operation_id, worker_id="worker-a", now=self.now, lease_seconds=60)
+        retry = self.repository.create(
+            operation_type="import",
+            idempotency_key="summary-retry",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(retry.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.schedule_retry(
+            retry.operation_id,
+            worker_id="worker-a",
+            next_run_at=self.now - timedelta(seconds=1),
+            checkpoint={"private": "not returned"},
+            now=self.now,
+        )
+
+        summary = self.repository.queue_summary(now=self.now)
+
+        self.assertEqual(summary["total"], 3)
+        self.assertEqual(summary["states"], {"queued": 1, "retry_scheduled": 1, "running": 1})
+        self.assertEqual(summary["eligible_count"], 2)
+        self.assertEqual(summary["cancellation_requested_count"], 0)
+        self.assertNotIn("opaque", str(summary))
+        self.assertNotIn("private", str(summary))
+
     def test_operation_payload_rejects_credential_named_fields(self) -> None:
         with self.assertRaises(ValueError):
             self.repository.create(
