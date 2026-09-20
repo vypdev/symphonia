@@ -17,6 +17,13 @@ class CopyExecutionService:
     plans: CopyPlanRepository
     operations: OperationRepository
     retry_delay_seconds: int = 60
+    max_retry_attempts: int = 5
+
+    def __post_init__(self) -> None:
+        if self.retry_delay_seconds <= 0:
+            raise ValueError("retry_delay_seconds must be positive")
+        if self.max_retry_attempts < 0:
+            raise ValueError("max_retry_attempts must not be negative")
 
     def execute(
         self,
@@ -227,6 +234,16 @@ class CopyExecutionService:
         checkpoint: dict[str, Any],
         now: datetime,
     ) -> OperationRecord:
+        retry_attempts = int(checkpoint.get("retry_attempts", 0)) + 1
+        checkpoint = {**checkpoint, "retry_attempts": retry_attempts}
+        if retry_attempts > self.max_retry_attempts:
+            return self._finish(
+                operation,
+                worker_id,
+                checkpoint | {"failure_code": "retry_exhausted"},
+                now,
+                "failed",
+            )
         return self.operations.schedule_retry(
             operation.operation_id,
             worker_id=worker_id,

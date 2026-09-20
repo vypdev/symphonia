@@ -115,6 +115,18 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(operation.state, "retry_scheduled")
         self.assertEqual(operation.next_run_at, NOW + timedelta(seconds=30))
 
+    def test_retry_budget_turns_repeated_transient_writes_into_failure(self) -> None:
+        digest = self.accepted_digest()
+        step_key = f"{digest}:entry:occ-1"
+        self.writer.results[step_key] = WriteResult(WriteOutcome.RETRYABLE, provider_code="temporary")
+        executor = CopyExecutionService(self.plans, self.operations, retry_delay_seconds=30, max_retry_attempts=0)
+
+        operation = executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(operation.state, "failed")
+        self.assertEqual(operation.checkpoint["failure_code"], "retry_exhausted")
+        self.assertEqual(operation.checkpoint["retry_attempts"], 1)
+
     def test_operation_runner_can_dispatch_claimed_copy_execution(self) -> None:
         digest = self.accepted_digest()
         self.workflow.enqueue_accepted_plan(digest, now=NOW)

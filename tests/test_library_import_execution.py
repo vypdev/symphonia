@@ -94,6 +94,30 @@ class LibraryImportExecutionTests(unittest.TestCase):
         self.assertIsNone(result.checkpoint["published_snapshot_id"])
         self.assertEqual(result.checkpoint["publication_state"], "partial")
 
+    def test_transient_import_failure_honors_retry_budget(self) -> None:
+        service = LibraryImportExecutionService(
+            LibraryImportService(self.projections), self.operations, max_retry_attempts=0
+        )
+        created = service.enqueue_playlist(
+            FakeAdapter(error=ProviderApiError(ProviderErrorCategory.TIMEOUT, "temporary")),
+            connection_id="connection-1",
+            playlist=self.playlist,
+            snapshot_id="snapshot-timeout",
+            observed_at=NOW,
+            now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+
+        failed = service.execute_claimed(
+            claimed,
+            adapter=FakeAdapter(error=ProviderApiError(ProviderErrorCategory.TIMEOUT, "temporary")),
+            worker_id="worker-a",
+            now=NOW,
+        )
+
+        self.assertEqual(failed.state, "failed")
+        self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
+
 
 if __name__ == "__main__":
     unittest.main()
