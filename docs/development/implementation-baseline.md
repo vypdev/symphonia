@@ -26,7 +26,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Copy plans bind target connection and effective write-capability evidence into their digest.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
-- Offline-testable official Spotify playlist reader with bounded pagination and normalized error categories.
+- Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories.
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.
 - Experimental official Apple Music library-playlist reader with separate developer/user token inputs.
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.

@@ -72,6 +72,21 @@ class SpotifyAdapterTests(unittest.TestCase):
         self.assertTrue(capabilities.supports(Capability.READ_PLAYLISTS))
         self.assertEqual(client.calls[0][1], "/me/playlists")
 
+    def test_write_capabilities_require_explicit_verified_composition_flag(self) -> None:
+        client = FakeClient({"0": JsonResponse(200, {"items": []}, {})})
+        adapter = SpotifyAdapter(
+            client,
+            lambda connection_id: "access-token",
+            connection_id="connection-1",
+            allow_writes=True,
+        )
+
+        capabilities = adapter.capabilities("connection-1")
+
+        self.assertTrue(capabilities.supports(Capability.CREATE_PLAYLIST))
+        self.assertTrue(capabilities.supports(Capability.ADD_PLAYLIST_ENTRIES))
+        self.assertEqual(capabilities.evidence_version, "spotify-playlist-read-write-v1")
+
     def test_rate_limit_is_normalized_with_retry_hint(self) -> None:
         client = FakeClient({"0": JsonResponse(429, {"error": {"status": 429}}, {"Retry-After": "10"})})
         adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1")

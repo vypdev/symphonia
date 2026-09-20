@@ -104,7 +104,7 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         display_name="Spotify",
         access_basis=AccessBasis.OFFICIAL,
         maturity="beta",
-        support_level="playlist-read",
+        support_level="playlist-read/write",
         upstream_dependencies=("Spotify Web API",),
         reviewed_on="2026-09-20",
     )
@@ -115,6 +115,7 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         token_for_connection: Callable[[str], str],
         page_size: int = 50,
         connection_id: str | None = None,
+        allow_writes: bool = False,
     ) -> None:
         if not 1 <= page_size <= 50:
             raise ValueError("Spotify playlist page_size must be between 1 and 50")
@@ -122,12 +123,16 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         self._token_for_connection = token_for_connection
         self._page_size = page_size
         self._connection_id = connection_id
+        self._allow_writes = allow_writes
 
     def capabilities(self, connection_id: str) -> ProviderCapabilities:
         response = self._request(connection_id, "GET", "/me/playlists", {"limit": "1", "offset": "0"})
+        enabled = {Capability.READ_PLAYLISTS}
+        if self._allow_writes and self._connection_id == connection_id:
+            enabled.update({Capability.CREATE_PLAYLIST, Capability.ADD_PLAYLIST_ENTRIES})
         return ProviderCapabilities(
-            enabled=frozenset({Capability.READ_PLAYLISTS}),
-            evidence_version="spotify-playlist-read-v1",
+            enabled=frozenset(enabled),
+            evidence_version="spotify-playlist-read-write-v1" if len(enabled) > 1 else "spotify-playlist-read-v1",
             observed_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         )
 
