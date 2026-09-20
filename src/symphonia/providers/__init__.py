@@ -11,6 +11,7 @@ from .contracts import (
     ProviderPlaylistEntry,
     ProviderPlaylistPage,
 )
+from .connections import ConnectionState, ProviderConnection
 from .importing import CollectionImportResult, ImportIssue, collect_playlist_pages, to_playlist_snapshot
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
@@ -18,10 +19,12 @@ __all__ = [
     "AccessBasis",
     "Capability",
     "CollectionImportResult",
+    "ConnectionState",
     "ImportIssue",
     "MediaKind",
     "ProviderAdapter",
     "ProviderCapabilities",
+    "ProviderConnection",
     "ProviderManifest",
     "ProviderObjectRef",
     "ProviderPlaylistEntry",

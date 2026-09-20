@@ -14,6 +14,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Append-only SQLite operation event history for auditable transitions with sanitized checkpoint summaries.
 - Bounded redacted operation diagnostics for support and a future authenticated operations view.
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
+- Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.

@@ -15,17 +15,25 @@ from .sqlite_library import (
     SnapshotConflictError,
     StoredPlaylistSnapshot,
 )
+from .sqlite_connections import (
+    ConnectionConflict,
+    ConnectionNotFound,
+    ProviderConnectionRepository,
+)
 
 __all__ = [
     "CopyPlanNotFound",
     "CopyPlanRepository",
     "IncompleteCollectionError",
+    "ConnectionConflict",
+    "ConnectionNotFound",
     "IdempotencyConflict",
     "LeaseConflict",
     "OperationNotFound",
     "OperationEvent",
     "OperationRepository",
     "PlaylistProjectionRepository",
+    "ProviderConnectionRepository",
     "ResolutionDecisionRepository",
     "SnapshotConflictError",
     "StoredCopyPlan",
