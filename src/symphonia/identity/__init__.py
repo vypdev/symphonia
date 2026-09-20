@@ -8,6 +8,13 @@ from .models import (
     ManualDecisionAction,
     ResolutionState,
 )
+from .normalization import (
+    NormalizedRecordingMetadata,
+    normalize_isrc,
+    normalize_recording_metadata,
+    normalize_text,
+    version_tokens,
+)
 
 __all__ = [
     "AssessmentClass",
@@ -16,5 +23,9 @@ __all__ = [
     "ManualDecision",
     "ManualDecisionAction",
     "ResolutionState",
+    "NormalizedRecordingMetadata",
+    "normalize_isrc",
+    "normalize_recording_metadata",
+    "normalize_text",
+    "version_tokens",
 ]
-

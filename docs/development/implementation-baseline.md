@@ -32,6 +32,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
+- Lossless Unicode-safe identity normalization with explicit version-token and ISRC derived fields; no automatic matching thresholds are assumed.
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
 - A copy executor that creates target playlists through a semantic writer port, checkpoints each occurrence, and reconciles unknown writes before retry.
 - SQLite persistence for complete playlist projections that keeps incomplete imports from replacing the last complete snapshot and isolates external IDs by namespace.

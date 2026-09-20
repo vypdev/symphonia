@@ -9,11 +9,35 @@ from symphonia.identity import (
     EvidenceKind,
     ManualDecision,
     ManualDecisionAction,
+    normalize_isrc,
+    normalize_recording_metadata,
+    normalize_text,
+    version_tokens,
 )
 from symphonia.infrastructure import ResolutionDecisionRepository
 
 
 class IdentityResolutionTests(unittest.TestCase):
+    def test_normalization_is_unicode_safe_and_lossless(self) -> None:
+        metadata = normalize_recording_metadata(
+            title="Beyoncé — Halo (Live Edit)",
+            artists=("Beyoncé", "  Jay-Z  "),
+            isrc="us-r1a-99-01234",
+        )
+
+        self.assertEqual(metadata.original_title, "Beyoncé — Halo (Live Edit)")
+        self.assertEqual(metadata.normalized_title, "beyoncé halo live edit")
+        self.assertEqual(metadata.original_artists, ("Beyoncé", "  Jay-Z  "))
+        self.assertEqual(metadata.normalized_artists, ("beyoncé", "jay z"))
+        self.assertEqual(metadata.version_tokens, ("live", "edit"))
+        self.assertEqual(metadata.normalized_isrc, "USR1A9901234")
+
+    def test_isrc_validation_never_turns_malformed_input_into_identity(self) -> None:
+        self.assertEqual(normalize_isrc("US-R1A-99-01234"), "USR1A9901234")
+        self.assertIsNone(normalize_isrc("not-an-isrc"))
+        self.assertEqual(normalize_text("  Café\u00a0del\u00a0Mar  "), "café del mar")
+        self.assertEqual(version_tokens("Song (Acoustic Remix)"), ("acoustic", "remix"))
+
     def test_unmatched_assessment_has_no_candidate(self) -> None:
         from symphonia.identity.models import CandidateAssessment
 
@@ -83,4 +107,3 @@ class IdentityResolutionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
