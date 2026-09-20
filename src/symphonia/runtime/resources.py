@@ -203,7 +203,7 @@ class RuntimeResources:
             return {
                 "ready": True,
                 "queue": self.operations.queue_summary(now=now),
-                "connections": self.connections.health_summary(),
+                "connections": self.connections.health_summary(now=now),
                 "projections": self.projections.summary(),
                 "resolutions": self.resolutions.summary(),
                 "operations": self.operations.diagnostics(

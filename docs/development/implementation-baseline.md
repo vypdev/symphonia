@@ -44,7 +44,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
 - Runtime configuration validates host, port, database path, and Ingress base path before startup.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.
-- Provider connection diagnostics expose only provider/state counts, never account or credential data.
+- Provider connection diagnostics expose provider/state and expiry counts, never account or credential data.
 - Import diagnostics expose bounded snapshot freshness and availability counts without playlist content.
 - Resolution diagnostics expose only manual-decision action counts, never track, actor, or reason data.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.

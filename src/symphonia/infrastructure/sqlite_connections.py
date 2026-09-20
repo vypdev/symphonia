@@ -134,7 +134,7 @@ class ProviderConnectionRepository:
             ).fetchall()
         return tuple(self._record(row) for row in rows)
 
-    def health_summary(self) -> dict[str, Any]:
+    def health_summary(self, *, now: datetime | None = None) -> dict[str, Any]:
         """Return provider/state counts without account or credential data."""
 
         rows = self._connection.execute(
@@ -152,7 +152,20 @@ class ProviderConnectionRepository:
             count = int(row["count"])
             by_provider.setdefault(provider, {})[str(row["state"])] = count
             total += count
-        return {"total": total, "by_provider": by_provider}
+        summary: dict[str, Any] = {"total": total, "by_provider": by_provider}
+        if now is not None:
+            expired = self._connection.execute(
+                """
+                SELECT COUNT(*) AS count
+                  FROM provider_connections
+                 WHERE state != 'disconnected'
+                   AND expires_at IS NOT NULL
+                   AND expires_at <= ?
+                """,
+                (_utc(now),),
+            ).fetchone()
+            summary["expired_count"] = int(expired["count"])
+        return summary
 
     def record_probe(
         self,

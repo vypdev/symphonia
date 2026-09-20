@@ -107,6 +107,13 @@ class ProviderConnectionRepositoryTests(unittest.TestCase):
         self.assertNotIn("account-1", str(summary))
         self.assertNotIn("opaque-secret", str(summary))
 
+    def test_health_summary_counts_expired_active_connections_when_time_is_supplied(self) -> None:
+        self.repository.create(connection())
+
+        summary = self.repository.health_summary(now=NOW + timedelta(days=31))
+
+        self.assertEqual(summary["expired_count"], 1)
+
     def test_missing_connection_is_explicit(self) -> None:
         with self.assertRaises(ConnectionNotFound):
             self.repository.get("missing")

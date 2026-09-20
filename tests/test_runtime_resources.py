@@ -168,7 +168,10 @@ class RuntimeResourcesTests(unittest.TestCase):
                 )
                 self.assertTrue(diagnostics["ready"])
                 self.assertEqual(diagnostics["queue"]["total"], 1)
-                self.assertEqual(diagnostics["connections"], {"total": 0, "by_provider": {}})
+                self.assertEqual(
+                    diagnostics["connections"],
+                    {"total": 0, "by_provider": {}, "expired_count": 0},
+                )
                 self.assertEqual(
                     diagnostics["projections"],
                     {
