@@ -206,6 +206,39 @@ class OperationRepository:
         ).fetchall()
         return tuple(self._event(row) for row in rows)
 
+    def diagnostic(self, operation_id: str, *, event_limit: int = 100) -> dict[str, Any]:
+        """Return a bounded, redacted support view of one operation."""
+
+        if event_limit <= 0:
+            raise ValueError("event_limit must be positive")
+        record = self.get(operation_id)
+        all_events = self.events(operation_id)
+        selected_events = all_events[-event_limit:]
+        return {
+            "operation_id": record.operation_id,
+            "operation_type": record.operation_type,
+            "state": record.state,
+            "worker_id": record.worker_id,
+            "next_run_at": None if record.next_run_at is None else _utc(record.next_run_at),
+            "cancel_requested": record.cancel_requested,
+            "created_at": _utc(record.created_at),
+            "updated_at": _utc(record.updated_at),
+            "payload_keys": sorted(str(key) for key in record.payload),
+            "checkpoint": self._checkpoint_summary(record.checkpoint),
+            "events_truncated": len(selected_events) != len(all_events),
+            "events": [
+                {
+                    "sequence": event.sequence,
+                    "event_type": event.event_type,
+                    "state": event.state,
+                    "worker_id": event.worker_id,
+                    "payload": event.payload,
+                    "created_at": _utc(event.created_at),
+                }
+                for event in selected_events
+            ],
+        }
+
     def claim(
         self,
         operation_id: str,

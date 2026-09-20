@@ -108,6 +108,35 @@ class OperationRepositoryTests(unittest.TestCase):
         )
         self.assertNotIn("must-not-be-audit-payload", event.payload)
 
+    def test_diagnostic_export_is_bounded_and_redacted(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="copy-1",
+            payload={"plan_digest": "secret-plan", "access_token": "secret-token"},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.checkpoint(
+            operation.operation_id,
+            worker_id="worker-a",
+            checkpoint={
+                "confirmed_occurrences": ["occ-1"],
+                "provider_track_id": "provider-secret",
+            },
+            now=self.now + timedelta(seconds=1),
+        )
+
+        diagnostic = self.repository.diagnostic(operation.operation_id, event_limit=2)
+        self.assertEqual(diagnostic["operation_id"], operation.operation_id)
+        self.assertEqual(diagnostic["payload_keys"], ["access_token", "plan_digest"])
+        self.assertEqual(diagnostic["checkpoint"]["confirmed_occurrences_count"], 1)
+        self.assertTrue(diagnostic["events_truncated"])
+        self.assertEqual(len(diagnostic["events"]), 2)
+        serialized = str(diagnostic)
+        self.assertNotIn("secret-plan", serialized)
+        self.assertNotIn("secret-token", serialized)
+        self.assertNotIn("provider-secret", serialized)
+
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
             operation_type="import",
