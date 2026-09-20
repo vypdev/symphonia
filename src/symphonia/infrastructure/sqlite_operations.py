@@ -56,6 +56,8 @@ class OperationRecord:
 class OperationRepository:
     """Transactional operation repository backed by one SQLite database."""
 
+    SCHEMA_VERSION = 2
+
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
@@ -73,6 +75,11 @@ class OperationRepository:
         return row is not None and row["healthy"] == 1
 
     def _migrate(self) -> None:
+        current_version = int(self._connection.execute("PRAGMA user_version").fetchone()[0])
+        if current_version > self.SCHEMA_VERSION:
+            raise RuntimeError(
+                f"operation store schema {current_version} is newer than supported {self.SCHEMA_VERSION}"
+            )
         self._connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS operations (
@@ -93,6 +100,15 @@ class OperationRepository:
                 ON operations (state, next_run_at, lease_expires_at);
             """
         )
+        columns = {
+            row[1]
+            for row in self._connection.execute("PRAGMA table_info(operations)").fetchall()
+        }
+        if "cancel_requested" not in columns:
+            self._connection.execute(
+                "ALTER TABLE operations ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0"
+            )
+        self._connection.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
 
     def create(
         self,

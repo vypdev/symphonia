@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import sqlite3
+import tempfile
 import unittest
 
 from symphonia.infrastructure import IdempotencyConflict, LeaseConflict, OperationRepository
@@ -217,6 +219,51 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertEqual(completed.state, "cancelled")
         self.assertFalse(completed.cancel_requested)
         self.assertIsNone(completed.worker_id)
+
+    def test_legacy_store_is_migrated_forward_without_losing_operations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/legacy.sqlite3"
+            connection = sqlite3.connect(path)
+            connection.executescript(
+                """
+                CREATE TABLE operations (
+                    operation_id TEXT PRIMARY KEY,
+                    operation_type TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL UNIQUE,
+                    payload_json TEXT NOT NULL,
+                    checkpoint_json TEXT NOT NULL,
+                    worker_id TEXT,
+                    lease_expires_at TEXT,
+                    next_run_at TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                PRAGMA user_version = 1;
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO operations (
+                    operation_id, operation_type, state, idempotency_key,
+                    payload_json, checkpoint_json, created_at, updated_at
+                ) VALUES ('legacy-1', 'copy', 'queued', 'legacy-key', '{}', '{}', ?, ?)
+                """,
+                (self.now.isoformat(), self.now.isoformat()),
+            )
+            connection.commit()
+            connection.close()
+
+            repository = OperationRepository(path)
+            try:
+                record = repository.get("legacy-1")
+                self.assertFalse(record.cancel_requested)
+                self.assertEqual(
+                    repository._connection.execute("PRAGMA user_version").fetchone()[0],
+                    OperationRepository.SCHEMA_VERSION,
+                )
+            finally:
+                repository.close()
 
 
 if __name__ == "__main__":
