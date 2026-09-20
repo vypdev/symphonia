@@ -30,6 +30,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories.
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.
 - Experimental official Apple Music library-playlist reader with separate developer/user token inputs.
+- Provider readers enforce bounded page sizes, repeated-cursor detection, and configurable maximum page counts.
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
 - Explicit runtime resource composition and reverse-order shutdown for all durable repositories.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.

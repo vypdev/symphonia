@@ -105,12 +105,16 @@ class AppleMusicAdapter(ProviderAdapter):
         client: AppleJsonClient | None,
         tokens_for_connection: Callable[[str], tuple[str, str]],
         page_size: int = 25,
+        max_pages: int = 10_000,
     ) -> None:
         if not 1 <= page_size <= 100:
             raise ValueError("Apple Music playlist page_size must be between 1 and 100")
+        if max_pages <= 0:
+            raise ValueError("Apple Music max_pages must be positive")
         self._client = client or UrllibAppleMusicClient()
         self._tokens_for_connection = tokens_for_connection
         self._page_size = page_size
+        self._max_pages = max_pages
 
     def capabilities(self, connection_id: str) -> ProviderCapabilities:
         self._request(connection_id, "/me/library/playlists", {"limit": "1", "offset": "0"})
@@ -132,6 +136,11 @@ class AppleMusicAdapter(ProviderAdapter):
         pages: list[ProviderPlaylistPage] = []
         seen_offsets: set[int] = set()
         while True:
+            if len(pages) >= self._max_pages:
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "Apple Music playlist pagination exceeded the configured page limit",
+                )
             if offset in seen_offsets:
                 raise ProviderApiError(
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,

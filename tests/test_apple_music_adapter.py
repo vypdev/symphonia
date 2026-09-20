@@ -106,6 +106,14 @@ class AppleMusicAdapterTests(unittest.TestCase):
 
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
 
+    def test_max_page_limit_fails_closed_before_unbounded_reads(self) -> None:
+        with self.assertRaises(ProviderApiError) as context:
+            AppleMusicAdapter(
+                FakeAppleClient(), lambda connection_id: ("developer-token", "user-token"), max_pages=1
+            ).read_playlist_pages("apple-connection-1", self.playlist())
+
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
 
 if __name__ == "__main__":
     unittest.main()

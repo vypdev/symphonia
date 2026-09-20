@@ -116,14 +116,18 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         page_size: int = 50,
         connection_id: str | None = None,
         allow_writes: bool = False,
+        max_pages: int = 10_000,
     ) -> None:
         if not 1 <= page_size <= 50:
             raise ValueError("Spotify playlist page_size must be between 1 and 50")
+        if max_pages <= 0:
+            raise ValueError("Spotify max_pages must be positive")
         self._client = client
         self._token_for_connection = token_for_connection
         self._page_size = page_size
         self._connection_id = connection_id
         self._allow_writes = allow_writes
+        self._max_pages = max_pages
 
     def capabilities(self, connection_id: str) -> ProviderCapabilities:
         response = self._request(connection_id, "GET", "/me/playlists", {"limit": "1", "offset": "0"})
@@ -147,6 +151,11 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         offset = self._parse_cursor(cursor)
         pages: list[ProviderPlaylistPage] = []
         while True:
+            if len(pages) >= self._max_pages:
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "Spotify playlist pagination exceeded the configured page limit",
+                )
             response = self._request(
                 connection_id,
                 "GET",

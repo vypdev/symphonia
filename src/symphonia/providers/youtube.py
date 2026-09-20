@@ -44,13 +44,17 @@ class YouTubeDataAdapter(ProviderAdapter):
         token_for_connection: Callable[[str], str],
         page_size: int = 50,
         api_key: str | None = None,
+        max_pages: int = 10_000,
     ) -> None:
         if not 1 <= page_size <= 50:
             raise ValueError("YouTube playlist page_size must be between 1 and 50")
+        if max_pages <= 0:
+            raise ValueError("YouTube max_pages must be positive")
         self._client = client or UrllibJsonClient("https://www.googleapis.com/youtube/v3")
         self._token_for_connection = token_for_connection
         self._page_size = page_size
         self._api_key = api_key
+        self._max_pages = max_pages
 
     def capabilities(self, connection_id: str) -> ProviderCapabilities:
         self._request(
@@ -77,6 +81,11 @@ class YouTubeDataAdapter(ProviderAdapter):
         position = 0
         seen_tokens: set[str | None] = set()
         while True:
+            if len(pages) >= self._max_pages:
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "YouTube playlist pagination exceeded the configured page limit",
+                )
             if page_token in seen_tokens:
                 raise ProviderApiError(
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,

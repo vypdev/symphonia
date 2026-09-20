@@ -95,6 +95,27 @@ class SpotifyAdapterTests(unittest.TestCase):
         self.assertEqual(context.exception.category, ProviderErrorCategory.RATE_LIMITED)
         self.assertIsNotNone(context.exception.retry_at)
 
+    def test_max_page_limit_fails_closed_before_unbounded_reads(self) -> None:
+        client = FakeClient(
+            {
+                "0": JsonResponse(
+                    200,
+                    {
+                        "items": [{"item": {"id": "track-1", "type": "track"}}],
+                        "next": "https://api.spotify.com/v1/playlists/playlist-1/items?offset=1",
+                    },
+                    {},
+                )
+            }
+        )
+        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", page_size=1, max_pages=1)
+
+        with self.assertRaises(ProviderApiError) as context:
+            adapter.read_playlist_pages("connection-1", self.playlist())
+
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+        self.assertEqual(len(client.calls), 1)
+
     def test_invalid_cursor_and_empty_token_fail_closed(self) -> None:
         client = FakeClient({"0": JsonResponse(200, {"items": [], "next": None}, {})})
         adapter = SpotifyAdapter(client, lambda connection_id: "")

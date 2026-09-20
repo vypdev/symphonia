@@ -105,6 +105,15 @@ class YouTubeDataAdapterTests(unittest.TestCase):
             )
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
 
+    def test_max_page_limit_fails_closed_before_unbounded_reads(self) -> None:
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist-1", "connection-1")
+        adapter = YouTubeDataAdapter(FakeClient(), lambda connection_id: "access-token", max_pages=1)
+
+        with self.assertRaises(ProviderApiError) as context:
+            adapter.read_playlist_pages("connection-1", playlist)
+
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
 
 if __name__ == "__main__":
     unittest.main()
