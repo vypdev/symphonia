@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 import sqlite3
 from typing import Any
+from urllib.parse import quote
 
 from symphonia.infrastructure import (
     AuthorizationAttemptRepository,
@@ -113,6 +114,48 @@ class RuntimeResources:
             destination.commit()
         finally:
             destination.close()
+
+    @classmethod
+    def validate_backup(cls, backup_path: str) -> bool:
+        """Validate a backup read-only before a future restore operation."""
+
+        if not isinstance(backup_path, str) or not backup_path.strip():
+            raise ValueError("backup_path must not be empty")
+        if backup_path == ":memory:":
+            return False
+        path = Path(backup_path).expanduser().resolve()
+        if not path.is_file():
+            return False
+        uri = f"file:{quote(str(path))}?mode=ro"
+        required_tables = {
+            "operations",
+            "operation_events",
+            "copy_plans",
+            "provider_connections",
+            "authorization_attempts",
+            "playlist_snapshots",
+            "playlist_snapshot_entries",
+            "current_playlist_snapshots",
+            "resolution_decisions",
+        }
+        connection: sqlite3.Connection | None = None
+        try:
+            connection = sqlite3.connect(uri, uri=True)
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
+            return required_tables.issubset(tables)
+        except sqlite3.Error:
+            return False
+        finally:
+            if connection is not None:
+                connection.close()
 
     def diagnostics(
         self,

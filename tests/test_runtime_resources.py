@@ -67,6 +67,8 @@ class RuntimeResourcesTests(unittest.TestCase):
             finally:
                 resources.close()
 
+            self.assertTrue(RuntimeResources.validate_backup(backup_path))
+
             backup = OperationRepository(backup_path)
             try:
                 restored = backup.get(created.operation_id)
@@ -84,6 +86,17 @@ class RuntimeResourcesTests(unittest.TestCase):
                     resources.backup_to(source_path)
             finally:
                 resources.close()
+
+    def test_validate_backup_rejects_missing_or_corrupt_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            missing = str(Path(directory) / "missing.sqlite3")
+            corrupt = Path(directory) / "corrupt.sqlite3"
+            corrupt.write_text("not a sqlite database", encoding="utf-8")
+
+            self.assertFalse(RuntimeResources.validate_backup(missing))
+            self.assertFalse(RuntimeResources.validate_backup(str(corrupt)))
+            with self.assertRaises(ValueError):
+                RuntimeResources.validate_backup("   ")
 
     def test_diagnostics_combine_safe_queue_and_operation_views(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
