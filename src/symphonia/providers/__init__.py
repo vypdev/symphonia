@@ -17,6 +17,7 @@ from .registry import ProviderAlreadyRegistered, ProviderNotRegistered, Provider
 from .errors import ProviderApiError, ProviderErrorCategory
 from .spotify import JsonResponse, SpotifyAdapter, UrllibJsonClient
 from .youtube import YouTubeDataAdapter
+from .apple_music import AppleJsonResponse, AppleMusicAdapter, UrllibAppleMusicClient
 from .capabilities import CapabilityError, CapabilityLayers, missing_capabilities, require_capabilities
 from .importing import CollectionImportResult, ImportIssue, collect_playlist_pages, to_playlist_snapshot
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
@@ -48,6 +49,9 @@ __all__ = [
     "SpotifyAdapter",
     "UrllibJsonClient",
     "YouTubeDataAdapter",
+    "AppleMusicAdapter",
+    "AppleJsonResponse",
+    "UrllibAppleMusicClient",
     "ProviderWriteError",
     "PlaylistWriter",
     "TargetPlaylist",

@@ -115,8 +115,8 @@ class ProviderPlaylistPage:
     revision: str | None = None
 
     def __post_init__(self) -> None:
-        if self.playlist.object_type != "playlist":
-            raise ValueError("playlist page requires a playlist object reference")
+        if self.playlist.object_type not in {"playlist", "library-playlists"}:
+            raise ValueError("playlist page requires a playlist or library-playlists object reference")
         positions = [entry.position for entry in self.entries]
         if positions != sorted(positions):
             raise ValueError("page entries must be ordered by position")
@@ -135,4 +135,3 @@ class ProviderAdapter(Protocol):
     def read_playlist_pages(
         self, connection_id: str, playlist: ProviderObjectRef, cursor: str | None = None
     ) -> Iterable[ProviderPlaylistPage]: ...
-
