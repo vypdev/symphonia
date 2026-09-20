@@ -58,6 +58,30 @@ class OperationRunnerTests(unittest.TestCase):
             ["created", "claimed", "checkpointed"],
         )
 
+    def test_handler_exception_is_terminal_and_does_not_persist_exception_detail(self) -> None:
+        operation = self.repository.create(
+            operation_type="fixture",
+            idempotency_key="fixture-exception",
+            payload={},
+            now=NOW,
+        )
+
+        def handler(claimed, worker_id, now):
+            raise RuntimeError("provider token=secret-token request=https://example.invalid")
+
+        result = OperationRunner(self.repository, {"fixture": handler}).run_once(
+            worker_id="worker-a", now=NOW
+        )
+
+        self.assertEqual(result.operation_id, operation.operation_id)
+        self.assertEqual(result.state, "failed")
+        self.assertEqual(result.checkpoint["failure_code"], "handler_exception:RuntimeError")
+        self.assertNotIn("secret-token", str(result.checkpoint))
+        self.assertEqual(
+            [event.event_type for event in self.repository.events(operation.operation_id)],
+            ["created", "claimed", "checkpointed"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

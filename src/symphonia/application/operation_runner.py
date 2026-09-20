@@ -42,5 +42,20 @@ class OperationRunner:
                 now=now,
                 state="failed",
             )
-        return handler(operation, worker_id, now)
-
+        try:
+            return handler(operation, worker_id, now)
+        except Exception as error:
+            # A handler must never strand a claimed operation in ``running``.
+            # Persist only a stable exception class marker: provider details
+            # may contain credentials, request URLs, or other sensitive data.
+            failure_code = f"handler_exception:{type(error).__name__}"
+            latest = self.operations.get(operation.operation_id)
+            if latest.state == "running" and latest.worker_id == worker_id:
+                return self.operations.checkpoint(
+                    operation.operation_id,
+                    worker_id=worker_id,
+                    checkpoint={**latest.checkpoint, "failure_code": failure_code},
+                    now=now,
+                    state="failed",
+                )
+            raise
