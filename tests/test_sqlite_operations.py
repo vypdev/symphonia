@@ -212,6 +212,29 @@ class OperationRepositoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.repository.diagnostics(limit=101)
 
+    def test_diagnostic_key_lists_are_bounded_and_mark_truncation(self) -> None:
+        payload = {f"key-{index:03d}": index for index in range(101)}
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="bounded-diagnostic-keys",
+            payload=payload,
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.checkpoint(
+            operation.operation_id,
+            worker_id="worker-a",
+            checkpoint={f"checkpoint-{index:03d}": index for index in range(101)},
+            now=self.now + timedelta(seconds=1),
+        )
+
+        diagnostic = self.repository.diagnostic(operation.operation_id)
+
+        self.assertEqual(len(diagnostic["payload_keys"]), 100)
+        self.assertTrue(diagnostic["payload_keys_truncated"])
+        self.assertEqual(len(diagnostic["checkpoint"]["checkpoint_keys"]), 100)
+        self.assertTrue(diagnostic["checkpoint"]["checkpoint_keys_truncated"])
+
     def test_queue_summary_is_aggregate_and_counts_only_eligible_work(self) -> None:
         queued = self.repository.create(
             operation_type="copy",

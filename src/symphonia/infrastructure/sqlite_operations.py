@@ -46,6 +46,7 @@ _SECRET_PAYLOAD_KEY = re.compile(
 )
 _MAX_DIAGNOSTIC_OPERATIONS = 100
 _MAX_DIAGNOSTIC_EVENTS = 100
+_MAX_DIAGNOSTIC_KEYS = 100
 
 
 def _validate_payload_keys(payload: Any) -> None:
@@ -270,6 +271,7 @@ class OperationRepository:
         record = self.get(operation_id)
         all_events = self.events(operation_id)
         selected_events = all_events[-event_limit:]
+        payload_keys, payload_keys_truncated = self._bounded_keys(record.payload)
         return {
             "operation_id": record.operation_id,
             "operation_type": record.operation_type,
@@ -279,7 +281,8 @@ class OperationRepository:
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at),
             "updated_at": _utc(record.updated_at),
-            "payload_keys": sorted(str(key) for key in record.payload),
+            "payload_keys": payload_keys,
+            "payload_keys_truncated": payload_keys_truncated,
             "checkpoint": self._checkpoint_summary(record.checkpoint),
             "events_truncated": len(selected_events) != len(all_events),
             "events": [
@@ -868,14 +871,21 @@ class OperationRepository:
     def _checkpoint_summary(checkpoint: dict[str, Any]) -> dict[str, Any]:
         """Keep audit data useful while excluding checkpoint values by default."""
 
+        checkpoint_keys, checkpoint_keys_truncated = OperationRepository._bounded_keys(checkpoint)
         summary: dict[str, Any] = {
-            "checkpoint_keys": sorted(str(key) for key in checkpoint),
+            "checkpoint_keys": checkpoint_keys,
+            "checkpoint_keys_truncated": checkpoint_keys_truncated,
         }
         for key in ("confirmed_occurrences", "issues"):
             value = checkpoint.get(key)
             if isinstance(value, (list, tuple, set)):
                 summary[f"{key}_count"] = len(value)
         return summary
+
+    @staticmethod
+    def _bounded_keys(value: dict[str, Any]) -> tuple[list[str], bool]:
+        keys = sorted(str(key) for key in value)
+        return keys[:_MAX_DIAGNOSTIC_KEYS], len(keys) > _MAX_DIAGNOSTIC_KEYS
 
     @staticmethod
     def _record(row: sqlite3.Row) -> OperationRecord:

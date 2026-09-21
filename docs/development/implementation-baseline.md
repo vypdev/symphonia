@@ -13,6 +13,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Atomic scheduler-facing claim selection for queued, due-retry, and expired-lease operations.
 - Append-only SQLite operation event history for auditable transitions with sanitized checkpoint summaries.
 - Bounded redacted operation diagnostics for support and a future authenticated operations view, with hard item/event caps.
+- Diagnostic payload/checkpoint key lists are capped at 100 entries and mark truncation.
 - Bounded recent-operation diagnostics listing that exposes only redacted support views.
 - Aggregate operation queue summaries expose state counts, eligible age, and expired leases without payload data.
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
