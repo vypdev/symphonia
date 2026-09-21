@@ -51,6 +51,21 @@ class RuntimeResourcesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             RuntimeResources.open("   ")
 
+    def test_foreign_keys_reject_orphan_projection_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            try:
+                with self.assertRaises(sqlite3.IntegrityError):
+                    resources.projections._connection.execute(  # type: ignore[attr-defined]
+                        """
+                        INSERT INTO current_playlist_snapshots (
+                            provider, namespace, playlist_id, snapshot_id
+                        ) VALUES ('test', 'test', 'playlist', 'missing-snapshot')
+                        """
+                    )
+            finally:
+                resources.close()
+
     def test_resources_support_context_manager_lifecycle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
