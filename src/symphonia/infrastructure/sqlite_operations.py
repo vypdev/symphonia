@@ -60,6 +60,8 @@ def _validate_payload_keys(payload: Any) -> None:
             active_containers.add(identity)
             try:
                 for key, nested in value.items():
+                    if not isinstance(key, str):
+                        raise ValueError("operation payload object keys must be strings")
                     key_text = str(key)
                     key_path = key_text if not path else f"{path}.{key_text}"
                     if _SECRET_PAYLOAD_KEY.search(key_text):

@@ -325,6 +325,15 @@ class OperationRepositoryTests(unittest.TestCase):
             )
         self.assertEqual(self.repository.get(operation.operation_id).state, "running")
 
+    def test_operation_payload_rejects_non_string_object_keys(self) -> None:
+        with self.assertRaisesRegex(ValueError, "keys must be strings"):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key="numeric-key",
+                payload={1: "must-not-be-coerced"},  # type: ignore[dict-item]
+                now=self.now,
+            )
+
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
             operation_type="import",
