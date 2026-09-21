@@ -235,6 +235,31 @@ class OperationRepositoryTests(unittest.TestCase):
         self.assertEqual(len(diagnostic["checkpoint"]["checkpoint_keys"]), 100)
         self.assertTrue(diagnostic["checkpoint"]["checkpoint_keys_truncated"])
 
+    def test_diagnostic_reads_only_a_bounded_event_window(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="bounded-event-window",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        for index in range(12):
+            self.repository.checkpoint(
+                operation.operation_id,
+                worker_id="worker-a",
+                checkpoint={"step": index},
+                now=self.now + timedelta(seconds=index + 1),
+            )
+
+        diagnostic = self.repository.diagnostic(operation.operation_id, event_limit=5)
+
+        self.assertTrue(diagnostic["events_truncated"])
+        self.assertEqual(len(diagnostic["events"]), 5)
+        self.assertEqual(
+            [event["event_type"] for event in diagnostic["events"]],
+            ["checkpointed"] * 5,
+        )
+
     def test_queue_summary_is_aggregate_and_counts_only_eligible_work(self) -> None:
         queued = self.repository.create(
             operation_type="copy",

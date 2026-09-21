@@ -269,8 +269,20 @@ class OperationRepository:
         if not 0 < event_limit <= _MAX_DIAGNOSTIC_EVENTS:
             raise ValueError(f"event_limit must be between 1 and {_MAX_DIAGNOSTIC_EVENTS}")
         record = self.get(operation_id)
-        all_events = self.events(operation_id)
-        selected_events = all_events[-event_limit:]
+        event_rows = self._connection.execute(
+            """
+            SELECT sequence, operation_id, event_type, state, worker_id, payload_json, created_at
+              FROM operation_events
+             WHERE operation_id = ?
+             ORDER BY sequence DESC
+             LIMIT ?
+            """,
+            (operation_id, event_limit + 1),
+        ).fetchall()
+        events_truncated = len(event_rows) > event_limit
+        selected_events = tuple(
+            self._event(row) for row in reversed(event_rows[:event_limit])
+        )
         payload_keys, payload_keys_truncated = self._bounded_keys(record.payload)
         return {
             "operation_id": record.operation_id,
@@ -284,7 +296,7 @@ class OperationRepository:
             "payload_keys": payload_keys,
             "payload_keys_truncated": payload_keys_truncated,
             "checkpoint": self._checkpoint_summary(record.checkpoint),
-            "events_truncated": len(selected_events) != len(all_events),
+            "events_truncated": events_truncated,
             "events": [
                 {
                     "sequence": event.sequence,
