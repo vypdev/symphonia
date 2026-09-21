@@ -43,6 +43,7 @@ class CopyPlanRepository:
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
+        self._connection.execute("PRAGMA foreign_keys = ON")
         self._migrate()
 
     def close(self) -> None:

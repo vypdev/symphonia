@@ -29,6 +29,18 @@ class RuntimeResourcesTests(unittest.TestCase):
                 self.assertIn("authorization_attempts", tables)
                 self.assertIn("resolution_decisions", tables)
                 self.assertTrue(resources.healthcheck())
+                for repository in (
+                    resources.operations,
+                    resources.plans,
+                    resources.connections,
+                    resources.authorization,
+                    resources.projections,
+                    resources.resolutions,
+                ):
+                    self.assertEqual(
+                        repository._connection.execute("PRAGMA foreign_keys").fetchone()[0],  # type: ignore[attr-defined]
+                        1,
+                    )
             finally:
                 resources.close()
 
