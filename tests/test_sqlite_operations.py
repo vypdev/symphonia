@@ -300,6 +300,31 @@ class OperationRepositoryTests(unittest.TestCase):
                 now=self.now,
             )
 
+    def test_operation_payload_and_checkpoint_must_be_json_objects(self) -> None:
+        with self.assertRaisesRegex(ValueError, "operation payload must be a JSON object"):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key="list-payload",
+                payload=[],  # type: ignore[arg-type]
+                now=self.now,
+            )
+
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="list-checkpoint",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        with self.assertRaisesRegex(ValueError, "checkpoint must be a JSON object"):
+            self.repository.checkpoint(
+                operation.operation_id,
+                worker_id="worker-a",
+                checkpoint=[],  # type: ignore[arg-type]
+                now=self.now + timedelta(seconds=1),
+            )
+        self.assertEqual(self.repository.get(operation.operation_id).state, "running")
+
     def test_only_lease_owner_can_checkpoint(self) -> None:
         operation = self.repository.create(
             operation_type="import",

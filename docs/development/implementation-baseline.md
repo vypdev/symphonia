@@ -30,6 +30,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Authorization callback binding rejects unsafe schemes, fragments, credentials, whitespace, and non-loopback HTTP hosts.
 - Normalized provider errors and provider codes redact common bearer/token/secret/password/cookie forms at the provider boundary.
 - Operation payloads and durable checkpoints recursively reject credential-shaped keys and cyclic structures before SQLite writes.
+- Durable operation intents, checkpoints, retries, and rate-limit waits require JSON-object payloads before SQLite writes.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Copy plans bind target connection and effective write-capability evidence into their digest.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.

@@ -87,6 +87,12 @@ def _validate_payload_keys(payload: Any) -> None:
         )
 
 
+def _validate_object_payload(payload: Any, *, label: str) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    _validate_payload_keys(payload)
+
+
 @dataclass(frozen=True, slots=True)
 class OperationRecord:
     operation_id: str
@@ -194,7 +200,7 @@ class OperationRepository:
 
         if not operation_type.strip() or not idempotency_key.strip():
             raise ValueError("operation_type and idempotency_key must not be empty")
-        _validate_payload_keys(payload)
+        _validate_object_payload(payload, label="operation payload")
         operation_id = operation_id or str(uuid.uuid4())
         timestamp = _utc(now)
         payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -558,7 +564,7 @@ class OperationRepository:
 
         if state not in {"running", "succeeded", "partial", "failed", "cancelled", "waiting_user"}:
             raise ValueError("invalid checkpoint state")
-        _validate_payload_keys(checkpoint)
+        _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
         checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         self._connection.execute("BEGIN IMMEDIATE")
@@ -699,7 +705,7 @@ class OperationRepository:
     ) -> OperationRecord:
         """Release a lease and persist a restart-safe retry time."""
 
-        _validate_payload_keys(checkpoint)
+        _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
         next_run_text = _utc(next_run_at)
         checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -767,7 +773,7 @@ class OperationRepository:
     ) -> OperationRecord:
         """Release a lease until an absolute provider rate-limit time."""
 
-        _validate_payload_keys(checkpoint)
+        _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
         next_run_text = _utc(next_run_at)
         checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
