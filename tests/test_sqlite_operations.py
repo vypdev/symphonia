@@ -700,6 +700,13 @@ class OperationRepositoryTests(unittest.TestCase):
             finally:
                 repository.close()
 
+    def test_fresh_operation_store_commits_schema_and_version_together(self) -> None:
+        self.assertEqual(
+            self.repository._connection.execute("PRAGMA user_version").fetchone()[0],  # type: ignore[attr-defined]
+            self.repository.SCHEMA_VERSION,
+        )
+        self.assertFalse(self.repository._connection.in_transaction)  # type: ignore[attr-defined]
+
 
 if __name__ == "__main__":
     unittest.main()

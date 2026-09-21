@@ -58,6 +58,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
+- The operation store applies its schema DDL, legacy column migration, and `user_version` marker in one transaction.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
 - Lossless Unicode-safe identity normalization with explicit version-token and ISRC derived fields; no automatic matching thresholds are assumed.
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
