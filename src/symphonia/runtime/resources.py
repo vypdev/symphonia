@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 import os
 from pathlib import Path
@@ -38,6 +38,7 @@ class RuntimeResources:
     projections: PlaylistProjectionRepository
     resolutions: ResolutionDecisionRepository
     database_path: str = ":memory:"
+    _closed: bool = field(default=False, init=False, repr=False)
 
     @classmethod
     def open(cls, database_path: str) -> "RuntimeResources":
@@ -66,6 +67,10 @@ class RuntimeResources:
     def close(self) -> None:
         """Close repositories in reverse dependency/startup order."""
 
+        if self._closed:
+            return
+        self._closed = True
+
         for repository in (
             self.resolutions,
             self.projections,
@@ -85,6 +90,8 @@ class RuntimeResources:
     def healthcheck(self) -> bool:
         """Check every durable store without exposing adapter internals."""
 
+        if self._closed:
+            return False
         try:
             for repository in (
                 self.operations,

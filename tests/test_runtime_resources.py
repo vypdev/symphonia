@@ -47,6 +47,16 @@ class RuntimeResourcesTests(unittest.TestCase):
                 self.assertTrue(managed.healthcheck())
             self.assertFalse(resources.healthcheck())
 
+    def test_close_is_idempotent_and_keeps_runtime_not_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            resources.close()
+            resources.close()
+
+            self.assertFalse(resources.healthcheck())
+            with self.assertRaisesRegex(RuntimeError, "unhealthy"):
+                resources.backup_to(str(Path(directory) / "backup.sqlite3"))
+
     def test_readiness_fails_closed_when_one_store_is_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
