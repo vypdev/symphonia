@@ -218,6 +218,11 @@ class RuntimeResources:
             integrity = connection.execute("PRAGMA integrity_check").fetchone()
             if integrity is None or integrity[0] != "ok":
                 return False
+            operation_schema_version = int(
+                connection.execute("PRAGMA user_version").fetchone()[0]
+            )
+            if operation_schema_version > OperationRepository.SCHEMA_VERSION:
+                return False
             tables = {
                 row[0]
                 for row in connection.execute(

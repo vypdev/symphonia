@@ -30,7 +30,7 @@ Without a runtime contract, framework selection can accidentally determine authe
 
 ### 2.2 Current behavior
 
-An owner-approved dependency-free runtime foundation exists, but the complete Supervisor-managed App described here does not. The foundation includes a non-root container metadata scaffold, `/data` persistence, validated process configuration, Ingress-relative health/readiness/version routing, composed SQLite stores, transactionally consistent backup/preflight helpers, idempotent resource shutdown, and deterministic tests. It does not provide the accepted authentication, migration ledger, restore workflow, platform matrix, or complete lifecycle UI required by this SDD.
+An owner-approved dependency-free runtime foundation exists, but the complete Supervisor-managed App described here does not. The foundation includes a non-root container metadata scaffold, `/data` persistence, validated process configuration, Ingress-relative health/readiness/version routing, composed SQLite stores, transactionally consistent backup/preflight helpers with future-schema rejection, idempotent resource shutdown, and deterministic tests. It does not provide the accepted authentication, migration ledger, restore workflow, platform matrix, or complete lifecycle UI required by this SDD.
 
 This SDD remains prospective and `Draft`; the foundation evidence below must not be read as implementation readiness or as proof that the complete App capability exists.
 

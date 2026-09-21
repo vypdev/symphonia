@@ -49,6 +49,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
+- Backup preflight rejects operation databases whose schema version is newer than the running foundation.
 - Runtime configuration validates host, port, database path, and Ingress base path before startup.
 - Runtime configuration rejects control characters, non-integral ports, and query/fragment-bearing Ingress paths before startup.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.

@@ -218,6 +218,27 @@ class RuntimeResourcesTests(unittest.TestCase):
 
             self.assertFalse(RuntimeResources.validate_backup(str(path)))
 
+    def test_validate_backup_rejects_a_future_operation_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            backup_path = Path(directory) / "backup.sqlite3"
+            resources = RuntimeResources.open(source_path)
+            try:
+                resources.backup_to(str(backup_path))
+            finally:
+                resources.close()
+
+            connection = sqlite3.connect(backup_path)
+            try:
+                connection.execute(
+                    f"PRAGMA user_version = {OperationRepository.SCHEMA_VERSION + 1}"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            self.assertFalse(RuntimeResources.validate_backup(str(backup_path)))
+
     def test_diagnostics_combine_safe_queue_and_operation_views(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
