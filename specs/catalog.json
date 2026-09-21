@@ -364,6 +364,7 @@
       ],
       "implementationEvidence": {
         "code": [
+          "src/symphonia/infrastructure/sqlite_common.py",
           "src/symphonia/infrastructure/sqlite_operations.py",
           "src/symphonia/application/operation_runner.py",
           "src/symphonia/application/operation_worker.py",

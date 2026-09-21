@@ -40,6 +40,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
 - Explicit runtime resource composition and reverse-order shutdown for all durable repositories.
 - Every SQLite repository enables foreign-key enforcement at connection startup; backup preflight remains a separate integrity check.
+- A shared SQLite connection policy applies the same five-second busy timeout and row-factory settings to every durable store.
 - Runtime resources support explicit and context-manager lifecycle shutdown.
 - Runtime resource shutdown is idempotent and remains not-ready after closure, so repeated Supervisor/finally cleanup cannot reopen or report healthy stores.
 - Readiness can validate every composed durable store instead of only the operation queue.

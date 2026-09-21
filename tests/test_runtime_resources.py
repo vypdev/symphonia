@@ -41,6 +41,10 @@ class RuntimeResourcesTests(unittest.TestCase):
                         repository._connection.execute("PRAGMA foreign_keys").fetchone()[0],  # type: ignore[attr-defined]
                         1,
                     )
+                    self.assertEqual(
+                        repository._connection.execute("PRAGMA busy_timeout").fetchone()[0],  # type: ignore[attr-defined]
+                        5000,
+                    )
             finally:
                 resources.close()
 

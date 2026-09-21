@@ -16,6 +16,8 @@ import sqlite3
 from typing import Any
 import uuid
 
+from .sqlite_common import connect
+
 
 def _utc(value: datetime) -> str:
     if value.tzinfo is None:
@@ -120,10 +122,7 @@ class OperationRepository:
     SCHEMA_VERSION = 3
 
     def __init__(self, path: str = ":memory:") -> None:
-        self._connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
-        self._connection.row_factory = sqlite3.Row
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        self._connection.execute("PRAGMA busy_timeout = 5000")
+        self._connection = connect(path)
         self._migrate()
 
     def close(self) -> None:

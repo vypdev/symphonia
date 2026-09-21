@@ -9,6 +9,8 @@ import sqlite3
 
 from symphonia.providers.authorization import AuthorizationAttempt, AuthorizationState, validate_redirect_uri
 
+from .sqlite_common import connect
+
 
 def _utc(value: datetime) -> str:
     if value.tzinfo is None:
@@ -38,9 +40,7 @@ class AuthorizationAttemptRepository:
     """Store only authorization correlation metadata, never raw state values."""
 
     def __init__(self, path: str = ":memory:") -> None:
-        self._connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
-        self._connection.row_factory = sqlite3.Row
-        self._connection.execute("PRAGMA foreign_keys = ON")
+        self._connection = connect(path)
         self._migrate()
 
     def close(self) -> None:
