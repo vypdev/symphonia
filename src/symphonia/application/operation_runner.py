@@ -43,7 +43,12 @@ class OperationRunner:
                 state="failed",
             )
         try:
-            return handler(operation, worker_id, now)
+            result = handler(operation, worker_id, now)
+            if not isinstance(result, OperationRecord):
+                raise TypeError("operation handler must return OperationRecord")
+            if result.operation_id != operation.operation_id:
+                raise ValueError("operation handler returned a different operation")
+            return result
         except Exception as error:
             # A handler must never strand a claimed operation in ``running``.
             # Persist only a stable exception class marker: provider details

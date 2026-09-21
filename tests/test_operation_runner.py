@@ -82,6 +82,26 @@ class OperationRunnerTests(unittest.TestCase):
             ["created", "claimed", "checkpointed"],
         )
 
+    def test_invalid_handler_result_is_terminal_and_does_not_strand_work(self) -> None:
+        operation = self.repository.create(
+            operation_type="fixture",
+            idempotency_key="fixture-invalid-result",
+            payload={},
+            now=NOW,
+        )
+
+        def handler(_claimed, _worker_id, _now):
+            return None
+
+        result = OperationRunner(self.repository, {"fixture": handler}).run_once(
+            worker_id="worker-a", now=NOW
+        )
+
+        self.assertEqual(result.operation_id, operation.operation_id)
+        self.assertEqual(result.state, "failed")
+        self.assertEqual(result.checkpoint["failure_code"], "handler_exception:TypeError")
+        self.assertEqual(self.repository.get(operation.operation_id).state, "failed")
+
 
 if __name__ == "__main__":
     unittest.main()
