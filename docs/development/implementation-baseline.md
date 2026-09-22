@@ -58,6 +58,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Import diagnostics expose bounded snapshot freshness and availability counts without playlist content.
 - Resolution diagnostics expose only manual-decision action counts, never track, actor, or reason data.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
+- The current JSON health/readiness/version surface disables caching, MIME sniffing, and referrer propagation.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
 - The operation store applies its schema DDL, legacy column migration, and `user_version` marker in one transaction.

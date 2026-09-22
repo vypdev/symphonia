@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from io import BytesIO
 import unittest
 
 from symphonia.infrastructure import OperationRepository
-from symphonia.runtime.http import route_get
+from symphonia.runtime.http import SymphoniaRequestHandler, route_get
 
 
 class RuntimeHTTPTests(unittest.TestCase):
@@ -58,6 +59,30 @@ class RuntimeHTTPTests(unittest.TestCase):
 
         self.assertEqual(status, 503)
         self.assertEqual(payload["status"], "not_ready")
+
+    def test_json_surface_sets_no_cache_and_content_sniffing_headers(self) -> None:
+        class FakeHandler:
+            def __init__(self) -> None:
+                self.status = None
+                self.headers = {}
+                self.wfile = BytesIO()
+
+            def send_response(self, status: int) -> None:
+                self.status = status
+
+            def send_header(self, name: str, value: str) -> None:
+                self.headers[name] = value
+
+            def end_headers(self) -> None:
+                return
+
+        handler = FakeHandler()
+        SymphoniaRequestHandler._json(handler, 200, {"status": "ok"})  # type: ignore[arg-type]
+
+        self.assertEqual(handler.status, 200)
+        self.assertEqual(handler.headers["Cache-Control"], "no-store")
+        self.assertEqual(handler.headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(handler.headers["Referrer-Policy"], "no-referrer")
 
 
 if __name__ == "__main__":
