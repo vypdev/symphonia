@@ -109,6 +109,28 @@ class IdentityResolutionTests(unittest.TestCase):
         finally:
             repository.close()
 
+    def test_resolution_healthcheck_fails_closed_on_corrupt_payload(self) -> None:
+        repository = ResolutionDecisionRepository()
+        try:
+            repository.record(
+                ManualDecision(
+                    provider_track_key="spotify:connection-1:track-1",
+                    candidate_recording_id="recording-1",
+                    action=ManualDecisionAction.ACCEPT,
+                    actor_id="local-user",
+                    reason="Verified the exact recording",
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                )
+            )
+            repository._connection.execute(  # type: ignore[attr-defined]
+                "UPDATE resolution_decisions SET payload_json = ?",
+                ("[]",),
+            )
+
+            self.assertFalse(repository.healthcheck())
+        finally:
+            repository.close()
+
 
 if __name__ == "__main__":
     unittest.main()

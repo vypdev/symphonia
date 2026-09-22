@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timezone
+import math
 import threading
-import time
 
 from symphonia.infrastructure.sqlite_operations import OperationRecord
 
@@ -33,11 +33,16 @@ class OperationWorker:
         poll_interval_seconds: float = 1.0,
         lease_seconds: int = 30,
     ) -> None:
-        if not worker_id.strip():
+        if not isinstance(worker_id, str) or not worker_id.strip():
             raise ValueError("worker_id must not be empty")
-        if poll_interval_seconds <= 0:
+        if (
+            isinstance(poll_interval_seconds, bool)
+            or not isinstance(poll_interval_seconds, (int, float))
+            or not math.isfinite(poll_interval_seconds)
+            or poll_interval_seconds <= 0
+        ):
             raise ValueError("poll_interval_seconds must be positive")
-        if lease_seconds <= 0:
+        if isinstance(lease_seconds, bool) or not isinstance(lease_seconds, int) or lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         self._runner = runner
         self._worker_id = worker_id

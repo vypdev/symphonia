@@ -54,13 +54,17 @@ class PlaylistProjectionRepository:
         self._connection.close()
 
     def healthcheck(self) -> bool:
-        """Return whether the migrated projection store can be read."""
+        """Return whether schema and projection references are readable."""
 
         try:
-            row = self._connection.execute("SELECT 1 AS healthy").fetchone()
+            integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            if self._connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                return False
         except sqlite3.Error:
             return False
-        return row is not None and row["healthy"] == 1
+        return True
 
     def _migrate(self) -> None:
         self._connection.executescript(

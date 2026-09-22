@@ -55,3 +55,13 @@ Persistent synchronization follows only after copy semantics and official provid
 ## Contributing during specification
 
 Use requirement identifiers in issues, SDDs, tests, and future commits. Material implementation work starts from the applicable cataloged SDD and its numeric verification budget. A change to accepted behavior must update the relevant horizontal specification and, when it changes an architectural decision, add or supersede an ADR. Do not infer a decision from an open question, and do not start production implementation until the SDD is ready and the owner explicitly approves it.
+
+Before opening a change, run `make verify`. It checks the SDD/catalog links and
+traceability, patch whitespace, and the offline test suite without provider
+accounts, Home Assistant, or network access.
+
+The two current evidence spikes can be run independently: `make spike-storage`
+exercises restart/lease recovery and SQLite backup validation, while the
+[OAuth callback spike](docs/development/oauth-callback-spike.md) documents the
+direct App-owned callback boundary. Both are research evidence, not published
+production endpoints.

@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
-import json
 import sqlite3
 import uuid
 from typing import Any
 
 from symphonia.identity.models import ManualDecision, ManualDecisionAction
 
-from .sqlite_common import connect
+from .sqlite_common import connect, dump_json, load_json
 
 
 class ResolutionDecisionRepository:
@@ -24,13 +23,19 @@ class ResolutionDecisionRepository:
         self._connection.close()
 
     def healthcheck(self) -> bool:
-        """Return whether the migrated decision store can be read."""
+        """Return whether schema and decision payloads are readable."""
 
         try:
-            row = self._connection.execute("SELECT 1 AS healthy").fetchone()
-        except sqlite3.Error:
+            integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            for row in self._connection.execute("SELECT payload_json FROM resolution_decisions").fetchall():
+                payload = load_json(row["payload_json"])
+                if not isinstance(payload, dict):
+                    return False
+        except (sqlite3.Error, TypeError, ValueError):
             return False
-        return row is not None and row["healthy"] == 1
+        return True
 
     def _migrate(self) -> None:
         self._connection.executescript(
@@ -54,7 +59,7 @@ class ResolutionDecisionRepository:
     def record(self, decision: ManualDecision) -> ManualDecision:
         decision_id = decision.decision_id or str(uuid.uuid4())
         persisted = replace(decision, decision_id=decision_id)
-        payload = json.dumps(
+        payload = dump_json(
             {
                 "provider_track_key": persisted.provider_track_key,
                 "candidate_recording_id": persisted.candidate_recording_id,
@@ -63,9 +68,6 @@ class ResolutionDecisionRepository:
                 "reason": persisted.reason,
                 "created_at": persisted.created_at,
             },
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
         )
         self._connection.execute(
             """

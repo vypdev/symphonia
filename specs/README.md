@@ -121,7 +121,13 @@ Run after every SDD or catalog change:
 
 ```text
 git diff --check
+PYTHONPATH=. python3 tools/validate_specs.py
 ```
+
+The validator checks that `catalog.json` parses, referenced files exist, each
+SDD has one known catalog capability ID, catalog statuses and paths agree with
+`CATALOG.md`, requirement IDs are present in the horizontal specifications,
+and local Markdown links resolve.
 
 Also verify:
 

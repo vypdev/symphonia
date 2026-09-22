@@ -55,6 +55,11 @@
           "src/symphonia/runtime/config.py",
           "src/symphonia/runtime/http.py",
           "src/symphonia/runtime/resources.py",
+          "src/symphonia/infrastructure/sqlite_authorization.py",
+          "src/symphonia/infrastructure/sqlite_connections.py",
+          "src/symphonia/infrastructure/sqlite_library.py",
+          "src/symphonia/infrastructure/sqlite_plans.py",
+          "src/symphonia/infrastructure/sqlite_resolutions.py",
           "Dockerfile",
           "addon/config.yaml"
         ],
@@ -62,6 +67,10 @@
           "tests/test_runtime_config.py",
           "tests/test_runtime_http.py",
           "tests/test_runtime_resources.py",
+          "tests/test_sqlite_authorization.py",
+          "tests/test_sqlite_connections.py",
+          "tests/test_sqlite_plans.py",
+          "tests/test_identity_resolution.py",
           "tests/test_homeassistant_app_metadata.py",
           "tests/test_architecture_boundaries.py"
         ],
@@ -174,7 +183,7 @@
         "documentation": []
       },
       "blockers": [
-        "OQ-004 direct App OAuth versus companion-integration authorization broker",
+        "RG-002 direct App callback reachability and OAuth boundary validation",
         "RG-002 Home Assistant OAuth callback spike",
         "RG-001 provider-specific scopes and account constraints",
         "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
@@ -366,6 +375,12 @@
         "code": [
           "src/symphonia/infrastructure/sqlite_common.py",
           "src/symphonia/infrastructure/sqlite_operations.py",
+          "src/symphonia/infrastructure/sqlite_authorization.py",
+          "src/symphonia/infrastructure/sqlite_connections.py",
+          "src/symphonia/infrastructure/sqlite_library.py",
+          "src/symphonia/infrastructure/sqlite_plans.py",
+          "src/symphonia/infrastructure/sqlite_resolutions.py",
+          "src/symphonia/domain/models.py",
           "src/symphonia/application/operation_runner.py",
           "src/symphonia/application/operation_worker.py",
           "src/symphonia/application/copy_execution.py",
@@ -373,6 +388,11 @@
         ],
         "tests": [
           "tests/test_sqlite_operations.py",
+          "tests/test_sqlite_authorization.py",
+          "tests/test_sqlite_connections.py",
+          "tests/test_sqlite_plans.py",
+          "tests/test_identity_resolution.py",
+          "tests/test_copy_planning.py",
           "tests/test_operation_runner.py",
           "tests/test_operation_worker.py",
           "tests/test_copy_execution.py",

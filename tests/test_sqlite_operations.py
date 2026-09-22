@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import sqlite3
 import tempfile
+import threading
 import unittest
 
 from symphonia.infrastructure import IdempotencyConflict, LeaseConflict, OperationRepository
@@ -79,6 +80,117 @@ class OperationRepositoryTests(unittest.TestCase):
         )
         self.assertEqual([event.state for event in events], ["queued", "running", "succeeded"])
         self.assertEqual(events[1].worker_id, "worker-a")
+
+    def test_two_sqlite_connections_cannot_claim_same_operation(self) -> None:
+        """Exercise the BEGIN IMMEDIATE lease boundary with real connections."""
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = f"{temporary_directory}/operations.sqlite3"
+            seed_repository = OperationRepository(database_path)
+            operation = seed_repository.create(
+                operation_type="copy",
+                idempotency_key="concurrent-claim",
+                payload={},
+                now=self.now,
+            )
+            seed_repository.close()
+
+            start = threading.Barrier(2)
+            outcomes: list[tuple[str, str]] = []
+            outcomes_lock = threading.Lock()
+
+            def attempt_claim(worker_id: str) -> None:
+                repository = OperationRepository(database_path)
+                try:
+                    start.wait(timeout=5)
+                    repository.claim(operation.operation_id, worker_id=worker_id, now=self.now)
+                    outcome = (worker_id, "claimed")
+                except LeaseConflict:
+                    outcome = (worker_id, "conflict")
+                except Exception as error:  # pragma: no cover - keeps thread failures observable
+                    outcome = (worker_id, f"error:{type(error).__name__}")
+                finally:
+                    repository.close()
+                with outcomes_lock:
+                    outcomes.append(outcome)
+
+            threads = [
+                threading.Thread(target=attempt_claim, args=(worker_id,))
+                for worker_id in ("worker-a", "worker-b")
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=10)
+
+            self.assertTrue(all(not thread.is_alive() for thread in threads))
+            statuses = {worker_id: status for worker_id, status in outcomes}
+            self.assertEqual(set(statuses), {"worker-a", "worker-b"})
+            self.assertEqual(sorted(statuses.values()), ["claimed", "conflict"])
+
+            verifier = OperationRepository(database_path)
+            try:
+                record = verifier.get(operation.operation_id)
+                self.assertEqual(record.state, "running")
+                self.assertIn(record.worker_id, {"worker-a", "worker-b"})
+                self.assertEqual(
+                    [event.event_type for event in verifier.events(operation.operation_id)],
+                    ["created", "claimed"],
+                )
+            finally:
+                verifier.close()
+
+    def test_two_sqlite_connections_claim_distinct_queue_items(self) -> None:
+        """Exercise scheduler selection under concurrent workers."""
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = f"{temporary_directory}/operations.sqlite3"
+            seed_repository = OperationRepository(database_path)
+            first = seed_repository.create(
+                operation_type="copy",
+                idempotency_key="concurrent-next-1",
+                payload={},
+                now=self.now,
+            )
+            second = seed_repository.create(
+                operation_type="copy",
+                idempotency_key="concurrent-next-2",
+                payload={},
+                now=self.now + timedelta(seconds=1),
+            )
+            seed_repository.close()
+
+            start = threading.Barrier(2)
+            outcomes: list[tuple[str, str | None]] = []
+            outcomes_lock = threading.Lock()
+
+            def claim_next(worker_id: str) -> None:
+                repository = OperationRepository(database_path)
+                try:
+                    start.wait(timeout=5)
+                    claimed = repository.claim_next(worker_id=worker_id, now=self.now)
+                    outcome = (worker_id, None if claimed is None else claimed.operation_id)
+                except Exception as error:  # pragma: no cover - keeps thread failures observable
+                    outcome = (worker_id, f"error:{type(error).__name__}")
+                finally:
+                    repository.close()
+                with outcomes_lock:
+                    outcomes.append(outcome)
+
+            threads = [
+                threading.Thread(target=claim_next, args=(worker_id,))
+                for worker_id in ("worker-a", "worker-b")
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=10)
+
+            self.assertTrue(all(not thread.is_alive() for thread in threads))
+            self.assertEqual({worker_id for worker_id, _ in outcomes}, {"worker-a", "worker-b"})
+            claimed_ids = [operation_id for _, operation_id in outcomes]
+            self.assertEqual(set(claimed_ids), {first.operation_id, second.operation_id})
+            self.assertEqual(len(claimed_ids), len(set(claimed_ids)))
 
     def test_checkpoint_events_store_only_sanitized_summary(self) -> None:
         operation = self.repository.create(
@@ -372,6 +484,92 @@ class OperationRepositoryTests(unittest.TestCase):
                 now=self.now + timedelta(seconds=1),
             )
         self.assertEqual(self.repository.get(operation.operation_id).state, "running")
+
+    def test_non_finite_numbers_are_rejected_before_durable_json_writes(self) -> None:
+        with self.assertRaises(ValueError):
+            self.repository.create(
+                operation_type="copy",
+                idempotency_key="nan-payload",
+                payload={"value": float("nan")},
+                now=self.now,
+            )
+
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="nan-checkpoint",
+            payload={},
+            now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        with self.assertRaises(ValueError):
+            self.repository.checkpoint(
+                operation.operation_id,
+                worker_id="worker-a",
+                checkpoint={"value": float("inf")},
+                now=self.now,
+            )
+        self.assertEqual(self.repository.get(operation.operation_id).checkpoint, {})
+
+        self.repository._connection.execute(
+            "UPDATE operations SET payload_json = ? WHERE operation_id = ?",
+            ('{"value": NaN}', operation.operation_id),
+        )
+        with self.assertRaises(ValueError):
+            self.repository.get(operation.operation_id)
+
+    def test_healthcheck_fails_closed_on_invalid_state_or_json(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="healthcheck-corruption",
+            payload={},
+            now=self.now,
+        )
+
+        self.repository._connection.execute(  # type: ignore[attr-defined]
+            "UPDATE operations SET state = ? WHERE operation_id = ?",
+            ("not-a-real-state", operation.operation_id),
+        )
+        self.assertFalse(self.repository.healthcheck())
+
+        self.repository._connection.execute(  # type: ignore[attr-defined]
+            "UPDATE operations SET state = ?, payload_json = ? WHERE operation_id = ?",
+            ("queued", "[]", operation.operation_id),
+        )
+        self.assertFalse(self.repository.healthcheck())
+
+        self.repository._connection.execute(  # type: ignore[attr-defined]
+            "UPDATE operations SET payload_json = ? WHERE operation_id = ?",
+            ('{"access_token":"must-not-be-readable"}', operation.operation_id),
+        )
+        self.assertFalse(self.repository.healthcheck())
+
+    def test_operation_and_worker_identifiers_require_non_empty_text(self) -> None:
+        for field, value in (
+            ("operation_type", None),
+            ("idempotency_key", "   "),
+            ("operation_id", ""),
+        ):
+            values = {
+                "operation_type": "copy",
+                "idempotency_key": "identifier-test",
+                "payload": {},
+                "now": self.now,
+            }
+            if field == "operation_id":
+                values[field] = value
+            else:
+                values[field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                self.repository.create(**values)
+
+        operation = self.repository.create(
+            operation_type="copy",
+            idempotency_key="worker-identifier-test",
+            payload={},
+            now=self.now,
+        )
+        with self.assertRaises(ValueError):
+            self.repository.claim(operation.operation_id, worker_id=None, now=self.now)  # type: ignore[arg-type]
 
     def test_operation_payload_rejects_non_string_object_keys(self) -> None:
         with self.assertRaisesRegex(ValueError, "keys must be strings"):

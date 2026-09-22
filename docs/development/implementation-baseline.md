@@ -1,7 +1,7 @@
 # Implementation baseline
 
 **Status:** owner-approved foundation slice
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-22
 
 The first implementation increment is intentionally narrower than any provider or Home Assistant capability. It proves the provider-independent core and the durable-operation persistence contract without selecting an external web framework, provider SDK, OAuth strategy, or frontend stack.
 
@@ -29,18 +29,26 @@ The first implementation increment is intentionally narrower than any provider o
 - Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
 - Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
+- Direct-callback authorization can resolve a durable attempt by the returned state digest after restart without persisting raw state; ambiguous digests fail closed.
+- Authorization consumption is covered across independent SQLite connections so callback replay races produce exactly one consumed attempt.
+- Authorization state is bounded before hashing, required identifiers are validated before SQLite writes, and durable failure codes use a bounded safe alphabet.
 - Application authorization boundary that generates one-use state without persisting the raw value.
 - Authorization callback binding rejects unsafe schemes, fragments, credentials, whitespace, and non-loopback HTTP hosts.
-- Normalized provider errors and provider codes redact common bearer/token/secret/password/cookie forms at the provider boundary.
+- Normalized provider errors and provider codes redact common bearer/token/secret/password/cookie forms at the provider boundary, including quoted JSON-like and query-like assignments.
 - Operation payloads and durable checkpoints recursively reject credential-shaped keys and cyclic structures before SQLite writes.
 - Durable operation intents, checkpoints, retries, and rate-limit waits require JSON-object payloads with string keys before SQLite writes.
+- Durable operation JSON rejects non-finite numbers on write and read, and operation/worker identifiers are validated before lease transitions.
+- Shared SQLite JSON helpers apply deterministic serialization and reject non-standard numbers in capability and plan payloads as well as operation state.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Copy plans bind target connection and effective write-capability evidence into their digest.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
+- Concrete provider manifests expose upstream dependencies and a dated research review marker.
 - Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories.
+- Spotify write adapters reject blank playlist/entry identifiers and unknown visibility values before issuing provider requests.
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.
 - Experimental official Apple Music library-playlist reader with separate developer/user token inputs.
 - Provider readers enforce bounded page sizes, repeated-cursor detection, and configurable maximum page counts.
+- Provider readers fail closed on malformed/non-absolute continuation links, backward offsets, and non-textual access/page tokens.
 - Experimental Home Assistant App metadata scaffold with Ingress-only management and `/data` persistence.
 - Explicit runtime resource composition and reverse-order shutdown for all durable repositories.
 - Every SQLite repository enables foreign-key enforcement at connection startup; backup preflight remains a separate integrity check.
@@ -50,18 +58,27 @@ The first implementation increment is intentionally narrower than any provider o
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
+- Backup publication validates the temporary SQLite copy before atomically replacing the destination.
+- Runtime backups reject missing parent directories and directory destinations before creating a temporary artifact.
 - Backup preflight rejects operation databases whose schema version is newer than the running foundation.
 - Runtime configuration validates host, port, database path, and Ingress base path before startup.
 - Runtime configuration rejects control characters, non-integral ports, and query/fragment-bearing Ingress paths before startup.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.
+- Runtime readiness validates SQLite integrity, foreign-key references, durable operation state/event values, authorization attempts, provider capability JSON, plan JSON, and resolution payloads; corruption fails closed.
 - Provider connection diagnostics expose provider/state and expiry counts, never account or credential data.
 - Import diagnostics expose bounded snapshot freshness and availability counts without playlist content.
 - Resolution diagnostics expose only manual-decision action counts, never track, actor, or reason data.
 - Ingress-relative health/version routing with normalized, traversal-safe base paths.
+- The composed runtime HTTP server has an offline route contract and a loopback smoke path for real health/readiness lifecycle checks.
 - The current JSON health/readiness/version surface disables caching, MIME sniffing, and referrer propagation.
+- The runtime JSON surface rejects non-standard numeric values before writing a response.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
+- Normalized provider identity, manifest, capability, entry, and page values reject non-textual or malformed boundary data before it reaches planning.
+- Normalized provider pages reject wrong enum/runtime types and duplicate positions before collection; dated manifest evidence must use an ISO date.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
+- Copy-plan reads and acceptance recompute the digest over execution-relevant content, rejecting tampering even when the stored digest field is unchanged.
 - The operation store applies its schema DDL, legacy column migration, and `user_version` marker in one transaction.
+- SQLite operation tests exercise real multi-connection races: one operation cannot be claimed twice and concurrent scheduler workers claim distinct queue items.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
 - Lossless Unicode-safe identity normalization with explicit version-token and ISRC derived fields; no automatic matching thresholds are assumed.
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.

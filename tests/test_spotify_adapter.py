@@ -116,14 +116,94 @@ class SpotifyAdapterTests(unittest.TestCase):
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
         self.assertEqual(len(client.calls), 1)
 
+    def test_repeated_offset_fails_closed_before_unbounded_reads(self) -> None:
+        class LoopingClient:
+            def __init__(self) -> None:
+                self.calls = []
+
+            def request(self, method: str, path: str, *, token: str, query: dict[str, str], body=None) -> JsonResponse:
+                self.calls.append((method, path, token, query))
+                return JsonResponse(
+                    200,
+                    {
+                        "items": [{"item": {"id": "track-1", "type": "track"}}],
+                        "next": "https://api.spotify.com/v1/playlists/playlist-1/items?offset=0",
+                    },
+                    {},
+                )
+
+        with self.assertRaises(ProviderApiError) as context:
+            SpotifyAdapter(LoopingClient(), lambda connection_id: "access-token", page_size=1).read_playlist_pages(
+                "connection-1", self.playlist()
+            )
+
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
     def test_invalid_cursor_and_empty_token_fail_closed(self) -> None:
         client = FakeClient({"0": JsonResponse(200, {"items": [], "next": None}, {})})
         adapter = SpotifyAdapter(client, lambda connection_id: "")
         with self.assertRaises(ProviderApiError):
             adapter.read_playlist_pages("connection-1", self.playlist())
+        adapter = SpotifyAdapter(client, lambda connection_id: None)  # type: ignore[arg-type]
+        with self.assertRaises(ProviderApiError) as context:
+            adapter.read_playlist_pages("connection-1", self.playlist())
+        self.assertEqual(context.exception.category, ProviderErrorCategory.AUTHENTICATION_REQUIRED)
         adapter = SpotifyAdapter(client, lambda connection_id: "token")
         with self.assertRaises(ValueError):
             adapter.read_playlist_pages("connection-1", self.playlist(), cursor="not-an-offset")
+        with self.assertRaises(ValueError):
+            adapter.read_playlist_pages("connection-1", self.playlist(), cursor=True)  # type: ignore[arg-type]
+
+    def test_malformed_next_links_fail_closed_without_fallback_pagination(self) -> None:
+        for next_url in (
+            "not-a-url",
+            "https://api.spotify.com/v1/playlists/playlist-1/items?limit=1",
+            "https://api.spotify.com/v1/playlists/playlist-1/items?offset=1&offset=2",
+            "https://api.spotify.com/v1/playlists/playlist-1/items?offset=0",
+            "https://api.spotify.com/v1/playlists/playlist-1/items?offset=not-an-integer",
+        ):
+            client = FakeClient(
+                {
+                    "0": JsonResponse(
+                        200,
+                        {"items": [{"item": {"id": "track-1", "type": "track"}}], "next": next_url},
+                        {},
+                    )
+                }
+            )
+            with self.subTest(next_url=next_url), self.assertRaises(ProviderApiError) as context:
+                SpotifyAdapter(client, lambda connection_id: "token").read_playlist_pages(
+                    "connection-1", self.playlist(),
+                )
+            self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
+    def test_target_visibility_must_be_explicit(self) -> None:
+        adapter = SpotifyAdapter(
+            FakeClient({"capabilities": JsonResponse(201, {"id": "target-1"}, {})}),
+            lambda connection_id: "access-token",
+            connection_id="connection-1",
+        )
+        with self.assertRaises(ValueError):
+            adapter.ensure_target_playlist(
+                provider="spotify",
+                name="Imported",
+                visibility="unlisted",
+                idempotency_key="target-1",
+            )
+
+        for kwargs in (
+            {"name": "", "visibility": "private", "idempotency_key": "target-1"},
+            {"name": "Imported", "visibility": "private", "idempotency_key": ""},
+        ):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                adapter.ensure_target_playlist(provider="spotify", **kwargs)
+
+        with self.assertRaises(ValueError):
+            adapter.add_entry(
+                target_playlist_id="",
+                provider_track_id="track-1",
+                idempotency_key="entry-1",
+            )
 
     def test_confirmed_writes_use_spotify_json_contract(self) -> None:
         client = FakeClient({"capabilities": JsonResponse(201, {"id": "target-1"}, {})})

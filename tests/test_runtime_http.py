@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from io import BytesIO
+import http.client
+from pathlib import Path
+import tempfile
+import threading
 import unittest
 
 from symphonia.infrastructure import OperationRepository
-from symphonia.runtime.http import SymphoniaRequestHandler, route_get
+from symphonia.runtime.http import SymphoniaRequestHandler, create_server, route_get
 
 
 class RuntimeHTTPTests(unittest.TestCase):
@@ -83,6 +87,65 @@ class RuntimeHTTPTests(unittest.TestCase):
         self.assertEqual(handler.headers["Cache-Control"], "no-store")
         self.assertEqual(handler.headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(handler.headers["Referrer-Policy"], "no-referrer")
+
+    def test_json_surface_rejects_non_standard_numbers(self) -> None:
+        class FakeHandler:
+            def __init__(self) -> None:
+                self.wfile = BytesIO()
+
+            def send_response(self, status: int) -> None:
+                return
+
+            def send_header(self, name: str, value: str) -> None:
+                return
+
+            def end_headers(self) -> None:
+                return
+
+        with self.assertRaises(ValueError):
+            SymphoniaRequestHandler._json(  # type: ignore[arg-type]
+                FakeHandler(),
+                200,
+                {"value": float("nan")},
+            )
+
+    def test_composed_runtime_http_smoke_exposes_health_and_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            try:
+                server = create_server(
+                    host="127.0.0.1",
+                    port=0,
+                    database_path=str(Path(directory) / "symphonia.sqlite3"),
+                    ingress_path="/symphonia",
+                )
+            except PermissionError:
+                self.skipTest("the test sandbox does not permit local socket binding")
+
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                connection = http.client.HTTPConnection(host, port, timeout=2)
+                try:
+                    connection.request("GET", "/symphonia/health")
+                    health = connection.getresponse()
+                    health_body = health.read().decode("utf-8")
+                    connection.request("GET", "/symphonia/ready")
+                    ready = connection.getresponse()
+                    ready_body = ready.read().decode("utf-8")
+                finally:
+                    connection.close()
+
+                self.assertEqual(health.status, 200)
+                self.assertIn('"status": "ok"', health_body)
+                self.assertEqual(ready.status, 200)
+                self.assertIn('"status": "ready"', ready_body)
+            finally:
+                server.shutdown()
+                server.server_close()
+                server.close_resources()
+                thread.join(timeout=2)
+                self.assertFalse(thread.is_alive())
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-20
+- **Last reviewed:** 2026-09-22
 
 ## Context
 
@@ -12,6 +13,12 @@ Home Assistant Supervisor provides an install/update lifecycle, Ingress UI authe
 ## Decision
 
 The primary supported distribution is a Supervisor-managed Home Assistant App installed from a Home Assistant App repository. It owns the long-running Symphonia service, durable jobs, provider connections, persistence, and management UI exposed through Ingress.
+
+The implementation follows the `vypdev/homeassistant-gateway` deployment
+pattern: the App is the product boundary and Ingress is the administrative
+entry point. Provider authorization is owned by the App's provider adapters;
+the MVP does not require a companion integration to broker OAuth. A companion
+integration remains a later, optional native-surface extension.
 
 The domain and application core remain independent of Home Assistant. A standalone composition profile will use the same core so the product can operate without Home Assistant and tests do not require it. Timing of the standalone release remains open.
 
@@ -51,4 +58,3 @@ Trade-offs:
 - standalone mode needs its own authentication/network boundary;
 - App and optional integration artifacts need version compatibility;
 - provider credentials in Supervisor backups require a deliberate encryption/key/restore model.
-

@@ -24,14 +24,17 @@ class SymphoniaHTTPServer(HTTPServer):
         *,
         resources: RuntimeResources | None = None,
     ) -> None:
+        if repository is not None and resources is not None:
+            raise ValueError("repository and resources are mutually exclusive")
         if repository is None and resources is None:
             raise ValueError("repository or resources must be supplied")
+        normalized_ingress_path = _normalize_base_path(ingress_path)
         super().__init__(address, SymphoniaRequestHandler)
         self.resources = resources
         self.repository = resources.operations if resources is not None else repository
         self.readiness_check: Callable[[], bool] = resources.healthcheck if resources is not None else repository.healthcheck
         self.service_version = __version__
-        self.ingress_path = _normalize_base_path(ingress_path)
+        self.ingress_path = normalized_ingress_path
 
     def close_resources(self) -> None:
         if self.resources is not None:
@@ -55,7 +58,12 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
         self._json(status, payload)
 
     def _json(self, status: int, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        body = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            allow_nan=False,
+        ).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

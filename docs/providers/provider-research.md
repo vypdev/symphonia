@@ -1,7 +1,7 @@
 # Provider and platform research
 
 **Status:** research snapshot, not an architectural decision
-**Reviewed:** 2026-09-20
+**Reviewed:** 2026-09-22
 **Source policy:** official documentation only; revalidate before implementation and every release
 
 ## How to read this document
@@ -9,6 +9,23 @@
 This snapshot separates what Symphonia needs from what an official API documents. It does not prove behavior for a particular account, market, application mode, or Home Assistant network setup. A live feasibility spike is required before either provider adapter is committed to the MVP.
 
 Existing Home Assistant and community implementations are reviewed separately in [Home Assistant music ecosystem review](home-assistant-ecosystem-review.md). They provide valuable implementation evidence but do not replace an official provider contract.
+
+## 2026-09-22 verification update
+
+The official references were rechecked before the next design pass. This is a
+documentation refresh, not a completed live-provider feasibility spike.
+
+| Provider/platform | Reconfirmed official evidence | Consequence for Symphonia |
+| --- | --- | --- |
+| Spotify | Playlist creation remains a separate empty-playlist operation; playlist item insertion accepts at most 100 items per request; the create operation defaults to public unless the request explicitly selects private visibility and has the required scope. | Keep target creation, visibility, batching, and checkpointing as separate capability decisions. The adapter must default to the product's safe private policy rather than inheriting the API default. |
+| Spotify authorization | Access tokens remain short-lived and the current refresh-token guidance documents a six-month lifetime for Developer Dashboard apps. | Reauthorization is a normal durable state and must be visible before an import or write is dispatched. |
+| YouTube Data API | The official surface models playlists as collections of videos; playlist-item insertion is an OAuth-protected write and the documented default quota is 10,000 units/day for most endpoints, with writes commonly costing 50 units. | The official adapter can be called YouTube Data, not YouTube Music. Search and write budgets must be planned explicitly; a playlist/video ID is not a recording identity. |
+| Apple Music | The official API exposes a personal iCloud Music Library, playlist reads, playlist creation, and adding tracks, using a developer token plus Music User Token. | Apple remains a future/contingency provider. Its token and origin lifecycle still require a dedicated feasibility spike before MVP promotion. |
+| Home Assistant Apps | Ingress is the authenticated UI boundary, requires the App to allow only the Supervisor ingress source, and exposes the ingress path through a request header. | The App can keep management routes Ingress-only, but this does not solve provider OAuth callback ownership or token storage. |
+
+These checks reinforce the existing conclusion: the repository may prepare
+official Spotify and ordinary YouTube adapter contracts, but it must not claim
+full YouTube Music library parity or silently use an unofficial endpoint.
 
 Legend:
 

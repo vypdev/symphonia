@@ -36,6 +36,7 @@ class CopyPlanningTests(unittest.TestCase):
         )
 
         self.assertFalse(plan.blocked)
+        self.assertEqual(plan.recompute_digest(), plan.digest)
         self.assertEqual([entry.occurrence_id for entry in plan.writable_entries], ["occ-1", "occ-2"])
         self.assertEqual([entry.position for entry in plan.writable_entries], [0, 1])
         self.assertEqual(plan.writable_entries[0].target_track_id, plan.writable_entries[1].target_track_id)
@@ -85,6 +86,31 @@ class CopyPlanningTests(unittest.TestCase):
         )
         with self.assertRaises(PlanAcceptanceError):
             plan.accept("not-the-plan")
+
+    def test_acceptance_rejects_tampered_plan_content(self) -> None:
+        plan = self.service.plan(
+            snapshot(SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1")),
+            target_provider="youtube",
+            target_playlist_name="Rock",
+        )
+        tampered = type(plan)(
+            source_snapshot_id=plan.source_snapshot_id,
+            source_provider=plan.source_provider,
+            source_playlist_id=plan.source_playlist_id,
+            target_provider=plan.target_provider,
+            target_playlist_name="Tampered",
+            target_visibility=plan.target_visibility,
+            policy=plan.policy,
+            entries=plan.entries,
+            digest=plan.digest,
+            source_namespace=plan.source_namespace,
+            target_connection_id=plan.target_connection_id,
+            target_capabilities=plan.target_capabilities,
+            target_capability_evidence_version=plan.target_capability_evidence_version,
+        )
+
+        with self.assertRaises(PlanAcceptanceError):
+            tampered.accept(tampered.digest)
 
     def test_snapshot_rejects_duplicate_positions(self) -> None:
         with self.assertRaises(ValueError):

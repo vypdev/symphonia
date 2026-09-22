@@ -42,7 +42,7 @@ class RuntimeResources:
 
     @classmethod
     def open(cls, database_path: str) -> "RuntimeResources":
-        if not database_path.strip():
+        if not isinstance(database_path, str) or not database_path.strip():
             raise ValueError("database_path must not be empty")
         opened: list[object] = []
         try:
@@ -117,7 +117,7 @@ class RuntimeResources:
         resulting backup should be retained.
         """
 
-        if not destination_path.strip():
+        if not isinstance(destination_path, str) or not destination_path.strip():
             raise ValueError("destination_path must not be empty")
         if self.database_path == ":memory:":
             raise ValueError("backups require a persistent database path")
@@ -129,6 +129,10 @@ class RuntimeResources:
         destination_path_object = Path(destination_path).expanduser().resolve()
         if live_path == destination_path_object:
             raise ValueError("destination_path must differ from the live database")
+        if not destination_path_object.parent.is_dir():
+            raise ValueError("destination_path parent directory must exist")
+        if destination_path_object.exists() and destination_path_object.is_dir():
+            raise ValueError("destination_path must be a file path")
 
         temporary_path: str | None = None
         try:
@@ -146,6 +150,8 @@ class RuntimeResources:
                 destination.commit()
             finally:
                 destination.close()
+            if not self.validate_backup(temporary_path):
+                raise RuntimeError("SQLite backup integrity validation failed")
             os.replace(temporary_path, destination_path_object)
             temporary_path = None
         finally:

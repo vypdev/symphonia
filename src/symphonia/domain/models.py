@@ -166,11 +166,45 @@ class CopyPlan:
     def omitted_entries(self) -> tuple[CopyPlanEntry, ...]:
         return tuple(entry for entry in self.entries if entry.disposition == "omit")
 
+    def recompute_digest(self) -> str:
+        """Recompute the immutable plan digest from every execution-relevant field."""
+
+        canonical = {
+            "source_snapshot_id": self.source_snapshot_id,
+            "source_provider": self.source_provider,
+            "source_playlist_id": self.source_playlist_id,
+            "source_namespace": self.source_namespace,
+            "target_provider": self.target_provider,
+            "target_playlist_name": self.target_playlist_name,
+            "target_visibility": self.target_visibility,
+            "policy": self.policy.value,
+            "target_connection_id": self.target_connection_id,
+            "target_capabilities": list(self.target_capabilities),
+            "target_capability_evidence_version": self.target_capability_evidence_version,
+            "entries": [
+                {
+                    "occurrence_id": entry.occurrence_id,
+                    "position": entry.position,
+                    "classification": entry.classification.value,
+                    "disposition": entry.disposition,
+                    "target_track_id": entry.target_track_id,
+                    "reason": entry.reason,
+                    "evidence": list(entry.evidence),
+                    "source_provider_track_object_type": entry.source_provider_track_object_type,
+                }
+                for entry in self.entries
+            ],
+        }
+        serialized = json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
     def accept(self, expected_digest: str) -> "AcceptedCopyPlan":
         """Bind execution to this exact plan digest."""
 
         if expected_digest != self.digest:
             raise PlanAcceptanceError("plan digest does not match the requested acceptance")
+        if self.recompute_digest() != self.digest:
+            raise PlanAcceptanceError("plan content does not match its digest")
         if self.blocked:
             raise PlanAcceptanceError("plan contains blocked entries")
         return AcceptedCopyPlan(plan=self, accepted_digest=self.digest)

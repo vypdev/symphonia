@@ -1,0 +1,28 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check specification consistency
+        run: PYTHONPATH=. python tools/validate_specs.py
+      - name: Check patch whitespace
+        run: git diff --check
+      - name: Run offline test suite
+        run: PYTHONPATH=src:. python -m unittest discover -s tests -v

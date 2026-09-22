@@ -51,5 +51,57 @@ class AuthorizationService:
     def consume(self, attempt_id: str, *, raw_state: str, now: datetime) -> AuthorizationAttempt:
         return self.attempts.consume(attempt_id, raw_state=raw_state, now=now)
 
+    def consume_callback(self, *, raw_state: str, now: datetime) -> AuthorizationAttempt:
+        """Consume a provider callback using only its returned state value."""
+
+        return self._consume_callback(raw_state=raw_state, now=now)
+
+    def resolve_callback(self, *, raw_state: str) -> AuthorizationAttempt:
+        """Resolve callback metadata before validating provider-specific routing."""
+
+        return self.attempts.get_by_state(raw_state)
+
+    def _consume_callback(
+        self,
+        *,
+        raw_state: str,
+        now: datetime,
+        expected_provider: str | None = None,
+    ) -> AuthorizationAttempt:
+        attempt = self.resolve_callback(raw_state=raw_state)
+        if expected_provider is not None and attempt.provider != expected_provider:
+            raise ValueError("authorization callback provider did not match the attempt")
+        return self.attempts.consume(attempt.attempt_id, raw_state=raw_state, now=now)
+
+    def consume_callback_for_provider(
+        self,
+        *,
+        raw_state: str,
+        provider: str,
+        now: datetime,
+    ) -> AuthorizationAttempt:
+        """Consume callback state only when it belongs to the routed provider."""
+
+        if not provider.strip():
+            raise ValueError("provider must not be blank")
+        return self._consume_callback(raw_state=raw_state, now=now, expected_provider=provider)
+
+    def deny_callback(
+        self,
+        *,
+        raw_state: str,
+        provider: str,
+        now: datetime,
+        failure_code: str = "consent_denied",
+    ) -> AuthorizationAttempt:
+        """Record provider denial only for the matching, durable attempt."""
+
+        if not provider.strip():
+            raise ValueError("provider must not be blank")
+        attempt = self.resolve_callback(raw_state=raw_state)
+        if attempt.provider != provider:
+            raise ValueError("authorization callback provider did not match the attempt")
+        return self.attempts.deny(attempt.attempt_id, now=now, failure_code=failure_code)
+
     def deny(self, attempt_id: str, *, now: datetime, failure_code: str = "consent_denied") -> AuthorizationAttempt:
         return self.attempts.deny(attempt_id, now=now, failure_code=failure_code)

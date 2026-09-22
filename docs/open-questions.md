@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
 **Status:** open; nothing here is an accepted decision
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-22
 
 ## Decisions requiring owner input
 
@@ -39,13 +39,18 @@ Options include:
 
 **Proposed default:** strict by default with an explicit, itemized best-effort override. Rollback/cleanup after partial provider writes still needs design.
 
-### OQ-004 — Which provider OAuth boundary should self-hosters use?
+### OQ-004 — Which provider OAuth credentials and callback profile should self-hosters use?
 
 Possibilities include project-owned shared client registrations, bring-your-own client credentials per install, or both. Spotify's five-user Development Mode cap strongly favors bring-your-own credentials for a distributed self-hosted project, but callback registration and support become harder.
 
-The callback boundary also has two credible shapes: a direct App-owned OAuth flow, or a minimal companion integration that uses Home Assistant Application Credentials/config flows and brokers a one-use connection grant to the App. The latter reuses Home Assistant UX but adds token ownership, backup, revocation, and version-skew questions. Apple Music would add a third, MusicKit-specific token model if promoted into scope.
-
-This decision requires the Home Assistant OAuth callback spike. It also affects documentation, verification, secret storage, direct port exposure, and whether remote Home Assistant access is needed.
+Owner direction (2026-09-22): follow the `vypdev/homeassistant-gateway`
+deployment pattern. The Supervisor App owns the provider adapters and the
+Ingress UI/API; a companion integration is not required to broker OAuth for
+the MVP. The working authorization shape is therefore a direct App-owned,
+callback-only flow. `RG-002` still has to prove callback reachability, exact
+redirect registration, state/PKCE/single-use behavior, secret ownership, and
+local/remote Home Assistant operation before the implementation contract is
+ready.
 
 ### OQ-005 — What authentication/exposure does standalone mode use, and when does it ship?
 
@@ -73,11 +78,17 @@ The repository currently has no license. The license should be selected before a
 
 Run the dated Spotify and YouTube test-account matrix in [provider research](providers/provider-research.md). Record scopes, account tier, app mode, market, exact endpoints, quota cost, payload gaps, playlist visibility, duplicate/order behavior, and cleanup results. Do not use personal libraries as fixtures.
 
+The official documentation was revalidated on 2026-09-22. That refresh confirms
+the documented Spotify playlist write limits and authorization lifetime, and
+that the public YouTube Data API remains a video-playlist surface rather than
+proof of full YouTube Music library parity. A dedicated test-account run is
+still required before this gate can close.
+
 If Apple Music is considered as a future provider or fallback for an official music-library surface, run its separate feasibility gates without silently changing the MVP. Community providers may inform test cases but cannot substitute for official-contract evidence.
 
 ### RG-002 — OAuth through a Home Assistant App
 
-Prototype authorization start/callback/error for Spotify and Google using both a direct App-owned flow and, where viable, a minimal companion-integration broker built on Home Assistant Application Credentials. Test:
+Prototype authorization start/callback/error for Spotify and Google using a direct App-owned, callback-only flow. Test:
 
 - local and externally reachable Home Assistant URLs;
 - HTTPS and exact registered redirects;
@@ -89,6 +100,9 @@ Prototype authorization start/callback/error for Spotify and Google using both a
 - no secrets in App options, browser-export files, URL query logs, referrers, or diagnostics.
 
 The result becomes an authentication/secret-storage RFC, not production code.
+The current local evidence is recorded in the [direct App OAuth callback
+spike](development/oauth-callback-spike.md); it proves route isolation and
+durable single-use state but does not close the Home Assistant topology gate.
 
 ### RG-003 — Matching evidence corpus
 
@@ -97,6 +111,11 @@ Build and review a licensed/synthetic labeled corpus containing exact duplicates
 ### RG-004 — Durable operation and storage spike
 
 Compare SQLite and PostgreSQL for transaction boundaries, leases, crash recovery, unknown writes, snapshot/history queries, online/cold backup under Supervisor, encryption-key restore, representative library size, and a per-migration applied ledger across stable/beta upgrade paths. Prove that a failed migration never replaces irrecoverable manual decisions/audit state with a fresh rescan. No framework selection should precede these results.
+
+The current local evidence includes a [reproducible SQLite recovery and backup
+spike](development/storage-recovery-spike.md) covering an expired lease across
+runtime restart and read-only backup validation. It is an initial evidence
+point, not a storage choice or a production SLO.
 
 ### RG-005 — Home Assistant native surface RFC
 
@@ -171,7 +190,7 @@ These need evidence and small RFCs; popularity is not evidence.
 ## Recommended next five specification/design tasks
 
 1. **Provider feasibility report (`RG-001`).** Prove or narrow the Spotify ↔ YouTube promise using official APIs and dedicated accounts; feed the evidence into the provider, [import](../specs/library-import-and-provider-projections.md), and [copy](../specs/one-time-playlist-copy.md) SDDs. Report unofficial YT Music evidence separately and keep Apple as an explicit future/contingency spike.
-2. **Close the [authorization SDD](../specs/provider-connections-and-authorization.md) blockers (`RG-002` + `OQ-004`).** Compare direct App OAuth with a minimal companion-integration broker, then settle callbacks, bring-your-own credentials, encryption, revocation, and backups.
+2. **Close the [authorization SDD](../specs/provider-connections-and-authorization.md) blockers (`RG-002` + `OQ-004`).** Validate the direct App callback flow, then settle bring-your-own credentials, encryption, revocation, and backups.
 3. **Close the [copy SDD](../specs/one-time-playlist-copy.md) policy blocker (`OQ-003`).** Decide target creation, strict/best-effort behavior, batching, partial failure, reconciliation, cancellation, and exact acceptance examples.
 4. **Close the [identity SDD](../specs/recording-identity-resolution.md) evidence blockers (`RG-003`).** Build the corpus and settle normalization, candidate sources, evidence, versioned rules, manual decisions, and measurable safety targets.
 5. **Close the [runtime](../specs/home-assistant-app-runtime-and-ingress.md) and [durable-operation](../specs/durable-operations-and-recovery.md) SDD blockers (`RG-004`).** Choose process topology and storage only after crash, lease, migration, backup, and representative-scale evidence.

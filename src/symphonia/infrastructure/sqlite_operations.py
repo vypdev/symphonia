@@ -47,6 +47,40 @@ _SECRET_PAYLOAD_KEY = re.compile(
 _MAX_DIAGNOSTIC_OPERATIONS = 100
 _MAX_DIAGNOSTIC_EVENTS = 100
 _MAX_DIAGNOSTIC_KEYS = 100
+_OPERATION_STATES = frozenset(
+    {
+        "queued",
+        "running",
+        "waiting_rate_limit",
+        "waiting_user",
+        "retry_scheduled",
+        "succeeded",
+        "partial",
+        "failed",
+        "cancelled",
+    }
+)
+
+
+def _require_text(value: Any, *, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a non-empty string")
+    return value
+
+
+def _reject_non_finite_json(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant is not allowed: {value}")
+
+
+def _load_json(value: str) -> Any:
+    return json.loads(value, parse_constant=_reject_non_finite_json)
+
+
+def _load_json_object(value: str, *, label: str) -> dict[str, Any]:
+    parsed = _load_json(value)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    return parsed
 
 
 def _validate_payload_keys(payload: Any) -> None:
@@ -138,10 +172,21 @@ class OperationRepository:
         self._connection.close()
 
     def healthcheck(self) -> bool:
-        """Return whether the migrated store can answer a basic read."""
+        """Return whether schema and durable operation values are readable."""
 
-        row = self._connection.execute("SELECT 1 AS healthy").fetchone()
-        return row is not None and row["healthy"] == 1
+        try:
+            integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            if self._connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                return False
+            for row in self._connection.execute("SELECT * FROM operations").fetchall():
+                self._record(row)
+            for row in self._connection.execute("SELECT * FROM operation_events").fetchall():
+                self._event(row)
+            return True
+        except (sqlite3.Error, TypeError, ValueError):
+            return False
 
     def _migrate(self) -> None:
         current_version = int(self._connection.execute("PRAGMA user_version").fetchone()[0])
@@ -220,12 +265,17 @@ class OperationRepository:
     ) -> OperationRecord:
         """Create once, or return the identical prior operation by key."""
 
-        if not operation_type.strip() or not idempotency_key.strip():
-            raise ValueError("operation_type and idempotency_key must not be empty")
+        _require_text(operation_type, label="operation_type")
+        _require_text(idempotency_key, label="idempotency_key")
         _validate_object_payload(payload, label="operation payload")
-        operation_id = operation_id or str(uuid.uuid4())
+        if operation_id is None:
+            operation_id = str(uuid.uuid4())
+        else:
+            _require_text(operation_id, label="operation_id")
         timestamp = _utc(now)
-        payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        payload_json = json.dumps(
+            payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             self._connection.execute(
@@ -416,6 +466,8 @@ class OperationRepository:
     ) -> OperationRecord:
         """Claim queued/retryable work or reclaim a lease that has expired."""
 
+        _require_text(operation_id, label="operation_id")
+        _require_text(worker_id, label="worker_id")
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         now_text = _utc(now)
@@ -480,6 +532,9 @@ class OperationRepository:
         durable eligibility; handler dispatch remains an application concern.
         """
 
+        _require_text(worker_id, label="worker_id")
+        if operation_type is not None:
+            _require_text(operation_type, label="operation_type")
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         now_text = _utc(now)
@@ -554,6 +609,8 @@ class OperationRepository:
     ) -> OperationRecord:
         """Extend a healthy lease; an expired owner cannot resurrect it."""
 
+        _require_text(operation_id, label="operation_id")
+        _require_text(worker_id, label="worker_id")
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         now_text = _utc(now)
@@ -598,11 +655,15 @@ class OperationRepository:
     ) -> OperationRecord:
         """Persist a checkpoint only for the current, unexpired lease holder."""
 
+        _require_text(operation_id, label="operation_id")
+        _require_text(worker_id, label="worker_id")
         if state not in {"running", "succeeded", "partial", "failed", "cancelled", "waiting_user"}:
             raise ValueError("invalid checkpoint state")
         _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
-        checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        checkpoint_json = json.dumps(
+            checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             row = self._connection.execute(
@@ -741,10 +802,14 @@ class OperationRepository:
     ) -> OperationRecord:
         """Release a lease and persist a restart-safe retry time."""
 
+        _require_text(operation_id, label="operation_id")
+        _require_text(worker_id, label="worker_id")
         _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
         next_run_text = _utc(next_run_at)
-        checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        checkpoint_json = json.dumps(
+            checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             row = self._connection.execute(
@@ -809,10 +874,14 @@ class OperationRepository:
     ) -> OperationRecord:
         """Release a lease until an absolute provider rate-limit time."""
 
+        _require_text(operation_id, label="operation_id")
+        _require_text(worker_id, label="worker_id")
         _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
         next_run_text = _utc(next_run_at)
-        checkpoint_json = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        checkpoint_json = json.dumps(
+            checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             row = self._connection.execute(
@@ -893,7 +962,9 @@ class OperationRepository:
                 event_type,
                 state,
                 worker_id,
-                json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                json.dumps(
+                    payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+                ),
                 created_at,
             ),
         )
@@ -920,13 +991,22 @@ class OperationRepository:
 
     @staticmethod
     def _record(row: sqlite3.Row) -> OperationRecord:
+        state = row["state"]
+        if state not in _OPERATION_STATES:
+            raise ValueError(f"operation store contains invalid state: {state!r}")
+        if row["cancel_requested"] not in (0, 1):
+            raise ValueError("operation store contains an invalid cancellation flag")
+        payload = _load_json_object(row["payload_json"], label="operation payload")
+        checkpoint = _load_json_object(row["checkpoint_json"], label="operation checkpoint")
+        _validate_payload_keys(payload)
+        _validate_payload_keys(checkpoint)
         return OperationRecord(
             operation_id=row["operation_id"],
             operation_type=row["operation_type"],
-            state=row["state"],
+            state=state,
             idempotency_key=row["idempotency_key"],
-            payload=json.loads(row["payload_json"]),
-            checkpoint=json.loads(row["checkpoint_json"]),
+            payload=payload,
+            checkpoint=checkpoint,
             worker_id=row["worker_id"],
             lease_expires_at=None if row["lease_expires_at"] is None else _parse_utc(row["lease_expires_at"]),
             next_run_at=None if row["next_run_at"] is None else _parse_utc(row["next_run_at"]),
@@ -937,12 +1017,15 @@ class OperationRepository:
 
     @staticmethod
     def _event(row: sqlite3.Row) -> OperationEvent:
+        state = row["state"]
+        if state not in _OPERATION_STATES:
+            raise ValueError(f"operation event contains invalid state: {state!r}")
         return OperationEvent(
             sequence=row["sequence"],
             operation_id=row["operation_id"],
             event_type=row["event_type"],
-            state=row["state"],
+            state=state,
             worker_id=row["worker_id"],
-            payload=json.loads(row["payload_json"]),
+            payload=_load_json_object(row["payload_json"], label="operation event payload"),
             created_at=_parse_utc(row["created_at"]),
         )

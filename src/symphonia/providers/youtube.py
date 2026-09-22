@@ -35,7 +35,7 @@ class YouTubeDataAdapter(ProviderAdapter):
         maturity="experimental",
         support_level="video-playlist-read",
         upstream_dependencies=("YouTube Data API v3",),
-        reviewed_on="2026-09-20",
+        reviewed_on="2026-09-22",
     )
 
     def __init__(
@@ -46,9 +46,9 @@ class YouTubeDataAdapter(ProviderAdapter):
         api_key: str | None = None,
         max_pages: int = 10_000,
     ) -> None:
-        if not 1 <= page_size <= 50:
+        if isinstance(page_size, bool) or not isinstance(page_size, int) or not 1 <= page_size <= 50:
             raise ValueError("YouTube playlist page_size must be between 1 and 50")
-        if max_pages <= 0:
+        if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages <= 0:
             raise ValueError("YouTube max_pages must be positive")
         self._client = client or UrllibJsonClient("https://www.googleapis.com/youtube/v3")
         self._token_for_connection = token_for_connection
@@ -76,6 +76,8 @@ class YouTubeDataAdapter(ProviderAdapter):
     ) -> tuple[ProviderPlaylistPage, ...]:
         if playlist.provider != self.manifest.provider or playlist.object_type != "playlist":
             raise ValueError("YouTube Data adapter requires a youtube_data playlist reference")
+        if cursor is not None and (not isinstance(cursor, str) or not cursor.strip()):
+            raise ValueError("YouTube playlist cursor must be a non-empty string token")
         page_token = cursor
         pages: list[ProviderPlaylistPage] = []
         position = 0
@@ -108,6 +110,11 @@ class YouTubeDataAdapter(ProviderAdapter):
                 for index, item in enumerate(items)
             )
             next_token = response.payload.get("nextPageToken")
+            if next_token is not None and (not isinstance(next_token, str) or not next_token.strip()):
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "YouTube pagination token was invalid",
+                )
             if next_token and not entries:
                 raise ProviderApiError(
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
@@ -120,7 +127,9 @@ class YouTubeDataAdapter(ProviderAdapter):
                     cursor=page_token,
                     next_cursor=str(next_token) if next_token else None,
                     complete=not bool(next_token),
-                    revision=response.payload.get("etag"),
+                    revision=response.payload.get("etag")
+                    if isinstance(response.payload.get("etag"), str)
+                    else None,
                 )
             )
             if not next_token:
@@ -130,7 +139,7 @@ class YouTubeDataAdapter(ProviderAdapter):
 
     def _request(self, connection_id: str, path: str, query: Mapping[str, str]):
         token = self._token_for_connection(connection_id)
-        if not token.strip():
+        if not isinstance(token, str) or not token.strip():
             raise ProviderApiError(ProviderErrorCategory.AUTHENTICATION_REQUIRED, "YouTube connection has no usable access token")
         complete_query = dict(query)
         if self._api_key:

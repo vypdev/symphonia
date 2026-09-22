@@ -52,6 +52,17 @@ class ProviderConnectionRepositoryTests(unittest.TestCase):
         self.assertEqual(raw["secret_ref"], "secret-ref-1")
         self.assertNotIn("access-token", str(raw))
 
+    def test_capability_json_rejects_non_standard_numbers_on_read(self) -> None:
+        self.repository.create(connection())
+        self.repository._connection.execute(  # type: ignore[attr-defined]
+            "UPDATE provider_connections SET capabilities_json = ?",
+            ('{"enabled": [], "evidence_version": NaN, "observed_at": "probe"}',),
+        )
+
+        self.assertFalse(self.repository.healthcheck())
+        with self.assertRaises(ValueError):
+            self.repository.get("spotify-1")
+
     def test_same_connection_is_idempotent_but_account_collision_is_rejected(self) -> None:
         first = connection()
         self.repository.create(first)

@@ -86,6 +86,31 @@ class AppleMusicAdapterTests(unittest.TestCase):
 
         self.assertEqual(context.exception.category, ProviderErrorCategory.AUTHENTICATION_REQUIRED)
 
+        for token_pair in ((None, "user-token"), ("developer-token",), ("developer-token", {})):
+            adapter = AppleMusicAdapter(FakeAppleClient(), lambda connection_id, pair=token_pair: pair)  # type: ignore[arg-type]
+            with self.subTest(token_pair=token_pair), self.assertRaises(ProviderApiError) as context:
+                adapter.read_playlist_pages("apple-connection-1", self.playlist())
+            self.assertEqual(context.exception.category, ProviderErrorCategory.AUTHENTICATION_REQUIRED)
+
+    def test_malformed_next_link_fails_closed_without_fallback_pagination(self) -> None:
+        class MalformedClient(FakeAppleClient):
+            def request(self, method, path, *, developer_token, user_token, query):
+                self.calls.append((method, path, developer_token, user_token, query))
+                return AppleJsonResponse(
+                    200,
+                    {
+                        "data": [{"id": "song-1", "type": "songs", "attributes": {"name": "One"}}],
+                        "next": "https://api.music.apple.com/v1/me/library/playlists/playlist-1/tracks?offset=not-an-integer",
+                    },
+                    {},
+                )
+
+        with self.assertRaises(ProviderApiError) as context:
+            AppleMusicAdapter(
+                MalformedClient(), lambda connection_id: ("developer-token", "user-token")
+            ).read_playlist_pages("apple-connection-1", self.playlist())
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
     def test_repeated_offset_is_a_provider_contract_failure(self) -> None:
         class LoopingClient(FakeAppleClient):
             def request(self, method, path, *, developer_token, user_token, query):
@@ -113,6 +138,12 @@ class AppleMusicAdapterTests(unittest.TestCase):
             ).read_playlist_pages("apple-connection-1", self.playlist())
 
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
+    def test_non_textual_cursor_is_rejected_before_provider_request(self) -> None:
+        with self.assertRaises(ValueError):
+            AppleMusicAdapter(
+                FakeAppleClient(), lambda connection_id: ("developer-token", "user-token")
+            ).read_playlist_pages("apple-connection-1", self.playlist(), cursor=True)  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":

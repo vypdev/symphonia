@@ -63,6 +63,36 @@ class AuthorizationServiceTests(unittest.TestCase):
         denied = self.service.deny("attempt-2", now=NOW)
         self.assertEqual(denied.state, AuthorizationState.DENIED)
 
+    def test_callback_consumption_resolves_the_durable_attempt_by_state(self) -> None:
+        self.service.begin(
+            provider="spotify",
+            actor_id="ha-user-1",
+            redirect_uri="https://ha.example/symphonia/callback",
+            now=NOW,
+        )
+
+        consumed = self.service.consume_callback(raw_state="raw-state-only-at-boundary", now=NOW)
+
+        self.assertEqual(consumed.attempt_id, "attempt-1")
+        self.assertEqual(consumed.state, AuthorizationState.CONSUMED)
+
+    def test_callback_provider_binding_is_checked_before_consumption(self) -> None:
+        self.service.begin(
+            provider="spotify",
+            actor_id="ha-user-1",
+            redirect_uri="https://ha.example/symphonia/callback",
+            now=NOW,
+        )
+
+        with self.assertRaises(ValueError):
+            self.service.consume_callback_for_provider(
+                raw_state="raw-state-only-at-boundary",
+                provider="google",
+                now=NOW,
+            )
+
+        self.assertEqual(self.repository.get("attempt-1").state, AuthorizationState.CREATED)
+
     def test_redirect_uri_rejects_unsafe_callback_forms(self) -> None:
         for redirect_uri in (
             "javascript:alert(1)",
@@ -77,6 +107,14 @@ class AuthorizationServiceTests(unittest.TestCase):
                     redirect_uri=redirect_uri,
                     now=NOW,
                 )
+
+        with self.assertRaises(ValueError):
+            self.service.begin(
+                provider="spotify",
+                actor_id="ha-user-1",
+                redirect_uri=None,  # type: ignore[arg-type]
+                now=NOW,
+            )
 
 
 if __name__ == "__main__":

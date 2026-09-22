@@ -61,6 +61,19 @@ class OperationWorkerTests(unittest.TestCase):
 
         self.assertTrue(stop_event.is_set())
 
+    def test_worker_rejects_invalid_identity_and_timing_values(self) -> None:
+        runner = OperationRunner(self.repository, {})
+        invalid_values = (
+            {"worker_id": None},
+            {"worker_id": "worker", "poll_interval_seconds": True},
+            {"worker_id": "worker", "poll_interval_seconds": float("nan")},
+            {"worker_id": "worker", "lease_seconds": True},
+            {"worker_id": "worker", "lease_seconds": 0.5},
+        )
+        for values in invalid_values:
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                OperationWorker(runner, **values)  # type: ignore[arg-type]
+
 
 if __name__ == "__main__":
     unittest.main()

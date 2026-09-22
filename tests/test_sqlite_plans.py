@@ -38,6 +38,36 @@ class CopyPlanRepositoryTests(unittest.TestCase):
         self.assertEqual(stored.plan, plan)
         self.assertIsNone(stored.accepted_at)
 
+    def test_plan_json_rejects_non_standard_numbers_on_read(self) -> None:
+        plan = self.ready_plan()
+        self.repository.save(plan, now=self.now)
+        self.repository._connection.execute(  # type: ignore[attr-defined]
+            "UPDATE copy_plans SET plan_json = ? WHERE digest = ?",
+            ('{"source_snapshot_id": NaN}', plan.digest),
+        )
+
+        self.assertFalse(self.repository.healthcheck())
+        with self.assertRaises(ValueError):
+            self.repository.get(plan.digest)
+
+    def test_plan_json_rejects_content_tampering_with_an_unchanged_digest(self) -> None:
+        plan = self.ready_plan()
+        self.repository.save(plan, now=self.now)
+        raw = self.repository._connection.execute(  # type: ignore[attr-defined]
+            "SELECT plan_json FROM copy_plans WHERE digest = ?",
+            (plan.digest,),
+        ).fetchone()["plan_json"]
+        tampered = raw.replace('"target_playlist_name":"Rock"', '"target_playlist_name":"Tampered"')
+        self.assertNotEqual(raw, tampered)
+        self.repository._connection.execute(  # type: ignore[attr-defined]
+            "UPDATE copy_plans SET plan_json = ? WHERE digest = ?",
+            (tampered, plan.digest),
+        )
+
+        self.assertFalse(self.repository.healthcheck())
+        with self.assertRaises(ValueError):
+            self.repository.get(plan.digest)
+
     def test_acceptance_is_durable_and_idempotent(self) -> None:
         plan = self.ready_plan()
         self.repository.save(plan, now=self.now)
@@ -70,4 +100,3 @@ class CopyPlanRepositoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

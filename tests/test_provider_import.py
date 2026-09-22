@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 import unittest
 
 from symphonia.domain import EntryClassification
@@ -14,6 +15,9 @@ from symphonia.providers import (
     ProviderAlreadyRegistered,
     ProviderNotRegistered,
     ProviderRegistry,
+    AppleMusicAdapter,
+    SpotifyAdapter,
+    YouTubeDataAdapter,
     collect_playlist_pages,
     to_playlist_snapshot,
 )
@@ -61,9 +65,80 @@ class ProviderContractTests(unittest.TestCase):
         self.assertNotEqual(same_upstream_id.external_key, another_connection.external_key)
         self.assertNotEqual(same_upstream_id.external_key, another_type.external_key)
 
+    def test_normalized_provider_values_reject_non_textual_identity_fields(self) -> None:
+        with self.assertRaises(ValueError):
+            ProviderObjectRef(None, "track", "track-1", "connection-1")  # type: ignore[arg-type]
+        with self.assertRaises(ValueError):
+            ProviderPlaylistEntry(
+                occurrence_id=None,  # type: ignore[arg-type]
+                position=0,
+                track=ProviderObjectRef("spotify", "track", "track-1", "connection-1"),
+                media_kind=MediaKind.TRACK,
+            )
+        with self.assertRaises(ValueError):
+            ProviderPlaylistPage(
+                playlist_ref(),
+                (),
+                None,
+                None,
+                True,
+                revision=42,  # type: ignore[arg-type]
+            )
+
+    def test_normalized_provider_values_reject_wrong_runtime_types(self) -> None:
+        with self.assertRaises(ValueError):
+            ProviderManifest("spotify", "Spotify", "official", "beta", "limited")  # type: ignore[arg-type]
+        with self.assertRaises(ValueError):
+            ProviderPlaylistEntry(
+                occurrence_id="occ-1",
+                position=True,  # type: ignore[arg-type]
+                track=ProviderObjectRef("spotify", "track", "track-1", "connection-1"),
+                media_kind=MediaKind.TRACK,
+            )
+        with self.assertRaises(ValueError):
+            ProviderPlaylistEntry(
+                occurrence_id="occ-1",
+                position=0,
+                track=None,  # type: ignore[arg-type]
+                media_kind=MediaKind.TRACK,
+            )
+        with self.assertRaises(ValueError):
+            ProviderPlaylistEntry(
+                occurrence_id="occ-1",
+                position=0,
+                track=ProviderObjectRef("spotify", "track", "track-1", "connection-1"),
+                media_kind="track",  # type: ignore[arg-type]
+            )
+        with self.assertRaises(ValueError):
+            ProviderPlaylistPage(playlist_ref(), [], None, None, True)  # type: ignore[arg-type]
+        with self.assertRaises(ValueError):
+            ProviderPlaylistPage(
+                playlist_ref(),
+                (entry("occ-1", 0, "track-1"), entry("occ-2", 0, "track-2")),
+                None,
+                None,
+                True,
+            )
+
     def test_manifest_discloses_access_basis(self) -> None:
         manifest = ProviderManifest("spotify", "Spotify", AccessBasis.OFFICIAL, "beta", "limited")
         self.assertEqual(manifest.access_basis, AccessBasis.OFFICIAL)
+        with self.assertRaises(ValueError):
+            ProviderManifest(
+                "spotify",
+                "Spotify",
+                AccessBasis.OFFICIAL,
+                "beta",
+                "limited",
+                reviewed_on="2026-9-2",
+            )
+
+    def test_concrete_adapter_manifests_have_dated_provenance(self) -> None:
+        for adapter in (SpotifyAdapter, YouTubeDataAdapter, AppleMusicAdapter):
+            manifest = adapter.manifest
+            self.assertTrue(manifest.upstream_dependencies)
+            self.assertIsNotNone(manifest.reviewed_on)
+            date.fromisoformat(manifest.reviewed_on or "")
 
     def test_complete_pages_preserve_order_and_duplicate_occurrences(self) -> None:
         result = collect_playlist_pages(

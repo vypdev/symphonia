@@ -9,9 +9,28 @@ import re
 
 
 _BEARER = re.compile(r"(?i)\bBearer\s+[^\s,;]+")
-_ASSIGNMENT = re.compile(
-    r"(?i)\b(token|access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|secret|password|cookie|authorization)\s*[:=]\s*[^\s,;]+"
+_CREDENTIAL_NAME = (
+    r"(?:token|access[_-]?token|refresh[_-]?token|id[_-]?token|"
+    r"client[_-]?secret|secret|password|cookie|authorization)"
 )
+_ASSIGNMENT_QUOTED = re.compile(
+    rf"(?i)(?P<key>[\"']?{_CREDENTIAL_NAME}[\"']?)"
+    r"\s*(?P<separator>[:=])\s*"
+    r"(?P<quote>[\"'])(?P<value>(?:\\.|[^\"'])*)(?P=quote)"
+)
+_ASSIGNMENT_UNQUOTED = re.compile(
+    rf"(?i)(?P<key>[\"']?{_CREDENTIAL_NAME}[\"']?)"
+    r"\s*(?P<separator>[:=])\s*"
+    r"(?P<value>[^,\s;}\"'&]+)"
+)
+
+
+def _redact_assignment(match: re.Match[str]) -> str:
+    quote = match.groupdict().get("quote") or ""
+    return (
+        f"{match.group('key')}{match.group('separator')}"
+        f"{quote}[REDACTED]{quote}"
+    )
 
 
 def redact_error_detail(detail: str) -> str:
@@ -20,7 +39,8 @@ def redact_error_detail(detail: str) -> str:
     if not isinstance(detail, str) or not detail.strip():
         raise ValueError("provider error detail must not be empty")
     redacted = _BEARER.sub("Bearer [REDACTED]", detail)
-    return _ASSIGNMENT.sub(lambda match: f"{match.group(1)}=[REDACTED]", redacted)
+    redacted = _ASSIGNMENT_QUOTED.sub(_redact_assignment, redacted)
+    return _ASSIGNMENT_UNQUOTED.sub(_redact_assignment, redacted)
 
 
 class ProviderErrorCategory(str, Enum):

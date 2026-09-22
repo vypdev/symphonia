@@ -97,7 +97,7 @@ class AppleMusicAdapter(ProviderAdapter):
         maturity="experimental",
         support_level="library-playlist-read",
         upstream_dependencies=("Apple Music API", "MusicKit user authentication"),
-        reviewed_on="2026-09-20",
+        reviewed_on="2026-09-22",
     )
 
     def __init__(
@@ -107,9 +107,9 @@ class AppleMusicAdapter(ProviderAdapter):
         page_size: int = 25,
         max_pages: int = 10_000,
     ) -> None:
-        if not 1 <= page_size <= 100:
+        if isinstance(page_size, bool) or not isinstance(page_size, int) or not 1 <= page_size <= 100:
             raise ValueError("Apple Music playlist page_size must be between 1 and 100")
-        if max_pages <= 0:
+        if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages <= 0:
             raise ValueError("Apple Music max_pages must be positive")
         self._client = client or UrllibAppleMusicClient()
         self._tokens_for_connection = tokens_for_connection
@@ -170,7 +170,9 @@ class AppleMusicAdapter(ProviderAdapter):
                     cursor=None if not pages and cursor is None else str(offset),
                     next_cursor=None if next_offset is None else str(next_offset),
                     complete=next_offset is None,
-                    revision=response.payload.get("etag"),
+                    revision=response.payload.get("etag")
+                    if isinstance(response.payload.get("etag"), str)
+                    else None,
                 )
             )
             if next_offset is None:
@@ -178,8 +180,19 @@ class AppleMusicAdapter(ProviderAdapter):
             offset = next_offset
 
     def _request(self, connection_id: str, path: str, query: Mapping[str, str]) -> AppleJsonResponse:
-        developer_token, user_token = self._tokens_for_connection(connection_id)
-        if not developer_token.strip() or not user_token.strip():
+        try:
+            developer_token, user_token = self._tokens_for_connection(connection_id)
+        except (TypeError, ValueError) as error:
+            raise ProviderApiError(
+                ProviderErrorCategory.AUTHENTICATION_REQUIRED,
+                "Apple Music connection did not provide a token pair",
+            ) from error
+        if (
+            not isinstance(developer_token, str)
+            or not isinstance(user_token, str)
+            or not developer_token.strip()
+            or not user_token.strip()
+        ):
             raise ProviderApiError(ProviderErrorCategory.AUTHENTICATION_REQUIRED, "Apple Music connection has no usable tokens")
         response = self._client.request(
             "GET",
@@ -216,9 +229,11 @@ class AppleMusicAdapter(ProviderAdapter):
     def _parse_offset(cursor: str | None) -> int:
         if cursor is None:
             return 0
+        if not isinstance(cursor, str) or not cursor.strip():
+            raise ValueError("Apple Music playlist cursor must be a non-empty string offset")
         try:
             value = int(cursor)
-        except ValueError as error:
+        except (TypeError, ValueError) as error:
             raise ValueError("Apple Music playlist cursor must be an integer offset") from error
         if value < 0:
             raise ValueError("Apple Music playlist cursor must not be negative")
@@ -228,11 +243,42 @@ class AppleMusicAdapter(ProviderAdapter):
     def _next_offset(next_url: Any, fallback: int) -> int | None:
         if not next_url:
             return None
-        if isinstance(next_url, str):
-            values = parse_qs(urlsplit(next_url).query).get("offset")
-            if values:
-                return AppleMusicAdapter._parse_offset(values[0])
-        return fallback
+        if not isinstance(next_url, str):
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Apple Music pagination next link was not a URL",
+            )
+        try:
+            parsed = urlsplit(next_url)
+        except ValueError as error:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Apple Music pagination next link was malformed",
+            ) from error
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Apple Music pagination next link was not an absolute URL",
+            )
+        values = parse_qs(parsed.query, keep_blank_values=True).get("offset")
+        if values is None or len(values) != 1:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Apple Music pagination next link did not contain one offset",
+            )
+        try:
+            next_offset = AppleMusicAdapter._parse_offset(values[0])
+        except ValueError as error:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Apple Music pagination next link contained an invalid offset",
+            ) from error
+        if next_offset < fallback:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Apple Music pagination moved backwards",
+            )
+        return next_offset
 
     @staticmethod
     def _entry(playlist: ProviderObjectRef, item: Any, position: int) -> ProviderPlaylistEntry:

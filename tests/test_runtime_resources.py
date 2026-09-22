@@ -5,8 +5,15 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 import sqlite3
+from unittest.mock import patch
 
 from symphonia.infrastructure import OperationRepository
+from symphonia.providers import (
+    Capability,
+    ConnectionState,
+    ProviderCapabilities,
+    ProviderConnection,
+)
 from symphonia.runtime import RuntimeResources
 
 
@@ -101,6 +108,24 @@ class RuntimeResourcesTests(unittest.TestCase):
                 resources.connections.close()
                 resources.operations.close()
 
+    def test_readiness_fails_closed_when_operation_state_is_corrupt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
+            try:
+                operation = resources.operations.create(
+                    operation_type="test",
+                    idempotency_key="corrupt-runtime-state",
+                    payload={},
+                    now=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                )
+                resources.operations._connection.execute(  # type: ignore[attr-defined]
+                    "UPDATE operations SET state = ? WHERE operation_id = ?",
+                    ("corrupt", operation.operation_id),
+                )
+                self.assertFalse(resources.healthcheck())
+            finally:
+                resources.close()
+
     def test_backup_to_copies_a_consistent_database(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source_path = str(Path(directory) / "symphonia.sqlite3")
@@ -111,6 +136,31 @@ class RuntimeResourcesTests(unittest.TestCase):
                     operation_type="test",
                     idempotency_key="backup-key",
                     payload={"value": "persisted"},
+                    now=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                )
+                resources.connections.create(
+                    ProviderConnection(
+                        connection_id="spotify-1",
+                        provider="spotify",
+                        provider_account_id="account-1",
+                        state=ConnectionState.CONNECTED,
+                        manifest_version="spotify-2026-09",
+                        secret_ref="opaque-secret-ref",
+                        capabilities=ProviderCapabilities(
+                            enabled=frozenset({Capability.READ_PLAYLISTS}),
+                            evidence_version="probe-1",
+                            observed_at="2026-09-20T12:00:00Z",
+                        ),
+                        created_at=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                        updated_at=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                    )
+                )
+                attempt = resources.authorization.create(
+                    attempt_id="attempt-1",
+                    provider="spotify",
+                    actor_id="ha-user-1",
+                    redirect_uri="https://ha.example/symphonia/callback",
+                    raw_state="callback-state",
                     now=datetime(2026, 9, 20, tzinfo=timezone.utc),
                 )
                 resources.backup_to(backup_path)
@@ -126,6 +176,16 @@ class RuntimeResourcesTests(unittest.TestCase):
                 self.assertEqual(len(backup.events(created.operation_id)), 1)
             finally:
                 backup.close()
+
+            restored_resources = RuntimeResources.open(backup_path)
+            try:
+                self.assertEqual(restored_resources.connections.get("spotify-1").secret_ref, "opaque-secret-ref")
+                self.assertEqual(
+                    restored_resources.authorization.get_by_state("callback-state").attempt_id,
+                    attempt.attempt_id,
+                )
+            finally:
+                restored_resources.close()
 
     def test_backup_to_rejects_the_live_database(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -154,6 +214,21 @@ class RuntimeResourcesTests(unittest.TestCase):
             finally:
                 resources.close()
 
+    def test_backup_to_rejects_invalid_destination_shape_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            resources = RuntimeResources.open(source_path)
+            try:
+                with self.assertRaises(ValueError):
+                    resources.backup_to(str(Path(directory) / "missing" / "backup.sqlite3"))
+                with self.assertRaises(ValueError):
+                    resources.backup_to(directory)
+            finally:
+                resources.close()
+
+        with self.assertRaises(ValueError):
+            RuntimeResources.open(None)  # type: ignore[arg-type]
+
     def test_backup_to_replaces_an_existing_destination_atomically(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source_path = str(Path(directory) / "symphonia.sqlite3")
@@ -172,6 +247,26 @@ class RuntimeResourcesTests(unittest.TestCase):
                 resources.close()
 
             self.assertTrue(RuntimeResources.validate_backup(str(backup_path)))
+
+    def test_backup_to_does_not_publish_an_invalid_temporary_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = str(Path(directory) / "symphonia.sqlite3")
+            backup_path = Path(directory) / "backup.sqlite3"
+            backup_path.write_text("previous backup", encoding="utf-8")
+            resources = RuntimeResources.open(source_path)
+            try:
+                resources.operations.create(
+                    operation_type="test",
+                    idempotency_key="invalid-backup",
+                    payload={},
+                    now=datetime(2026, 9, 20, tzinfo=timezone.utc),
+                )
+                with patch.object(RuntimeResources, "validate_backup", return_value=False):
+                    with self.assertRaisesRegex(RuntimeError, "integrity"):
+                        resources.backup_to(str(backup_path))
+                self.assertEqual(backup_path.read_text(encoding="utf-8"), "previous backup")
+            finally:
+                resources.close()
 
     def test_backup_to_fails_closed_when_a_store_is_unhealthy(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

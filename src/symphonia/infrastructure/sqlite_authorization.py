@@ -7,7 +7,13 @@ import hashlib
 import hmac
 import sqlite3
 
-from symphonia.providers.authorization import AuthorizationAttempt, AuthorizationState, validate_redirect_uri
+from symphonia.providers.authorization import (
+    MAX_AUTHORIZATION_STATE_LENGTH,
+    AuthorizationAttempt,
+    AuthorizationState,
+    validate_failure_code,
+    validate_redirect_uri,
+)
 
 from .sqlite_common import connect
 
@@ -23,7 +29,11 @@ def _parse_utc(value: str) -> datetime:
 
 
 def state_digest(state: str) -> str:
-    if not state or not state.strip():
+    if (
+        not isinstance(state, str)
+        or not state.strip()
+        or len(state) > MAX_AUTHORIZATION_STATE_LENGTH
+    ):
         raise ValueError("authorization state must not be empty")
     return hashlib.sha256(state.encode("utf-8")).hexdigest()
 
@@ -47,13 +57,17 @@ class AuthorizationAttemptRepository:
         self._connection.close()
 
     def healthcheck(self) -> bool:
-        """Return whether the migrated authorization store can be read."""
+        """Return whether schema and authorization attempts are readable."""
 
         try:
-            row = self._connection.execute("SELECT 1 AS healthy").fetchone()
-        except sqlite3.Error:
+            integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            for row in self._connection.execute("SELECT * FROM authorization_attempts").fetchall():
+                self._record(row)
+        except (sqlite3.Error, TypeError, ValueError):
             return False
-        return row is not None and row["healthy"] == 1
+        return True
 
     def _migrate(self) -> None:
         self._connection.executescript(
@@ -88,7 +102,15 @@ class AuthorizationAttemptRepository:
     ) -> AuthorizationAttempt:
         if ttl <= timedelta(0):
             raise ValueError("authorization attempt ttl must be positive")
+        for value, field_name in (
+            (attempt_id, "attempt_id"),
+            (provider, "provider"),
+            (actor_id, "actor_id"),
+        ):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{field_name} must not be empty")
         validate_redirect_uri(redirect_uri)
+        state_digest(raw_state)
         created_at = _utc(now)
         expires_at = _utc(now + ttl)
         self._connection.execute(
@@ -117,6 +139,19 @@ class AuthorizationAttemptRepository:
         if row is None:
             raise AuthorizationAttemptNotFound(attempt_id)
         return self._record(row)
+
+    def get_by_state(self, raw_state: str) -> AuthorizationAttempt:
+        """Resolve callback state without persisting or returning raw state."""
+
+        digest = state_digest(raw_state)
+        rows = self._connection.execute(
+            "SELECT * FROM authorization_attempts WHERE state_digest = ? LIMIT 2", (digest,)
+        ).fetchall()
+        if not rows:
+            raise AuthorizationAttemptNotFound("authorization state")
+        if len(rows) > 1:
+            raise AuthorizationAttemptError("authorization state is ambiguous")
+        return self._record(rows[0])
 
     def consume(self, attempt_id: str, *, raw_state: str, now: datetime) -> AuthorizationAttempt:
         """Consume a matching, unexpired state exactly once."""
@@ -162,6 +197,7 @@ class AuthorizationAttemptRepository:
         return self.get(attempt_id)
 
     def deny(self, attempt_id: str, *, now: datetime, failure_code: str = "consent_denied") -> AuthorizationAttempt:
+        validate_failure_code(failure_code)
         return self._complete(attempt_id, AuthorizationState.DENIED, now, failure_code)
 
     def expire(self, attempt_id: str, *, now: datetime) -> AuthorizationAttempt:

@@ -105,6 +105,29 @@ class YouTubeDataAdapterTests(unittest.TestCase):
             )
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
 
+    def test_non_textual_page_token_is_a_provider_contract_failure(self) -> None:
+        class MalformedClient(FakeClient):
+            def request(self, method: str, path: str, *, token: str, query: dict[str, str], body=None) -> JsonResponse:
+                self.calls.append((method, path, token, query))
+                if path == "/channels":
+                    return JsonResponse(200, {"items": [{"id": "channel-1"}]}, {})
+                return JsonResponse(200, {"items": [], "nextPageToken": {"unexpected": "object"}}, {})
+
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist-1", "connection-1")
+        with self.assertRaises(ProviderApiError) as context:
+            YouTubeDataAdapter(MalformedClient(), lambda connection_id: "access-token").read_playlist_pages(
+                "connection-1", playlist
+            )
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
+    def test_non_textual_access_token_fails_as_authentication_required(self) -> None:
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist-1", "connection-1")
+        with self.assertRaises(ProviderApiError) as context:
+            YouTubeDataAdapter(FakeClient(), lambda connection_id: None).read_playlist_pages(  # type: ignore[arg-type]
+                "connection-1", playlist
+            )
+        self.assertEqual(context.exception.category, ProviderErrorCategory.AUTHENTICATION_REQUIRED)
+
     def test_max_page_limit_fails_closed_before_unbounded_reads(self) -> None:
         playlist = ProviderObjectRef("youtube_data", "playlist", "playlist-1", "connection-1")
         adapter = YouTubeDataAdapter(FakeClient(), lambda connection_id: "access-token", max_pages=1)
@@ -113,6 +136,13 @@ class YouTubeDataAdapterTests(unittest.TestCase):
             adapter.read_playlist_pages("connection-1", playlist)
 
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
+    def test_non_textual_cursor_is_rejected_before_provider_request(self) -> None:
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist-1", "connection-1")
+        with self.assertRaises(ValueError):
+            YouTubeDataAdapter(FakeClient(), lambda connection_id: "access-token").read_playlist_pages(
+                "connection-1", playlist, cursor={"unexpected": "object"}  # type: ignore[arg-type]
+            )
 
 
 if __name__ == "__main__":

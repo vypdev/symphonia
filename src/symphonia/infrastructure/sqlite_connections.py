@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import json
 import sqlite3
 from typing import Any
 
 from symphonia.providers.connections import ConnectionState, ProviderConnection
 from symphonia.providers.contracts import Capability, ProviderCapabilities
 
-from .sqlite_common import connect
+from .sqlite_common import connect, dump_json, load_json
 
 
 def _utc(value: datetime) -> str:
@@ -42,13 +41,17 @@ class ProviderConnectionRepository:
         self._connection.close()
 
     def healthcheck(self) -> bool:
-        """Return whether the migrated connection store can be read."""
+        """Return whether schema and persisted connection values are readable."""
 
         try:
-            row = self._connection.execute("SELECT 1 AS healthy").fetchone()
-        except sqlite3.Error:
+            integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            for row in self._connection.execute("SELECT * FROM provider_connections").fetchall():
+                self._record(row)
+        except (sqlite3.Error, TypeError, ValueError):
             return False
-        return row is not None and row["healthy"] == 1
+        return True
 
     def _migrate(self) -> None:
         self._connection.executescript(
@@ -235,22 +238,19 @@ class ProviderConnectionRepository:
 def _serialize_capabilities(capabilities: ProviderCapabilities | None) -> str | None:
     if capabilities is None:
         return None
-    return json.dumps(
+    return dump_json(
         {
             "enabled": sorted(capability.value for capability in capabilities.enabled),
             "evidence_version": capabilities.evidence_version,
             "observed_at": capabilities.observed_at,
         },
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
     )
 
 
 def _deserialize_capabilities(payload: str | None) -> ProviderCapabilities | None:
     if payload is None:
         return None
-    value = json.loads(payload)
+    value = load_json(payload)
     return ProviderCapabilities(
         enabled=frozenset(Capability(item) for item in value["enabled"]),
         evidence_version=value["evidence_version"],

@@ -40,7 +40,11 @@ class FakeAdapter:
 
 class ProviderConnectionServiceTests(unittest.TestCase):
     def test_provider_error_detail_redacts_common_credentials(self) -> None:
-        detail = redact_error_detail("Bearer abc123 token=secret refresh_token=refresh-value")
+        detail = redact_error_detail(
+            'Bearer abc123 token=secret refresh_token="refresh-value" '
+            'json={"access_token":"json-secret","client_secret": "client-value"} '
+            "cookie='cookie-value' password=\"two words\" authorization: 'header secret'"
+        )
         error = ProviderApiError(
             ProviderErrorCategory.NETWORK_ERROR,
             detail,
@@ -48,10 +52,17 @@ class ProviderConnectionServiceTests(unittest.TestCase):
         )
 
         self.assertNotIn("abc123", str(error))
-        self.assertNotIn("secret", str(error))
         self.assertNotIn("refresh-value", str(error))
+        self.assertNotIn("json-secret", str(error))
+        self.assertNotIn("client-value", str(error))
+        self.assertNotIn("cookie-value", str(error))
+        self.assertNotIn("two words", str(error))
+        self.assertNotIn("header secret", str(error))
+        self.assertIn('access_token":"[REDACTED]"', str(error))
+        self.assertIn('client_secret":"[REDACTED]"', str(error))
+        self.assertIn("cookie='[REDACTED]'", str(error))
+        self.assertEqual(error.provider_code, "authorization=[REDACTED]")
         self.assertNotIn("header-secret", error.provider_code)
-        self.assertIn("[REDACTED]", str(error))
 
     def setUp(self) -> None:
         self.connections = ProviderConnectionRepository()

@@ -130,7 +130,13 @@ Whether standalone packaging ships in the first public release or immediately af
 
 A companion custom integration MAY later expose native entities, actions, events, and configuration discovery. It must call a stable, authenticated Symphonia API and MUST NOT duplicate matching, sync, credential, or retry logic.
 
-The integration MAY also be evaluated as a narrow provider-authorization broker so Symphonia can reuse Home Assistant's Application Credentials/config-flow callback machinery. If selected, it must exchange an opaque, one-use connection grant over the authenticated local API; provider operation logic remains in the App. Token ownership, refresh, revocation, backup, failure recovery, and integration/App version skew must be specified before this is accepted.
+The MVP does not require the companion integration to broker provider
+authorization. Provider authorization is owned by the App's adapters following
+the App-plus-Ingress pattern. A future proposal MAY evaluate a narrow broker
+to reuse Home Assistant's Application Credentials/config-flow machinery; if
+selected, it must exchange an opaque, one-use connection grant over the
+authenticated local API, and token ownership, refresh, revocation,
+backup/recovery, and version skew must be specified before acceptance.
 
 Candidate native surface (illustrative, not accepted):
 
@@ -146,7 +152,8 @@ Three approaches require an RFC:
 | MQTT discovery/events | Mature decoupling and push model | Adds an MQTT dependency and weakens direct operation correlation |
 | App calls Home Assistant APIs directly | Fewer artifacts for events/actions initiated by the App | Couples the service to Home Assistant and does not cleanly provide a native integration surface |
 
-The companion-integration approach is the current leading direction, not yet an accepted implementation decision.
+The App-plus-Ingress approach is the accepted primary direction. The
+companion-integration approach is deferred to a future native-surface RFC.
 
 ## Service/API shape
 
@@ -266,7 +273,7 @@ There are three distinct concerns:
 
 Provider redirect URIs must be exact and externally reachable under provider rules, while Home Assistant Ingress uses a proxied base path and session. The official Home Assistant Spotify integration demonstrates `https://my.home-assistant.io/redirect/oauth` and `<HOME_ASSISTANT_URL>/auth/external/callback` through Home Assistant's Application Credentials/config-flow machinery. A Supervisor App does not automatically inherit that machinery; using it would require a companion integration or another explicitly designed broker.
 
-The project MUST complete an OAuth callback spike for local-only and externally reachable Home Assistant deployments before provider authentication architecture is accepted. It must compare a direct App flow with a minimal companion-integration authorization broker and cover HTTPS, redirect registration, Ingress session continuity, remote access, dynamic paths, user-provided OAuth clients, state/PKCE/single use, denial/error flows, token ownership, integration/App version skew, backup/restore, and reauthorization. Any direct callback port must satisfy `SYM-SEC-009`. Tokens MUST NOT be pasted into App options or browser-export files as a normal workaround.
+The project MUST complete an OAuth callback spike for local-only and externally reachable Home Assistant deployments before provider authentication architecture is accepted. It must validate the direct App flow and cover HTTPS, redirect registration, Ingress session continuity, remote access, dynamic paths, user-provided OAuth clients, state/PKCE/single use, denial/error flows, token ownership, backup/restore, and reauthorization. Any direct callback port must satisfy `SYM-SEC-009`. Tokens MUST NOT be pasted into App options or browser-export files as a normal workaround.
 
 See the dated [Home Assistant music ecosystem review](../providers/home-assistant-ecosystem-review.md) for the implementation evidence and security cautions behind these alternatives.
 

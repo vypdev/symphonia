@@ -2,7 +2,31 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
+from typing import Any
+
+
+def _reject_non_finite_json(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant is not allowed: {value}")
+
+
+def dump_json(value: Any) -> str:
+    """Serialize adapter payloads using one strict, deterministic policy."""
+
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
+def load_json(value: str) -> Any:
+    """Read adapter JSON without accepting NaN or Infinity extensions."""
+
+    return json.loads(value, parse_constant=_reject_non_finite_json)
 
 
 def connect(path: str) -> sqlite3.Connection:
@@ -15,4 +39,4 @@ def connect(path: str) -> sqlite3.Connection:
     return connection
 
 
-__all__ = ["connect"]
+__all__ = ["connect", "dump_json", "load_json"]

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import json
 import sqlite3
 from typing import Any
 
@@ -16,7 +15,7 @@ from symphonia.domain.models import (
     PlanAcceptanceError,
 )
 
-from .sqlite_common import connect
+from .sqlite_common import connect, dump_json, load_json
 
 
 def _utc(value: datetime) -> str:
@@ -50,13 +49,19 @@ class CopyPlanRepository:
         self._connection.close()
 
     def healthcheck(self) -> bool:
-        """Return whether the migrated plan store can be read."""
+        """Return whether schema and immutable plan values are readable."""
 
         try:
-            row = self._connection.execute("SELECT 1 AS healthy").fetchone()
-        except sqlite3.Error:
+            integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
+            if integrity is None or integrity[0] != "ok":
+                return False
+            for row in self._connection.execute("SELECT digest, plan_json FROM copy_plans").fetchall():
+                plan = _deserialize(load_json(row["plan_json"]))
+                if plan.digest != row["digest"] or plan.recompute_digest() != row["digest"]:
+                    return False
+        except (sqlite3.Error, TypeError, ValueError, KeyError):
             return False
-        return row is not None and row["healthy"] == 1
+        return True
 
     def _migrate(self) -> None:
         self._connection.executescript(
@@ -72,7 +77,7 @@ class CopyPlanRepository:
 
     def save(self, plan: CopyPlan, *, now: datetime) -> StoredCopyPlan:
         payload = _serialize(plan)
-        plan_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        plan_json = dump_json(payload)
         self._connection.execute(
             "INSERT OR IGNORE INTO copy_plans (digest, plan_json, created_at) VALUES (?, ?, ?)",
             (plan.digest, plan_json, _utc(now)),
@@ -88,8 +93,11 @@ class CopyPlanRepository:
         ).fetchone()
         if row is None:
             raise CopyPlanNotFound(digest)
+        plan = _deserialize(load_json(row["plan_json"]))
+        if plan.digest != row["digest"] or plan.recompute_digest() != row["digest"]:
+            raise ValueError("stored plan content does not match its digest")
         return StoredCopyPlan(
-            plan=_deserialize(json.loads(row["plan_json"])),
+            plan=plan,
             accepted_at=None if row["accepted_at"] is None else _parse_utc(row["accepted_at"]),
         )
 

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from .contracts import (
@@ -106,7 +106,7 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         maturity="beta",
         support_level="playlist-read/write",
         upstream_dependencies=("Spotify Web API",),
-        reviewed_on="2026-09-20",
+        reviewed_on="2026-09-22",
     )
 
     def __init__(
@@ -118,9 +118,9 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         allow_writes: bool = False,
         max_pages: int = 10_000,
     ) -> None:
-        if not 1 <= page_size <= 50:
+        if isinstance(page_size, bool) or not isinstance(page_size, int) or not 1 <= page_size <= 50:
             raise ValueError("Spotify playlist page_size must be between 1 and 50")
-        if max_pages <= 0:
+        if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages <= 0:
             raise ValueError("Spotify max_pages must be positive")
         self._client = client
         self._token_for_connection = token_for_connection
@@ -150,12 +150,19 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
             raise ValueError("Spotify adapter requires a Spotify playlist reference")
         offset = self._parse_cursor(cursor)
         pages: list[ProviderPlaylistPage] = []
+        seen_offsets: set[int] = set()
         while True:
             if len(pages) >= self._max_pages:
                 raise ProviderApiError(
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
                     "Spotify playlist pagination exceeded the configured page limit",
                 )
+            if offset in seen_offsets:
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "Spotify pagination repeated an offset",
+                )
+            seen_offsets.add(offset)
             response = self._request(
                 connection_id,
                 "GET",
@@ -175,7 +182,8 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
                     "Spotify pagination advanced without returning items",
                 )
-            next_cursor = str(offset + len(entries)) if next_url else None
+            next_offset = self._next_offset(next_url, offset + len(entries))
+            next_cursor = str(next_offset) if next_offset is not None else None
             pages.append(
                 ProviderPlaylistPage(
                     playlist=playlist,
@@ -183,12 +191,16 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
                     cursor=None if not pages and cursor is None else str(offset),
                     next_cursor=next_cursor,
                     complete=next_cursor is None,
-                    revision=response.payload.get("snapshot_id"),
+                    revision=response.payload.get("snapshot_id")
+                    if isinstance(response.payload.get("snapshot_id"), str)
+                    else None,
                 )
             )
             if next_cursor is None:
                 return tuple(pages)
-            offset += len(entries)
+            if next_offset is None:
+                raise AssertionError("Spotify pagination cursor was unexpectedly empty")
+            offset = next_offset
 
     def ensure_target_playlist(
         self,
@@ -200,6 +212,12 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
     ) -> TargetPlaylist:
         if provider != self.manifest.provider:
             raise ValueError("Spotify adapter requires a Spotify target provider")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("Spotify playlist name must not be empty")
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+            raise ValueError("Spotify playlist idempotency_key must not be empty")
+        if visibility not in {"private", "public"}:
+            raise ValueError("Spotify playlist visibility must be private or public")
         connection_id = self._write_connection_id()
         try:
             response = self._request(
@@ -231,6 +249,15 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         provider_track_id: str,
         idempotency_key: str,
     ) -> WriteResult:
+        if (
+            not isinstance(target_playlist_id, str)
+            or not target_playlist_id.strip()
+            or not isinstance(provider_track_id, str)
+            or not provider_track_id.strip()
+            or not isinstance(idempotency_key, str)
+            or not idempotency_key.strip()
+        ):
+            raise ValueError("Spotify write identifiers must not be empty")
         try:
             connection_id = self._write_connection_id()
         except ProviderWriteError as error:
@@ -280,7 +307,7 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         body: Mapping[str, Any] | None = None,
     ) -> JsonResponse:
         token = self._token_for_connection(connection_id)
-        if not token.strip():
+        if not isinstance(token, str) or not token.strip():
             raise ProviderApiError(ProviderErrorCategory.AUTHENTICATION_REQUIRED, "Spotify connection has no usable access token")
         response = self._client.request(method, path, token=token, query=query, body=body)
         if 200 <= response.status < 300:
@@ -324,6 +351,8 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
     def _parse_cursor(cursor: str | None) -> int:
         if cursor is None:
             return 0
+        if not isinstance(cursor, str) or not cursor.strip():
+            raise ValueError("Spotify playlist cursor must be a non-empty string offset")
         try:
             value = int(cursor)
         except ValueError as error:
@@ -331,6 +360,47 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         if value < 0:
             raise ValueError("Spotify playlist cursor must not be negative")
         return value
+
+    @classmethod
+    def _next_offset(cls, next_url: Any, fallback: int) -> int | None:
+        if not next_url:
+            return None
+        if not isinstance(next_url, str):
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Spotify pagination next link was not a URL",
+            )
+        try:
+            parsed = urlsplit(next_url)
+        except ValueError as error:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Spotify pagination next link was malformed",
+            ) from error
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Spotify pagination next link was not an absolute URL",
+            )
+        values = parse_qs(parsed.query, keep_blank_values=True).get("offset")
+        if values is None or len(values) != 1:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Spotify pagination next link did not contain one offset",
+            )
+        try:
+            next_offset = cls._parse_cursor(values[0])
+        except ValueError as error:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Spotify pagination next link contained an invalid offset",
+            ) from error
+        if next_offset < fallback:
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Spotify pagination moved backwards",
+            )
+        return next_offset
 
     @staticmethod
     def _entry(playlist: ProviderObjectRef, item: Any, *, position: int) -> ProviderPlaylistEntry:

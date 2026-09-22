@@ -206,7 +206,7 @@ This review does not accept a dependency or new provider into the MVP. It narrow
 1. Extend the provider manifest RFC with independent access-basis, maturity, and product-support classifications so, for example, unofficial-but-mature and official-but-experimental are not conflated.
 2. Make capabilities an intersection of adapter, connection, object, and live health—not provider-wide booleans.
 3. Include provider instance/connection namespace and object type in external-identity analysis.
-4. Compare direct App OAuth with a minimal companion-integration authorization broker in the Home Assistant OAuth spike.
+4. Validate the direct App-owned, callback-only OAuth flow in the Home Assistant OAuth spike; keep a companion broker as a separately scoped future option.
 5. Add an Apple Music test-account spike as a future-provider candidate, focusing on Music User Token acquisition, catalog/library IDs, `canEdit`, playlist append, and absence of remove/reorder.
 6. Require completeness markers for every import/list operation and preserve unavailable entries.
 7. Threat-model every directly exposed App listener and prevent provider-controlled values from acquiring filesystem or executable semantics.

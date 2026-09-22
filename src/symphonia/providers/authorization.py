@@ -10,7 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import re
 from urllib.parse import urlsplit
+
+
+MAX_AUTHORIZATION_STATE_LENGTH = 512
+_FAILURE_CODE = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,63}$")
 
 
 class AuthorizationState(str, Enum):
@@ -24,7 +29,7 @@ class AuthorizationState(str, Enum):
 def validate_redirect_uri(value: str) -> str:
     """Validate a fixed OAuth callback URI before durable binding."""
 
-    if not value or not value.strip() or any(character.isspace() for character in value):
+    if not isinstance(value, str) or not value.strip() or any(character.isspace() for character in value):
         raise ValueError("redirect_uri must be a nonblank URI without whitespace")
     parsed = urlsplit(value)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
@@ -35,6 +40,14 @@ def validate_redirect_uri(value: str) -> str:
         raise ValueError("redirect_uri must not embed credentials")
     if parsed.scheme == "http" and parsed.hostname.lower() not in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError("http redirect_uri is only allowed for loopback hosts")
+    return value
+
+
+def validate_failure_code(value: str) -> str:
+    """Keep durable authorization outcomes bounded and safe for diagnostics."""
+
+    if not isinstance(value, str) or _FAILURE_CODE.fullmatch(value) is None:
+        raise ValueError("failure_code must be a bounded lowercase code")
     return value
 
 
@@ -59,7 +72,7 @@ class AuthorizationAttempt:
             (self.redirect_uri, "redirect_uri"),
             (self.state_digest, "state_digest"),
         ):
-            if not value.strip():
+            if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must not be empty")
         validate_redirect_uri(self.redirect_uri)
         if self.created_at.tzinfo is None or self.expires_at.tzinfo is None:
@@ -68,3 +81,5 @@ class AuthorizationAttempt:
             raise ValueError("authorization attempt must expire after creation")
         if self.completed_at is not None and self.completed_at.tzinfo is None:
             raise ValueError("completed_at must be timezone-aware")
+        if self.failure_code is not None:
+            validate_failure_code(self.failure_code)
