@@ -58,9 +58,19 @@ class RuntimeResources:
             opened.append(projections)
             resolutions = ResolutionDecisionRepository(database_path)
             opened.append(resolutions)
-        except Exception:
+        except Exception as startup_error:
+            cleanup_error_types: list[str] = []
             for repository in reversed(opened):
-                repository.close()  # type: ignore[attr-defined]
+                try:
+                    repository.close()  # type: ignore[attr-defined]
+                except Exception as cleanup_error:
+                    cleanup_error_types.append(type(cleanup_error).__name__)
+            if cleanup_error_types:
+                error_types = ", ".join(cleanup_error_types)
+                startup_error.add_note(
+                    "startup cleanup also encountered repository close errors "
+                    f"({error_types})"
+                )
             raise
         return cls(operations, plans, connections, authorization, projections, resolutions, database_path)
 

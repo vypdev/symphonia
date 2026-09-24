@@ -55,6 +55,7 @@ The first implementation increment is intentionally narrower than any provider o
 - A shared SQLite connection policy applies the same five-second busy timeout and row-factory settings to every durable store.
 - Runtime resources support explicit and context-manager lifecycle shutdown.
 - Runtime resource shutdown attempts every repository close even if one raises, remains retryable after a partial close, and is idempotent after full closure.
+- Partial runtime startup unwinds every repository already opened, retaining the startup exception as primary if cleanup also fails.
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
