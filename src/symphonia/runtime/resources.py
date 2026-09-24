@@ -142,7 +142,12 @@ class RuntimeResources:
         if not self.healthcheck():
             raise RuntimeError("cannot back up an unhealthy runtime")
         live_path = Path(self.database_path).expanduser().resolve()
-        destination_path_object = Path(destination_path).expanduser().resolve()
+        destination_candidate = Path(destination_path).expanduser()
+        if destination_candidate.is_symlink():
+            raise ValueError("destination_path must not be a symbolic link")
+        destination_path_object = (
+            destination_candidate.parent.resolve() / destination_candidate.name
+        )
         if live_path == destination_path_object:
             raise ValueError("destination_path must differ from the live database")
         if not destination_path_object.parent.is_dir():
