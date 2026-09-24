@@ -9,7 +9,7 @@ from typing import Any
 from symphonia.providers.connections import ConnectionState, ProviderConnection
 from symphonia.providers.contracts import Capability, ProviderCapabilities
 
-from .sqlite_common import connect, dump_json, load_json
+from .sqlite_common import connect, dump_json, initialize_with_cleanup, load_json
 
 
 def _utc(value: datetime) -> str:
@@ -35,7 +35,7 @@ class ProviderConnectionRepository:
 
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = connect(path)
-        self._migrate()
+        initialize_with_cleanup(self._connection, self._migrate)
 
     def close(self) -> None:
         self._connection.close()

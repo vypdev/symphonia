@@ -16,7 +16,7 @@ import sqlite3
 from typing import Any
 import uuid
 
-from .sqlite_common import connect
+from .sqlite_common import connect, initialize_with_cleanup
 
 
 def _utc(value: datetime) -> str:
@@ -166,7 +166,7 @@ class OperationRepository:
 
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = connect(path)
-        self._migrate()
+        initialize_with_cleanup(self._connection, self._migrate)
 
     def close(self) -> None:
         self._connection.close()

@@ -11,7 +11,7 @@ from symphonia.domain.models import EntryClassification, PlaylistSnapshot, Sourc
 from symphonia.providers.contracts import ProviderPlaylistEntry
 from symphonia.providers.importing import CollectionImportResult
 
-from .sqlite_common import connect
+from .sqlite_common import connect, initialize_with_cleanup
 
 
 def _utc(value: datetime) -> str:
@@ -48,7 +48,7 @@ class PlaylistProjectionRepository:
 
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = connect(path)
-        self._migrate()
+        initialize_with_cleanup(self._connection, self._migrate)
 
     def close(self) -> None:
         self._connection.close()

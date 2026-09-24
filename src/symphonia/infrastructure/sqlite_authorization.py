@@ -15,7 +15,7 @@ from symphonia.providers.authorization import (
     validate_redirect_uri,
 )
 
-from .sqlite_common import connect
+from .sqlite_common import connect, initialize_with_cleanup
 
 
 def _utc(value: datetime) -> str:
@@ -51,7 +51,7 @@ class AuthorizationAttemptRepository:
 
     def __init__(self, path: str = ":memory:") -> None:
         self._connection = connect(path)
-        self._migrate()
+        initialize_with_cleanup(self._connection, self._migrate)
 
     def close(self) -> None:
         self._connection.close()

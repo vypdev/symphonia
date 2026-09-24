@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 from typing import Any
 
 
@@ -39,4 +40,23 @@ def connect(path: str) -> sqlite3.Connection:
     return connection
 
 
-__all__ = ["connect", "dump_json", "load_json"]
+def initialize_with_cleanup(
+    connection: sqlite3.Connection,
+    initialize: Callable[[], None],
+) -> None:
+    """Close a newly opened connection if its schema initialization fails."""
+
+    try:
+        initialize()
+    except BaseException as initialization_error:
+        try:
+            connection.close()
+        except BaseException as cleanup_error:
+            initialization_error.add_note(
+                "SQLite connection cleanup also failed "
+                f"({type(cleanup_error).__name__})"
+            )
+        raise
+
+
+__all__ = ["connect", "dump_json", "initialize_with_cleanup", "load_json"]

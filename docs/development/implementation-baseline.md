@@ -56,6 +56,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Runtime resources support explicit and context-manager lifecycle shutdown.
 - Runtime resource shutdown attempts every repository close even if one raises, remains retryable after a partial close, and is idempotent after full closure.
 - Partial runtime startup unwinds every repository already opened, retaining the startup exception as primary if cleanup also fails.
+- Every SQLite store closes its newly opened connection when schema initialization fails, preserving the migration error as primary.
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
