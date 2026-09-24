@@ -68,7 +68,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Provider connection diagnostics expose provider/state and expiry counts, never account or credential data.
 - Import diagnostics expose bounded snapshot freshness and availability counts without playlist content.
 - Resolution diagnostics expose only manual-decision action counts, never track, actor, or reason data.
-- Ingress-relative health/version routing with normalized, traversal-safe base paths.
+- Ingress-relative health/version routing accepts only origin-form request targets, rejects absolute/network-path targets and fragments, and uses normalized traversal-safe base paths.
 - The composed runtime HTTP server has an offline route contract and a loopback smoke path for real health/readiness lifecycle checks.
 - The current JSON health/readiness/version surface disables caching, MIME sniffing, and referrer propagation.
 - The runtime JSON surface rejects non-standard numeric values before writing a response.

@@ -142,7 +142,19 @@ def _normalize_base_path(value: str) -> str:
 
 
 def _relative_path(request_path: str, base_path: str) -> str | None:
-    path = urlsplit(request_path).path or "/"
+    if (
+        not isinstance(request_path, str)
+        or not request_path.startswith("/")
+        or request_path.startswith("//")
+    ):
+        return None
+    try:
+        parsed = urlsplit(request_path)
+    except ValueError:
+        return None
+    if parsed.scheme or parsed.netloc or parsed.fragment:
+        return None
+    path = parsed.path or "/"
     if base_path == "/":
         return path
     if path == base_path:
