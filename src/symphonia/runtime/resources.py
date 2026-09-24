@@ -69,8 +69,7 @@ class RuntimeResources:
 
         if self._closed:
             return
-        self._closed = True
-
+        first_error: Exception | None = None
         for repository in (
             self.resolutions,
             self.projections,
@@ -79,7 +78,14 @@ class RuntimeResources:
             self.plans,
             self.operations,
         ):
-            repository.close()
+            try:
+                repository.close()
+            except Exception as error:
+                if first_error is None:
+                    first_error = error
+        if first_error is not None:
+            raise first_error
+        self._closed = True
 
     def __enter__(self) -> "RuntimeResources":
         return self
