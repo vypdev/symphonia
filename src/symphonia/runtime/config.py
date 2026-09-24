@@ -7,15 +7,17 @@ import os
 from collections.abc import Mapping
 
 
-def _normalize_ingress_path(value: str) -> str:
+def normalize_ingress_path(value: object) -> str:
     if not isinstance(value, str) or not value or not value.startswith("/"):
         raise ValueError("ingress path must start with '/'")
     if any(ord(char) < 0x20 or ord(char) == 0x7F for char in value):
         raise ValueError("ingress path must not contain control characters")
     if "?" in value or "#" in value:
         raise ValueError("ingress path must contain only a path")
+    if "\\" in value or "//" in value:
+        raise ValueError("ingress path contains an unsafe separator")
     normalized = value.rstrip("/") or "/"
-    if "//" in normalized or "/.." in normalized or "/./" in normalized:
+    if any(segment in {".", ".."} for segment in normalized.split("/")):
         raise ValueError("ingress path contains an unsafe segment")
     return normalized
 
@@ -58,7 +60,7 @@ class RuntimeConfig:
         if any(ord(char) < 0x20 or ord(char) == 0x7F for char in self.database_path):
             raise ValueError("database_path must not contain control characters")
         object.__setattr__(self, "database_path", self.database_path.strip())
-        object.__setattr__(self, "ingress_path", _normalize_ingress_path(self.ingress_path))
+        object.__setattr__(self, "ingress_path", normalize_ingress_path(self.ingress_path))
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] | None = None) -> "RuntimeConfig":
@@ -71,4 +73,4 @@ class RuntimeConfig:
         )
 
 
-__all__ = ["RuntimeConfig"]
+__all__ = ["RuntimeConfig", "normalize_ingress_path"]

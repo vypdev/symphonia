@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 from symphonia import __version__
 from symphonia.infrastructure.sqlite_operations import OperationRepository
+from .config import normalize_ingress_path
 from .resources import RuntimeResources
 
 
@@ -28,7 +29,7 @@ class SymphoniaHTTPServer(HTTPServer):
             raise ValueError("repository and resources are mutually exclusive")
         if repository is None and resources is None:
             raise ValueError("repository or resources must be supplied")
-        normalized_ingress_path = _normalize_base_path(ingress_path)
+        normalized_ingress_path = normalize_ingress_path(ingress_path)
         super().__init__(address, SymphoniaRequestHandler)
         self.resources = resources
         self.repository = resources.operations if resources is not None else repository
@@ -109,7 +110,7 @@ def route_get(
     mistaken for application readiness.
     """
 
-    relative_path = _relative_path(path, _normalize_base_path(ingress_path))
+    relative_path = _relative_path(path, normalize_ingress_path(ingress_path))
     if relative_path is None:
         return 404, {"error": "not_found"}
     if relative_path == "/health":
@@ -126,19 +127,6 @@ def route_get(
     if relative_path == "/version":
         return 200, {"service": "symphonia", "version": service_version}
     return 404, {"error": "not_found"}
-
-
-def _normalize_base_path(value: str) -> str:
-    if not value or not value.startswith("/"):
-        raise ValueError("ingress path must start with '/'")
-    if any(ord(char) < 0x20 or ord(char) == 0x7F for char in value):
-        raise ValueError("ingress path must not contain control characters")
-    if "?" in value or "#" in value:
-        raise ValueError("ingress path must contain only a path")
-    normalized = value.rstrip("/") or "/"
-    if "//" in normalized or "/.." in normalized or "/./" in normalized:
-        raise ValueError("ingress path contains an unsafe segment")
-    return normalized
 
 
 def _relative_path(request_path: str, base_path: str) -> str | None:
