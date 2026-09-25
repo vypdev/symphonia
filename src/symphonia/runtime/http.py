@@ -91,8 +91,14 @@ def create_server(
     resources = RuntimeResources.open(database_path)
     try:
         return SymphoniaHTTPServer((host, port), ingress_path=ingress_path, resources=resources)
-    except Exception:
-        resources.close()
+    except BaseException as startup_error:
+        try:
+            resources.close()
+        except BaseException as cleanup_error:
+            startup_error.add_note(
+                "runtime resource cleanup also failed "
+                f"({type(cleanup_error).__name__})"
+            )
         raise
 
 

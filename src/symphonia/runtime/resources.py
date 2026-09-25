@@ -58,12 +58,12 @@ class RuntimeResources:
             opened.append(projections)
             resolutions = ResolutionDecisionRepository(database_path)
             opened.append(resolutions)
-        except Exception as startup_error:
+        except BaseException as startup_error:
             cleanup_error_types: list[str] = []
             for repository in reversed(opened):
                 try:
                     repository.close()  # type: ignore[attr-defined]
-                except Exception as cleanup_error:
+                except BaseException as cleanup_error:
                     cleanup_error_types.append(type(cleanup_error).__name__)
             if cleanup_error_types:
                 error_types = ", ".join(cleanup_error_types)
@@ -79,7 +79,7 @@ class RuntimeResources:
 
         if self._closed:
             return
-        first_error: Exception | None = None
+        first_error: BaseException | None = None
         for repository in (
             self.resolutions,
             self.projections,
@@ -90,7 +90,7 @@ class RuntimeResources:
         ):
             try:
                 repository.close()
-            except Exception as error:
+            except BaseException as error:
                 if first_error is None:
                     first_error = error
         if first_error is not None:
