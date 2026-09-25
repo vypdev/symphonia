@@ -167,7 +167,7 @@ class RuntimeResources:
                 temporary_path = temporary.name
             destination = sqlite3.connect(temporary_path)
             try:
-                self.operations._connection.backup(destination)  # type: ignore[attr-defined]
+                self.operations.backup_to(destination)
                 destination.commit()
             finally:
                 destination.close()

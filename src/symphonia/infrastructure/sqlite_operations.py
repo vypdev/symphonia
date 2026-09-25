@@ -171,6 +171,11 @@ class OperationRepository:
     def close(self) -> None:
         self._connection.close()
 
+    def backup_to(self, destination: sqlite3.Connection) -> None:
+        """Copy this store's consistent SQLite snapshot to a destination."""
+
+        self._connection.backup(destination)
+
     def healthcheck(self) -> bool:
         """Return whether schema and durable operation values are readable."""
 

@@ -58,7 +58,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Partial runtime startup unwinds every repository already opened, retaining the startup exception as primary if cleanup also fails.
 - Every SQLite store closes its newly opened connection when schema initialization fails, preserving the migration error as primary.
 - Readiness can validate every composed durable store instead of only the operation queue.
-- Runtime resources provide a consistent SQLite online-backup helper while the service remains open.
+- Runtime resources request a consistent online backup through the operation repository adapter while the service remains open, without reaching into its private connection.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
 - Backup publication validates the temporary SQLite copy before atomically replacing the destination.
 - Runtime backups reject missing parent directories, directory destinations, and final-component symlinks before creating a temporary artifact.
