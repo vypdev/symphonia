@@ -75,6 +75,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Ingress-relative health/version routing accepts only origin-form request targets, rejects absolute/network-path targets and fragments, and uses normalized traversal-safe base paths.
 - The composed runtime HTTP server has an offline route contract and a loopback smoke path for real health/readiness lifecycle checks.
 - The current JSON health/readiness/version surface disables caching, MIME sniffing, and referrer propagation.
+- The HTTP handler suppresses the Python version header and returns generic JSON for parser/method errors, closing the connection without reflecting details.
 - The runtime JSON surface rejects non-standard numeric values before writing a response.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - Normalized provider identity, manifest, capability, entry, and page values reject non-textual or malformed boundary data before it reaches planning.

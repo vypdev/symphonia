@@ -46,6 +46,9 @@ class SymphoniaHTTPServer(HTTPServer):
 class SymphoniaRequestHandler(BaseHTTPRequestHandler):
     """Only health/readiness/version are exposed until the API SDD is ready."""
 
+    server_version = "Symphonia"
+    sys_version = ""
+
     server: SymphoniaHTTPServer
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
@@ -58,7 +61,28 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
         )
         self._json(status, payload)
 
-    def _json(self, status: int, payload: dict[str, Any]) -> None:
+    def send_error(
+        self,
+        code: int,
+        message: str | None = None,
+        explain: str | None = None,
+    ) -> None:
+        del message, explain
+        error = "not_implemented" if code == 501 else (
+            "server_error" if code >= 500 else "bad_request"
+        )
+        self._json(code, {"error": error}, close_connection=True)
+
+    def version_string(self) -> str:
+        return self.server_version
+
+    def _json(
+        self,
+        status: int,
+        payload: dict[str, Any],
+        *,
+        close_connection: bool = False,
+    ) -> None:
         body = json.dumps(
             payload,
             ensure_ascii=False,
@@ -71,6 +95,9 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
+        if close_connection:
+            self.close_connection = True
+            self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
