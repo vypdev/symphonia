@@ -1,7 +1,7 @@
 # Implementation baseline
 
 **Status:** owner-approved foundation slice
-**Last reviewed:** 2026-09-22
+**Last reviewed:** 2026-09-25
 
 The first implementation increment is intentionally narrower than any provider or Home Assistant capability. It proves the provider-independent core and the durable-operation persistence contract without selecting an external web framework, provider SDK, OAuth strategy, or frontend stack.
 
