@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 from symphonia import __version__
 from symphonia.infrastructure.sqlite_operations import OperationRepository
-from .config import normalize_ingress_path
+from .config import RuntimeConfig, normalize_ingress_path
 from .resources import RuntimeResources
 
 
@@ -88,9 +88,19 @@ def create_server(
 ) -> SymphoniaHTTPServer:
     """Create a server with an already-migrated durable operation store."""
 
-    resources = RuntimeResources.open(database_path)
+    config = RuntimeConfig(
+        host=host,
+        port=port,
+        database_path=database_path,
+        ingress_path=ingress_path,
+    )
+    resources = RuntimeResources.open(config.database_path)
     try:
-        return SymphoniaHTTPServer((host, port), ingress_path=ingress_path, resources=resources)
+        return SymphoniaHTTPServer(
+            (config.host, config.port),
+            ingress_path=config.ingress_path,
+            resources=resources,
+        )
     except BaseException as startup_error:
         try:
             resources.close()

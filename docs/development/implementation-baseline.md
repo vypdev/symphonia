@@ -64,7 +64,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Backup publication validates the temporary SQLite copy before atomically replacing the destination.
 - Runtime backups reject missing parent directories, directory destinations, and final-component symlinks before creating a temporary artifact.
 - Backup preflight rejects operation databases whose schema version is newer than the running foundation.
-- Runtime configuration validates host, port, database path, and Ingress base path before startup.
+- Runtime configuration and the public server factory validate host, port, database path, and Ingress base path before opening stores or binding a socket.
 - Runtime configuration and HTTP routing share one Ingress path normalizer that rejects control characters, query/fragments, backslashes, repeated slashes, and literal dot segments.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.
 - Runtime readiness validates SQLite integrity, foreign-key references, durable operation state/event values, authorization attempts, provider capability JSON, plan JSON, and resolution payloads; corruption fails closed.
