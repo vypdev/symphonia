@@ -5,6 +5,7 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from collections.abc import Callable
+from socket import socket
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -16,6 +17,7 @@ from .resources import RuntimeResources
 
 class SymphoniaHTTPServer(HTTPServer):
     allow_reuse_address = True
+    request_timeout_seconds = 2.0
 
     def __init__(
         self,
@@ -36,6 +38,11 @@ class SymphoniaHTTPServer(HTTPServer):
         self.readiness_check: Callable[[], bool] = resources.healthcheck if resources is not None else repository.healthcheck
         self.service_version = __version__
         self.ingress_path = normalized_ingress_path
+
+    def get_request(self) -> tuple[socket, tuple[str, int]]:
+        request, client_address = super().get_request()
+        request.settimeout(self.request_timeout_seconds)
+        return request, client_address
 
     def close_resources(self) -> None:
         if self.resources is not None:
