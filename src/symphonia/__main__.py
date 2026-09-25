@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
+from types import FrameType
 
 from symphonia.runtime import RuntimeConfig, create_server
+
+
+def _handle_sigterm(_signum: int, _frame: FrameType | None) -> None:
+    raise KeyboardInterrupt
 
 
 def main() -> None:
@@ -32,14 +38,22 @@ def main() -> None:
         )
     except ValueError as error:
         parser.error(str(error))
-    server = create_server(config.host, config.port, config.database_path, config.ingress_path)
+    previous_sigterm_handler = signal.signal(signal.SIGTERM, _handle_sigterm)
+    server = None
     try:
+        server = create_server(config.host, config.port, config.database_path, config.ingress_path)
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
-        server.server_close()
-        server.close_resources()
+        try:
+            if server is not None:
+                try:
+                    server.server_close()
+                finally:
+                    server.close_resources()
+        finally:
+            signal.signal(signal.SIGTERM, previous_sigterm_handler)
 
 
 if __name__ == "__main__":
