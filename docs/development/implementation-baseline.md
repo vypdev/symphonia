@@ -78,6 +78,7 @@ The first implementation increment is intentionally narrower than any provider o
 - The composed runtime HTTP server has an offline route contract and a loopback smoke path for real health/readiness lifecycle checks.
 - The current JSON health/readiness/version surface disables caching, MIME sniffing, and referrer propagation.
 - The HTTP handler suppresses the Python version header and returns generic JSON for parser/method errors, closing the connection without reflecting details.
+- Client disconnects or response-write timeouts close the request quietly instead of emitting a server traceback.
 - The container health probe follows the configured runtime port and Ingress base path.
 - The container health probe follows the configured listener host, mapping IPv4/IPv6 wildcard binds to their loopback equivalents, and requires the Symphonia ready JSON contract rather than any HTTP 200 response.
 - The runtime JSON surface rejects non-standard numeric values before writing a response.
