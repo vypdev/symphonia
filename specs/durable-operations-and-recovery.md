@@ -1,14 +1,14 @@
 # Durable operations and recovery
 
 - Status: Draft
-- Date: 2026-09-20
+- Date: 2026-09-26
 - Catalog capability ID: `durable-operations-and-recovery`
 - Owners: Symphonia maintainers
 - Scope: execute imports and provider writes through durable, observable operations that recover safely across restarts, rate limits, uncertain writes, and upgrades.
 - Related requirements: `SYM-PROD-004`–`SYM-PROD-006`, `SYM-ARCH-001`–`SYM-ARCH-002`, `SYM-ARCH-005`, `SYM-ARCH-008`–`SYM-ARCH-010`, `SYM-JOB-001`–`SYM-JOB-008`, `SYM-OBS-001`–`SYM-OBS-006`, `SYM-TEST-004`, `SYM-TEST-013`, `SYM-DEP-002`, `SYM-DEP-008`
 - Related decisions/research: [system architecture](../docs/architecture/system-architecture.md), [development specification](../docs/development/development-specification.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `RG-004`
 - Required review gates: architecture, persistence/recovery, provider contracts, testing, documentation, security/operations
-- Open decisions blocking readiness: persistent store; worker/process topology; lease and retention parameters; supported migration strategy; representative operation sizes and timing targets; cancellation after lease expiry with an uncertain external outcome (`OQ-010`)
+- Open decisions blocking readiness: persistent store; worker/process topology; lease and retention parameters; supported migration strategy; representative operation sizes and timing targets; provider-aware reconciliation and an authorized manual-resolution surface
 
 ## 1. Executive summary
 
@@ -22,7 +22,7 @@ Provider work crosses unreliable networks and may take longer than an HTTP reque
 
 The product, architecture, and provider specifications require resumability, rate-limit awareness, explicit partial outcomes, auditable state, and safe operation in the Home Assistant App lifecycle.
 
-An owner-approved foundation slice now proves a dependency-free SQLite operation repository, transactional schema/legacy-column migration, leases with strict positive-integer duration validation, checkpoints with strict state validation, retries, cancellation, recovery events, bounded diagnostics with strict integer limits, capped key lists and bounded-memory key summaries/event reads, provider-independent handlers with result validation, shared SQLite connection policy with foreign-key enforcement and bounded lock waits, connection cleanup when store initialization fails, JSON-object/string-key payload validation, and deterministic worker tests. Repository entrypoints validate non-empty operation IDs before reads and state transitions. The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a possibly stale handler object. Complete repository calls serialize access to a shared SQLite connection; cross-connection and cross-process correctness continues to rely on SQLite transactions and leases. Operation transactions place `BEGIN` inside the protected scope, attempt rollback on process-level interruption, and preserve the primary exception if rollback also fails. Readiness streams through persisted operations and audit events rather than materializing the ledger, and fails closed on SQLite integrity or foreign-key corruption, invalid persisted operation/event states, malformed or excessively nested JSON objects, timestamps without a defined or representable UTC offset, and invalid credential-bearing payload keys; operation, checkpoint, and audit-event payloads reject token-, password-, authorization-, and API-key-shaped fields in snake, kebab, and camel case on writes and reads, while errors do not echo rejected key names. Real multi-connection claim/replay and backup-reopen evidence cover the recovery path. The capability SDD remains `Draft`: persistent-store and worker-topology decisions, retention, migration strategy, representative sizing, and the complete provider/UI vertical slice are still open. This evidence does not authorize production operation policy or claim that the full capability is implemented.
+An owner-approved foundation slice now proves a dependency-free SQLite operation repository, transactional schema/legacy-column migration, leases with strict positive-integer duration validation, checkpoints with strict state validation, retries, cancellation, recovery events, bounded diagnostics with strict integer limits, capped key lists and bounded-memory key summaries/event reads, provider-independent handlers with result validation, shared SQLite connection policy with foreign-key enforcement and bounded lock waits, connection cleanup when store initialization fails, JSON-object/string-key payload validation, and deterministic worker mechanics. Repository entrypoints validate non-empty operation IDs before reads and state transitions. The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a possibly stale handler object. Complete repository calls serialize access to a shared SQLite connection; cross-connection and cross-process correctness continues to rely on SQLite transactions and leases. Operation transactions place `BEGIN` inside the protected scope, attempt rollback on process-level interruption, and preserve the primary exception if rollback also fails. Readiness streams through persisted operations and audit events rather than materializing the ledger, and fails closed on SQLite integrity or foreign-key corruption, invalid persisted operation/event states, malformed or excessively nested JSON objects, timestamps without a defined or representable UTC offset, and invalid credential-bearing payload keys; operation, checkpoint, and audit-event payloads reject token-, password-, authorization-, and API-key-shaped fields in snake, kebab, and camel case on writes and reads, while errors do not echo rejected key names. Cancellation recovery now quarantines an expired cancellation-requested lease in `waiting_user`, records why reconciliation is required, prevents ordinary resume/handler dispatch, and supports an explicit repository resolution to truthful `cancelled` or `partial` outcomes. This is a persistence primitive only: authorization and a user/operator surface are not implemented. Real multi-connection claim/replay and backup-reopen evidence cover the recovery path. The capability SDD remains `Draft`: persistent-store and worker-topology decisions, retention, migration strategy, representative sizing, provider-aware reconciliation, authorization/UI, and the complete provider vertical are still open. This evidence does not authorize production operation policy or claim that the full capability is implemented.
 
 Evidence sources:
 
@@ -204,11 +204,11 @@ Progress shall not move backward without an explicit explanation. Status shall n
 | Repeated transient failure | Apply bounded backoff and attempt ceiling | End `failed` with remediation guidance |
 | Permanent item failures | Continue only when operation policy permits | End `partial` with per-item results |
 | Incompatible application/schema upgrade | Do not claim or mutate externally | Run verified migration or require operator action |
-| Cancellation races with a provider call | Reconcile the in-flight call; start no later steps | Report confirmed partial state accurately |
+| Cancellation races with a provider call | Reconcile the in-flight call; if the worker lease expires, quarantine in `waiting_user` and never dispatch the ordinary handler | Report confirmed partial state accurately; an unresolved outcome is not terminal `cancelled` |
 
 Graceful shutdown stops new claims, lets safe checkpoints finish within a bounded interval, and then releases or permits leases to expire. Correctness must also hold for abrupt termination.
 
-If a cancellation request survives a worker loss while a provider outcome is uncertain, the ordinary handler must not be dispatched again and the operation must not be reported as fully cancelled until reconciliation or the owner-approved `OQ-010` manual recovery path resolves the in-flight step.
+If a cancellation request survives worker loss while a provider outcome is uncertain, the repository moves the expired operation to `waiting_user`, records `reconciliation_required`, and clears its lease without clearing the cancellation request. It is never eligible for ordinary claim or resume. A trusted caller may resolve only an established `no_effect` outcome to `cancelled` or `effect_confirmed` to `partial`; unresolved outcomes remain in `waiting_user`. The repository primitive is not an authorization boundary, and no caller is wired until the provider-specific and authenticated operator contracts are approved.
 
 ## 11. Security and privacy
 
@@ -224,7 +224,7 @@ If a cancellation request survives a worker loss while a provider outcome is unc
 
 Structured events include operation creation, eligibility, claim, renewal, checkpoint, wait, retry schedule, reconciliation, cancellation, and terminal transition. Each event includes operation ID, operation type, state, attempt count, adapter category, and bounded error code; it excludes credentials and unbounded content.
 
-Metrics include queue depth, oldest eligible age, running leases, expired lease recoveries, state counts, execution latency, wait duration, attempt counts, unknown outcomes, reconciliation results, and terminal result ratios. Cardinality shall remain bounded.
+Metrics include queue depth, oldest eligible age, running leases, expired lease recoveries, cancellation-reconciliation-required count, state counts, execution latency, wait duration, attempt counts, unknown outcomes, reconciliation results, and terminal result ratios. Cardinality shall remain bounded.
 
 Health distinguishes API availability, persistent-store readiness, worker liveness, claim progress, and migration state. A redacted export provides state history, version information, checkpoints, lease history, and categorized errors.
 
@@ -238,17 +238,17 @@ Initial rollout uses one App instance and conservative concurrency. Multi-instan
 
 ## 14. Numeric test budget
 
-Minimum planned automated tests: **86**.
+Minimum planned automated tests: **88**.
 
 | Area | Minimum |
 |---|---:|
 | Domain states, transitions, cancellation, and invariants | 20 |
-| Claims, leases, races, checkpoints, idempotency, and reconciliation | 24 |
+| Claims, leases, races, checkpoints, idempotency, and reconciliation | 26 |
 | Persistence and provider outcome adapter contracts | 16 |
 | UI states and accessibility | 8 |
 | Integration, restart, migration, security, corruption, and redaction | 18 |
 
-Required deterministic tests include duplicate dispatch, concurrent claim, lease expiry, clock boundaries, crash before/after every checkpoint, store outage, retry exhaustion, rate-limit timing, cancellation races, unknown outcomes, and compatible/incompatible upgrades.
+Required deterministic tests include duplicate dispatch, concurrent claim, lease expiry, clock boundaries, crash before/after every checkpoint, store outage, retry exhaustion, rate-limit timing, cancellation races, unknown outcomes, cancellation quarantine and manual outcome resolution, and compatible/incompatible upgrades.
 
 The eight feature-specific UI cases supplement the UI-foundation budget and inherit its component-catalog, host-context, accessibility, responsive, theme/localization, hostile-content, and dated visual-reference gates.
 
@@ -273,7 +273,7 @@ Implementation shall update:
 6. Duplicate submissions and duplicate dispatches do not duplicate logical work.
 7. Rate limits and transient failures produce bounded, visible waits.
 8. Expired authorization produces `waiting_user` without discarding progress.
-9. Cancellation starts no later work and accurately accounts for in-flight outcomes.
+9. Cancellation starts no later work and accurately accounts for in-flight outcomes. A cancellation-requested operation whose worker lease expires during an uncertain provider write becomes `waiting_user`, is not dispatched through its ordinary handler, and remains non-resumable until explicit resolution records `no_effect` or `effect_confirmed`.
 10. Store unavailability prevents new external side effects.
 11. Supported upgrades preserve or safely refuse every persisted state fixture.
 12. Logs, metrics, events, and diagnostics contain no credentials or prohibited content.

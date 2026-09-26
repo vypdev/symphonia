@@ -503,9 +503,21 @@ class OperationRepository:
             """
             SELECT COUNT(*) AS count
               FROM operations
-             WHERE cancel_requested = 0
-               AND state = 'running'
+             WHERE state = 'running'
                AND (lease_expires_at IS NULL OR lease_expires_at <= ?)
+            """,
+            (now_text,),
+        ).fetchone()
+        cancellation_recovery = self._connection.execute(
+            """
+            SELECT COUNT(*) AS count
+             FROM operations
+             WHERE cancel_requested = 1
+               AND (
+                    state = 'waiting_user'
+                    OR (state = 'running'
+                        AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
+               )
             """,
             (now_text,),
         ).fetchone()
@@ -527,6 +539,7 @@ class OperationRepository:
             "oldest_eligible_at": oldest_eligible_at,
             "oldest_eligible_age_seconds": oldest_eligible_age_seconds,
             "cancellation_requested_count": int(cancellation_rows["count"]),
+            "cancellation_recovery_required_count": int(cancellation_recovery["count"]),
         }
 
     @_serialize_repository_access
@@ -600,10 +613,11 @@ class OperationRepository:
         lease_seconds: int = 30,
         operation_type: str | None = None,
     ) -> OperationRecord | None:
-        """Atomically claim the oldest queued, due, or expired operation.
+        """Quarantine expired cancelled work, then claim one eligible operation.
 
-        This is the scheduler-facing primitive. It deliberately selects only
-        durable eligibility; handler dispatch remains an application concern.
+        Cancellation recovery never dispatches an ordinary handler. The
+        scheduler-facing claim still selects only durable eligibility; handler
+        dispatch remains an application concern.
         """
 
         _require_text(worker_id, label="worker_id")
@@ -618,6 +632,60 @@ class OperationRepository:
             parameters += (operation_type,)
         try:
             self._connection.execute("BEGIN IMMEDIATE")
+            # A cancelled worker may have disappeared during an external
+            # request. Quarantine one expired lease for explicit resolution;
+            # never send it through the ordinary operation handler again.
+            uncertain = self._connection.execute(
+                """
+                SELECT operation_id, checkpoint_json
+                  FROM operations
+                 WHERE cancel_requested = 1
+                   AND state = 'running'
+                   AND (lease_expires_at IS NULL OR lease_expires_at <= ?)
+                 ORDER BY COALESCE(lease_expires_at, created_at), created_at, operation_id
+                 LIMIT 1
+                """,
+                (now_text,),
+            ).fetchone()
+            if uncertain is not None:
+                operation_id = uncertain["operation_id"]
+                checkpoint = _load_json_object(
+                    uncertain["checkpoint_json"], label="operation checkpoint"
+                )
+                checkpoint.update(
+                    {
+                        "reconciliation_required": True,
+                        "recovery_reason": "cancelled_worker_lease_expired",
+                    }
+                )
+                checkpoint_json = json.dumps(
+                    checkpoint,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                )
+                self._connection.execute(
+                    """
+                    UPDATE operations
+                       SET state = 'waiting_user', checkpoint_json = ?,
+                           worker_id = NULL, lease_expires_at = NULL,
+                           next_run_at = NULL, updated_at = ?
+                     WHERE operation_id = ?
+                    """,
+                    (checkpoint_json, now_text, operation_id),
+                )
+                self._append_event(
+                    operation_id=operation_id,
+                    event_type="cancellation_reconciliation_required",
+                    state="waiting_user",
+                    worker_id=None,
+                    payload={
+                        "recovery_reason": "cancelled_worker_lease_expired",
+                        **self._checkpoint_summary(checkpoint),
+                    },
+                    created_at=now_text,
+                )
             row = self._connection.execute(
                 f"""
                 SELECT *
@@ -742,9 +810,6 @@ class OperationRepository:
             raise ValueError("invalid checkpoint state")
         _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
-        checkpoint_json = json.dumps(
-            checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
-        )
         try:
             self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
@@ -756,14 +821,38 @@ class OperationRepository:
                 raise LeaseConflict("worker does not own a running operation")
             if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
                 raise LeaseConflict("operation lease has expired")
-            effective_state = "cancelled" if row["cancel_requested"] else state
+            effective_state = state
+            if row["cancel_requested"] and state in {"running", "cancelled", "waiting_user"}:
+                outcome_is_uncertain = (
+                    checkpoint.get("unknown_step") is not None
+                    or checkpoint.get("reconciliation_required") is True
+                )
+                if outcome_is_uncertain:
+                    effective_state = "waiting_user"
+                    checkpoint = {
+                        **checkpoint,
+                        "reconciliation_required": True,
+                        "recovery_reason": "cancelled_during_unknown_outcome",
+                    }
+                else:
+                    effective_state = "cancelled"
+            checkpoint_json = json.dumps(
+                checkpoint,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
             self._connection.execute(
                 """
                 UPDATE operations
                    SET state = ?, checkpoint_json = ?, updated_at = ?,
                        worker_id = CASE WHEN ? = 'running' THEN worker_id ELSE NULL END,
                        lease_expires_at = CASE WHEN ? = 'running' THEN lease_expires_at ELSE NULL END,
-                       cancel_requested = CASE WHEN ? = 'cancelled' THEN 0 ELSE cancel_requested END
+                       cancel_requested = CASE
+                           WHEN ? IN ('cancelled', 'succeeded', 'partial', 'failed') THEN 0
+                           ELSE cancel_requested
+                       END
                  WHERE operation_id = ?
                 """,
                 (
@@ -806,6 +895,50 @@ class OperationRepository:
             if row["state"] in {"succeeded", "partial", "failed", "cancelled"}:
                 self._connection.execute("COMMIT")
                 return self.get(operation_id)
+            if row["state"] == "waiting_user" and row["cancel_requested"]:
+                # Repeated cancellation is not a resolution of an unknown
+                # provider outcome. Preserve the actionable quarantine.
+                self._connection.execute("COMMIT")
+                return self.get(operation_id)
+            if row["state"] == "waiting_user":
+                checkpoint = _load_json_object(
+                    row["checkpoint_json"], label="operation checkpoint"
+                )
+                if (
+                    checkpoint.get("unknown_step") is not None
+                    or checkpoint.get("reconciliation_required") is True
+                ):
+                    checkpoint.update(
+                        {
+                            "reconciliation_required": True,
+                            "recovery_reason": "cancelled_while_unknown_outcome",
+                        }
+                    )
+                    checkpoint_json = json.dumps(
+                        checkpoint,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        allow_nan=False,
+                    )
+                    self._connection.execute(
+                        """
+                        UPDATE operations
+                           SET checkpoint_json = ?, cancel_requested = 1, updated_at = ?
+                         WHERE operation_id = ?
+                        """,
+                        (checkpoint_json, now_text, operation_id),
+                    )
+                    self._append_event(
+                        operation_id=operation_id,
+                        event_type="cancellation_requested",
+                        state="waiting_user",
+                        worker_id=None,
+                        payload={"recovery_reason": "cancelled_while_unknown_outcome"},
+                        created_at=now_text,
+                    )
+                    self._connection.execute("COMMIT")
+                    return self.get(operation_id)
             if row["state"] == "running":
                 self._connection.execute(
                     "UPDATE operations SET cancel_requested = 1, updated_at = ? WHERE operation_id = ?",
@@ -858,6 +991,16 @@ class OperationRepository:
                 raise OperationNotFound(operation_id)
             if row["state"] != "waiting_user":
                 raise LeaseConflict("only waiting_user operations can be resumed")
+            checkpoint = _load_json_object(
+                row["checkpoint_json"], label="operation checkpoint"
+            )
+            if (
+                row["cancel_requested"]
+                or checkpoint.get("reconciliation_required") is True
+            ):
+                raise LeaseConflict(
+                    "cancellation recovery must be resolved before operation can resume"
+                )
             self._connection.execute(
                 "UPDATE operations SET state = 'queued', updated_at = ? WHERE operation_id = ?",
                 (now_text, operation_id),
@@ -868,6 +1011,72 @@ class OperationRepository:
                 state="queued",
                 worker_id=None,
                 payload={},
+                created_at=now_text,
+            )
+            self._connection.execute("COMMIT")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
+            raise
+        return self.get(operation_id)
+
+    @_serialize_repository_access
+    def resolve_cancelled_outcome(
+        self,
+        operation_id: str,
+        *,
+        outcome: str,
+        now: datetime,
+    ) -> OperationRecord:
+        """Persist an explicit manual resolution of an uncertain cancelled write.
+
+        Callers must authorize the human/operator action before invoking this
+        repository primitive. An unresolved outcome stays in ``waiting_user``
+        and cannot be resumed through the ordinary operation path.
+        """
+
+        _require_text(operation_id, label="operation_id")
+        if not isinstance(outcome, str) or outcome not in {"no_effect", "effect_confirmed"}:
+            raise ValueError("outcome must be 'no_effect' or 'effect_confirmed'")
+        now_text = _utc(now)
+        try:
+            self._connection.execute("BEGIN IMMEDIATE")
+            row = self._connection.execute(
+                "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
+            ).fetchone()
+            if row is None:
+                raise OperationNotFound(operation_id)
+            if row["state"] != "waiting_user" or not row["cancel_requested"]:
+                raise LeaseConflict("operation has no unresolved cancellation outcome")
+            checkpoint = _load_json_object(
+                row["checkpoint_json"], label="operation checkpoint"
+            )
+            if checkpoint.get("reconciliation_required") is not True:
+                raise LeaseConflict("operation is not awaiting cancellation reconciliation")
+            checkpoint["cancellation_resolution"] = outcome
+            checkpoint_json = json.dumps(
+                checkpoint,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            resolved_state = "cancelled" if outcome == "no_effect" else "partial"
+            self._connection.execute(
+                """
+                UPDATE operations
+                   SET state = ?, checkpoint_json = ?, cancel_requested = 0,
+                       worker_id = NULL, lease_expires_at = NULL,
+                       next_run_at = NULL, updated_at = ?
+                 WHERE operation_id = ?
+                """,
+                (resolved_state, checkpoint_json, now_text, operation_id),
+            )
+            self._append_event(
+                operation_id=operation_id,
+                event_type="cancellation_reconciled",
+                state=resolved_state,
+                worker_id=None,
+                payload={"outcome": outcome},
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")

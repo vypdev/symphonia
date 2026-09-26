@@ -72,11 +72,11 @@ Decide retention for immutable snapshots, operation detail, provider metadata, l
 
 The repository currently has no license. The license should be selected before accepting outside contributions. Contributor handling of provider fixtures, terms, security reports, and trademarks also needs a policy.
 
-### OQ-010 — How should cancellation recover after a worker loses an uncertain external write?
+### OQ-010 — How should cancellation recover after a worker loses an uncertain external write? — Resolved design
 
-If cancellation is requested while a provider write is in flight and the worker disappears before recording the response, the system cannot safely assume the write did not happen. Choose between a durable reconciliation-required phase that resumes only reconciliation, or a `waiting_user` state that blocks until an explicit manual action. The operation must not be reported as fully cancelled while the external outcome remains unknown.
+**Decision (2026-09-26, selected under owner delegation):** use `waiting_user` as the provider-independent safety boundary. If a cancellation-requested worker lease expires, quarantine the operation with a durable reconciliation marker; never dispatch its ordinary handler again and never report it as cancelled while the external outcome is unknown. An authorized operator must establish `no_effect` (terminal `cancelled`) or `effect_confirmed` (terminal `partial`) before clearing the cancellation request. If neither fact can be established, it stays in `waiting_user`.
 
-**Proposed default:** persist the in-flight step and reconcile it before finalizing cancellation; use `waiting_user` if the provider cannot safely confirm the outcome. The current operation state model does not yet define this recovery transition.
+This foundation deliberately does not guess at provider reconciliation or expose an unauthenticated resolution endpoint. A future provider-aware reconciliation handler may resolve the outcome automatically only after its provider contract is proven. The repository primitive for explicit resolution is not itself an authorization boundary; any caller must enforce the approved operator identity and action policy. The durable-operation SDD remains blocked on that provider/UI vertical and its other readiness gates, but OQ-010 no longer represents an unresolved policy choice.
 
 ## Research/design gates (not owner preference alone)
 

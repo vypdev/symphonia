@@ -410,7 +410,7 @@
         "OQ-007 representative operation sizes and timing targets",
         "Process topology and worker concurrency defaults",
         "Retention policy for step detail and operation history",
-        "OQ-010 cancellation recovery after an uncertain in-flight provider write"
+        "Provider-aware reconciliation and authorized manual-resolution surface"
       ]
     }
   ]
