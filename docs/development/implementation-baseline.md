@@ -72,7 +72,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Port parsing accepts integer values, numeric strings, and integral floats while rejecting booleans and arbitrary integer-coercible objects that could silently truncate.
 - Runtime host, database, and Ingress values reject Unicode C0/C1 control characters before host whitespace normalization; the shared Ingress normalizer also rejects query/fragments, backslashes, repeated slashes, and literal dot segments.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.
-- Runtime readiness validates SQLite integrity, foreign-key references, durable operation state/event values, authorization attempts, provider capability JSON, plan JSON, and resolution payloads; corruption fails closed.
+- Runtime readiness validates SQLite integrity, foreign-key references, durable operation state/event values, authorization attempts, provider capability JSON, plan JSON, and resolution payloads; malformed, out-of-range, or excessively nested durable values fail closed.
 - Durable operation readiness validates operation and event rows incrementally instead of materializing the full ledger in memory.
 - Provider connection diagnostics expose provider/state and expiry counts, never account or credential data.
 - Import diagnostics expose bounded snapshot freshness and availability counts without playlist content.

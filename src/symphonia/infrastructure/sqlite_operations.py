@@ -239,7 +239,7 @@ class OperationRepository:
             for row in self._connection.execute("SELECT * FROM operation_events"):
                 self._event(row)
             return True
-        except (sqlite3.Error, TypeError, ValueError):
+        except (sqlite3.Error, TypeError, ValueError, OverflowError, RecursionError):
             return False
 
     @_serialize_repository_access
