@@ -208,7 +208,7 @@ Progress shall not move backward without an explicit explanation. Status shall n
 
 Graceful shutdown stops new claims, lets safe checkpoints finish within a bounded interval, and then releases or permits leases to expire. Correctness must also hold for abrupt termination.
 
-If a cancellation request survives worker loss while a provider outcome is uncertain, the repository moves the expired operation to `waiting_user`, records `reconciliation_required`, and clears its lease without clearing the cancellation request. It is never eligible for ordinary claim or resume. A trusted caller may resolve only an established `no_effect` outcome to `cancelled` or `effect_confirmed` to `partial`; unresolved outcomes remain in `waiting_user`. The repository primitive is not an authorization boundary, and no caller is wired until the provider-specific and authenticated operator contracts are approved.
+If a cancellation request survives worker loss while a provider outcome is uncertain, the repository moves the expired operation to `waiting_user`, records `reconciliation_required`, and clears its lease without clearing the cancellation request. It is never eligible for ordinary claim or resume. The same quarantine applies if a worker reaches a retry or rate-limit release path with an uncertain checkpoint after cancellation was requested; such an operation is not scheduled for another ordinary attempt. A trusted caller may resolve only an established `no_effect` outcome to `cancelled` or `effect_confirmed` to `partial`; unresolved outcomes remain in `waiting_user`. The repository primitive is not an authorization boundary, and no caller is wired until the provider-specific and authenticated operator contracts are approved.
 
 ## 11. Security and privacy
 
@@ -273,7 +273,7 @@ Implementation shall update:
 6. Duplicate submissions and duplicate dispatches do not duplicate logical work.
 7. Rate limits and transient failures produce bounded, visible waits.
 8. Expired authorization produces `waiting_user` without discarding progress.
-9. Cancellation starts no later work and accurately accounts for in-flight outcomes. A cancellation-requested operation whose worker lease expires during an uncertain provider write becomes `waiting_user`, is not dispatched through its ordinary handler, and remains non-resumable until explicit resolution records `no_effect` or `effect_confirmed`.
+9. Cancellation starts no later work and accurately accounts for in-flight outcomes. A cancellation-requested operation whose worker lease expires during an uncertain provider write becomes `waiting_user`, is not dispatched through its ordinary handler or retry/rate-limit path, and remains non-resumable until explicit resolution records `no_effect` or `effect_confirmed`.
 10. Store unavailability prevents new external side effects.
 11. Supported upgrades preserve or safely refuse every persisted state fixture.
 12. Logs, metrics, events, and diagnostics contain no credentials or prohibited content.
