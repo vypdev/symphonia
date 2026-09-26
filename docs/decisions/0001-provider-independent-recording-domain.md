@@ -50,4 +50,3 @@ Trade-offs:
 - canonical metadata needs provenance/merge rules;
 - provider-specific data must be stored alongside, not forced into, the core entity;
 - migrations may be needed as recording/release/work knowledge improves.
-

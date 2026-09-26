@@ -89,4 +89,3 @@ class ManualDecision:
             raise ValueError("manual decisions require track, actor, and reason")
         if self.action in {ManualDecisionAction.ACCEPT, ManualDecisionAction.REJECT} and not self.candidate_recording_id:
             raise ValueError("accept/reject decisions require a candidate recording")
-

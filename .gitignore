@@ -9,4 +9,3 @@ build/
 .venv/
 *.sqlite3
 *.db
-

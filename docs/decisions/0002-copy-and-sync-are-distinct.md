@@ -45,4 +45,3 @@ Trade-offs:
 - copy history must retain enough source/target evidence to inform future sync design;
 - users who want ongoing mirroring must wait for a later release;
 - promoting a copied pair into sync requires an explicit future workflow.
-

@@ -79,4 +79,3 @@ class ProviderConnectionService:
 
     def disconnect(self, connection_id: str, *, now: datetime) -> ProviderConnection:
         return self.connections.disconnect(connection_id, now=now)
-

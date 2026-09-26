@@ -45,4 +45,3 @@ def require_capabilities(capabilities: ProviderCapabilities, required: Iterable[
     if missing:
         names = ", ".join(sorted(capability.value for capability in missing))
         raise CapabilityError(f"required capabilities are unavailable: {names}")
-

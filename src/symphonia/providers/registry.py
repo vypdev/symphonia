@@ -41,4 +41,3 @@ class ProviderRegistry:
 
     def manifests(self) -> tuple[ProviderManifest, ...]:
         return tuple(self._adapters[key].manifest for key in sorted(self._adapters))
-
