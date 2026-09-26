@@ -66,7 +66,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Failed backup cleanup preserves the primary backup error and annotates a secondary temporary-file removal failure.
 - Runtime backups reject missing parent directories, directory destinations, and final-component symlinks before creating a temporary artifact.
 - Backup preflight rejects operation databases whose schema version is newer than the running foundation.
-- Runtime configuration and the public server factory validate host, port, database path, and Ingress base path before opening stores or binding a socket; direct resource opening shares the database-path validator.
+- Runtime configuration and the public server factory validate host, port, database path, and Ingress base path before opening stores or binding a socket; direct resource opening shares the database-path validator, including consistent `~` expansion for SQLite and backup path comparisons.
 - Port parsing accepts integer values, numeric strings, and integral floats while rejecting booleans and arbitrary integer-coercible objects that could silently truncate.
 - Runtime host, database, and Ingress values reject Unicode C0/C1 control characters before host whitespace normalization; the shared Ingress normalizer also rejects query/fragments, backslashes, repeated slashes, and literal dot segments.
 - Runtime resources provide a bounded, payload-free aggregate diagnostics view for future authenticated surfaces.

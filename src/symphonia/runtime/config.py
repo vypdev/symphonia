@@ -46,7 +46,7 @@ def normalize_database_path(value: object) -> str:
         raise ValueError("database_path must not be empty")
     if _has_control_characters(value):
         raise ValueError("database_path must not contain control characters")
-    return value.strip()
+    return os.path.expanduser(value.strip())
 
 
 @dataclass(frozen=True, slots=True)
