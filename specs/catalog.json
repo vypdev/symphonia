@@ -376,6 +376,7 @@
         "code": [
           "src/symphonia/infrastructure/sqlite_common.py",
           "src/symphonia/infrastructure/sqlite_operations.py",
+          "tools/storage_recovery_spike.py",
           "src/symphonia/infrastructure/sqlite_authorization.py",
           "src/symphonia/infrastructure/sqlite_connections.py",
           "src/symphonia/infrastructure/sqlite_library.py",

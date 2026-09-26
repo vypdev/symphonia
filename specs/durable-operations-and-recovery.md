@@ -230,7 +230,7 @@ Health distinguishes API availability, persistent-store readiness, worker livene
 
 ## 13. Rollout, migration, and compatibility
 
-Before implementation readiness, a persistence spike shall prove atomic claim, lease expiry, transactional checkpointing, backup/restore behavior under `/data`, and migration safety in the chosen Home Assistant App runtime.
+Before implementation readiness, a persistence spike shall prove atomic claim, ordinary and cancellation-requested lease expiry, transactional checkpointing, backup/restore behavior under `/data`, and migration safety in the chosen Home Assistant App runtime. The local SQLite spike now exercises cancellation quarantine and verifies that unresolved cancellation cannot be resumed; it remains research evidence, not representative Home Assistant/App-scale or provider evidence.
 
 Operation records and payloads carry explicit schema and handler versions. Upgrade tests cover queued, running, waiting, partial-progress, cancelled, and terminal fixtures. A version that cannot safely resume an operation shall leave it untouched and expose an actionable incompatibility state rather than guessing.
 

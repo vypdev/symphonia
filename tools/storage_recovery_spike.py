@@ -1,9 +1,9 @@
 """Reproducible SQLite recovery/backup spike for the runtime foundation.
 
 This is evidence tooling, not a production benchmark or a restore command. It
-creates a disposable persistent store, simulates a worker restart with an
-expired lease, and validates an online backup using the runtime's existing
-preflight checks.
+creates a disposable persistent store, simulates ordinary and cancellation-
+requested worker restarts with expired leases, and validates an online backup
+using the runtime's existing preflight checks.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import tempfile
 import time
 from typing import Any
 
+from symphonia.infrastructure.sqlite_operations import LeaseConflict
 from symphonia.runtime import RuntimeResources
 
 
@@ -72,7 +73,7 @@ def run_spike(
                 if synthetic_padding:
                     payload["synthetic_padding"] = synthetic_padding
                 resources.operations.create(
-                    operation_type="spike.copy",
+                    operation_type="spike.recovery" if index == 0 else "spike.queued",
                     idempotency_key=f"spike-key-{index}",
                     operation_id=f"spike-operation-{index}",
                     payload=payload,
@@ -91,6 +92,27 @@ def run_spike(
             phase_ms["initial_claim"] = round(
                 (time.perf_counter() - phase_started) * 1000, 2
             )
+            phase_started = time.perf_counter()
+            cancelled = resources.operations.create(
+                operation_type="spike.recovery",
+                idempotency_key="spike-cancelled-key",
+                operation_id="spike-cancelled-operation",
+                payload={"fixture": "cancelled-expired-lease"},
+                now=BASE_TIME,
+            )
+            cancelled = resources.operations.claim(
+                cancelled.operation_id,
+                worker_id="worker-before-restart",
+                now=BASE_TIME,
+                lease_seconds=1,
+            )
+            resources.operations.cancel(
+                cancelled.operation_id,
+                now=BASE_TIME + timedelta(milliseconds=500),
+            )
+            phase_ms["cancellation_fixture_setup"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
 
         phase_started = time.perf_counter()
         with RuntimeResources.open(str(source_path)) as resources:
@@ -98,15 +120,37 @@ def run_spike(
                 (time.perf_counter() - phase_started) * 1000, 2
             )
             phase_started = time.perf_counter()
-            recovered = resources.operations.claim(
-                claimed.operation_id,
+            recovered = resources.operations.claim_next(
                 worker_id="worker-after-restart",
                 now=BASE_TIME + timedelta(seconds=2),
                 lease_seconds=30,
+                operation_type="spike.recovery",
             )
+            if recovered is None or recovered.operation_id != claimed.operation_id:
+                raise RuntimeError("ordinary expired fixture was not reclaimed")
             phase_ms["expired_lease_recovery"] = round(
                 (time.perf_counter() - phase_started) * 1000, 2
             )
+            cancellation_recovered = resources.operations.get(cancelled.operation_id)
+            cancellation_audit_event_count = len(
+                resources.operations.events(cancelled.operation_id)
+            )
+            try:
+                resources.operations.resume(
+                    cancelled.operation_id,
+                    now=BASE_TIME + timedelta(seconds=2),
+                )
+            except LeaseConflict:
+                cancellation_resume_blocked = True
+            else:
+                cancellation_resume_blocked = False
+            if (
+                cancellation_recovered.state != "waiting_user"
+                or not cancellation_recovered.cancel_requested
+                or cancellation_recovered.checkpoint.get("reconciliation_required") is not True
+                or not cancellation_resume_blocked
+            ):
+                raise RuntimeError("cancelled expired fixture was not safely quarantined")
             recovered_worker_id = recovered.worker_id
             phase_started = time.perf_counter()
             completed = resources.operations.checkpoint(
@@ -136,13 +180,22 @@ def run_spike(
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         return {
             "operation_count": operation_count,
+            "cancellation_fixture_count": 1,
             "payload_bytes_per_operation": payload_bytes,
             "total_synthetic_payload_bytes": total_payload_bytes,
             "sqlite_version": sqlite3.sqlite_version,
             "recovered_operation_id": recovered.operation_id,
             "recovered_worker_id": recovered_worker_id,
             "recovered_state": completed.state,
+            "cancellation_recovery_state": cancellation_recovered.state,
+            "cancellation_still_requested": cancellation_recovered.cancel_requested,
+            "cancellation_reconciliation_required": cancellation_recovered.checkpoint.get(
+                "reconciliation_required"
+            )
+            is True,
+            "cancellation_resume_blocked": cancellation_resume_blocked,
             "audit_event_count": audit_event_count,
+            "cancellation_audit_event_count": cancellation_audit_event_count,
             "source_bytes": source_bytes,
             "backup_bytes": backup_bytes,
             "backup_valid": backup_valid,
