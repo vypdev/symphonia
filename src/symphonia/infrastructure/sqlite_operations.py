@@ -44,6 +44,7 @@ class LeaseConflict(RuntimeError):
 _SECRET_PAYLOAD_KEY = re.compile(
     r"(?i)(?:^|[_-])(access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|api[_-]?key|password|cookie|authorization|secret[_-]?token)(?:$|[_-])|^(?:secret|token)$"
 )
+_CAMEL_CASE_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _MAX_DIAGNOSTIC_OPERATIONS = 100
 _MAX_DIAGNOSTIC_EVENTS = 100
 _MAX_DIAGNOSTIC_KEYS = 100
@@ -97,7 +98,7 @@ def _rollback_after_error(connection: sqlite3.Connection, error: BaseException) 
         )
 
 
-def _validate_payload_keys(payload: Any) -> None:
+def _validate_payload_keys(payload: Any, *, label: str = "operation payload") -> None:
     forbidden: list[str] = []
     active_containers: set[int] = set()
 
@@ -105,15 +106,16 @@ def _validate_payload_keys(payload: Any) -> None:
         if isinstance(value, Mapping):
             identity = id(value)
             if identity in active_containers:
-                raise ValueError("operation payload must not contain cyclic structures")
+                raise ValueError(f"{label} must not contain cyclic structures")
             active_containers.add(identity)
             try:
                 for key, nested in value.items():
                     if not isinstance(key, str):
-                        raise ValueError("operation payload object keys must be strings")
+                        raise ValueError(f"{label} object keys must be strings")
                     key_text = str(key)
                     key_path = key_text if not path else f"{path}.{key_text}"
-                    if _SECRET_PAYLOAD_KEY.search(key_text):
+                    normalized_key = _CAMEL_CASE_BOUNDARY.sub("_", key_text)
+                    if _SECRET_PAYLOAD_KEY.search(normalized_key):
                         forbidden.append(key_path)
                     walk(nested, key_path)
             finally:
@@ -122,7 +124,7 @@ def _validate_payload_keys(payload: Any) -> None:
         if isinstance(value, (list, tuple)):
             identity = id(value)
             if identity in active_containers:
-                raise ValueError("operation payload must not contain cyclic structures")
+                raise ValueError(f"{label} must not contain cyclic structures")
             active_containers.add(identity)
             try:
                 for index, nested in enumerate(value):
@@ -133,7 +135,7 @@ def _validate_payload_keys(payload: Any) -> None:
     walk(payload)
     if forbidden:
         raise ValueError(
-            "operation payload contains forbidden credential keys: "
+            f"{label} contains forbidden credential keys: "
             + ", ".join(sorted(forbidden))
         )
 
@@ -141,7 +143,7 @@ def _validate_payload_keys(payload: Any) -> None:
 def _validate_object_payload(payload: Any, *, label: str) -> None:
     if not isinstance(payload, dict):
         raise ValueError(f"{label} must be a JSON object")
-    _validate_payload_keys(payload)
+    _validate_payload_keys(payload, label=label)
 
 
 @dataclass(frozen=True, slots=True)
@@ -971,6 +973,7 @@ class OperationRepository:
         payload: dict[str, Any],
         created_at: str,
     ) -> None:
+        _validate_object_payload(payload, label="operation event payload")
         self._connection.execute(
             """
             INSERT INTO operation_events (
@@ -1018,8 +1021,8 @@ class OperationRepository:
             raise ValueError("operation store contains an invalid cancellation flag")
         payload = _load_json_object(row["payload_json"], label="operation payload")
         checkpoint = _load_json_object(row["checkpoint_json"], label="operation checkpoint")
-        _validate_payload_keys(payload)
-        _validate_payload_keys(checkpoint)
+        _validate_payload_keys(payload, label="operation payload")
+        _validate_payload_keys(checkpoint, label="operation checkpoint")
         return OperationRecord(
             operation_id=row["operation_id"],
             operation_type=row["operation_type"],
@@ -1040,12 +1043,14 @@ class OperationRepository:
         state = row["state"]
         if state not in _OPERATION_STATES:
             raise ValueError(f"operation event contains invalid state: {state!r}")
+        payload = _load_json_object(row["payload_json"], label="operation event payload")
+        _validate_payload_keys(payload, label="operation event payload")
         return OperationEvent(
             sequence=row["sequence"],
             operation_id=row["operation_id"],
             event_type=row["event_type"],
             state=state,
             worker_id=row["worker_id"],
-            payload=_load_json_object(row["payload_json"], label="operation event payload"),
+            payload=payload,
             created_at=_parse_utc(row["created_at"]),
         )
