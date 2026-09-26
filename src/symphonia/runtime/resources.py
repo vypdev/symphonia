@@ -19,6 +19,7 @@ from symphonia.infrastructure import (
     ProviderConnectionRepository,
     ResolutionDecisionRepository,
 )
+from .config import normalize_database_path
 
 
 @dataclass(slots=True)
@@ -42,8 +43,7 @@ class RuntimeResources:
 
     @classmethod
     def open(cls, database_path: str) -> "RuntimeResources":
-        if not isinstance(database_path, str) or not database_path.strip():
-            raise ValueError("database_path must not be empty")
+        database_path = normalize_database_path(database_path)
         opened: list[object] = []
         try:
             operations = OperationRepository(database_path)

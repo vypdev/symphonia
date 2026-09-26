@@ -1,7 +1,7 @@
 """Minimal process runtime and health endpoints."""
 
+from .config import RuntimeConfig, normalize_database_path
 from .http import create_server
-from .config import RuntimeConfig
 from .resources import RuntimeResources
 
-__all__ = ["RuntimeConfig", "RuntimeResources", "create_server"]
+__all__ = ["RuntimeConfig", "RuntimeResources", "create_server", "normalize_database_path"]

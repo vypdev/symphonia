@@ -41,6 +41,14 @@ def _parse_port(value: object) -> int:
     return port
 
 
+def normalize_database_path(value: object) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("database_path must not be empty")
+    if _has_control_characters(value):
+        raise ValueError("database_path must not contain control characters")
+    return value.strip()
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeConfig:
     """Configuration that is safe to hand to the runtime composition root."""
@@ -60,11 +68,7 @@ class RuntimeConfig:
             raise ValueError("host must be a non-empty value without whitespace")
         object.__setattr__(self, "host", host)
         object.__setattr__(self, "port", _parse_port(self.port))
-        if not isinstance(self.database_path, str) or not self.database_path.strip():
-            raise ValueError("database_path must not be empty")
-        if _has_control_characters(self.database_path):
-            raise ValueError("database_path must not contain control characters")
-        object.__setattr__(self, "database_path", self.database_path.strip())
+        object.__setattr__(self, "database_path", normalize_database_path(self.database_path))
         object.__setattr__(self, "ingress_path", normalize_ingress_path(self.ingress_path))
 
     @classmethod
@@ -78,4 +82,4 @@ class RuntimeConfig:
         )
 
 
-__all__ = ["RuntimeConfig", "normalize_ingress_path"]
+__all__ = ["RuntimeConfig", "normalize_database_path", "normalize_ingress_path"]
