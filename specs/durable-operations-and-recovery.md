@@ -8,7 +8,7 @@
 - Related requirements: `SYM-PROD-004`–`SYM-PROD-006`, `SYM-ARCH-001`–`SYM-ARCH-002`, `SYM-ARCH-005`, `SYM-ARCH-008`–`SYM-ARCH-010`, `SYM-JOB-001`–`SYM-JOB-008`, `SYM-OBS-001`–`SYM-OBS-006`, `SYM-TEST-004`, `SYM-TEST-013`, `SYM-DEP-002`, `SYM-DEP-008`
 - Related decisions/research: [system architecture](../docs/architecture/system-architecture.md), [development specification](../docs/development/development-specification.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `RG-004`
 - Required review gates: architecture, persistence/recovery, provider contracts, testing, documentation, security/operations
-- Open decisions blocking readiness: persistent store; worker/process topology; lease and retention parameters; supported migration strategy; representative operation sizes and timing targets
+- Open decisions blocking readiness: persistent store; worker/process topology; lease and retention parameters; supported migration strategy; representative operation sizes and timing targets; cancellation after lease expiry with an uncertain external outcome (`OQ-010`)
 
 ## 1. Executive summary
 
@@ -206,6 +206,8 @@ Progress shall not move backward without an explicit explanation. Status shall n
 | Cancellation races with a provider call | Reconcile the in-flight call; start no later steps | Report confirmed partial state accurately |
 
 Graceful shutdown stops new claims, lets safe checkpoints finish within a bounded interval, and then releases or permits leases to expire. Correctness must also hold for abrupt termination.
+
+If a cancellation request survives a worker loss while a provider outcome is uncertain, the ordinary handler must not be dispatched again and the operation must not be reported as fully cancelled until reconciliation or the owner-approved `OQ-010` manual recovery path resolves the in-flight step.
 
 ## 11. Security and privacy
 

@@ -408,7 +408,8 @@
         "RG-004 storage engine and lease/crash-recovery spike",
         "OQ-007 representative operation sizes and timing targets",
         "Process topology and worker concurrency defaults",
-        "Retention policy for step detail and operation history"
+        "Retention policy for step detail and operation history",
+        "OQ-010 cancellation recovery after an uncertain in-flight provider write"
       ]
     }
   ]

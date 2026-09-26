@@ -12,7 +12,7 @@ This is the human-readable view of [`catalog.json`](./catalog.json). Until gener
 | `library-import-and-provider-projections` | Draft | [Library import and provider projections](library-import-and-provider-projections.md) | Blocked by provider completeness, retention, and representative scale |
 | `recording-identity-resolution` | Draft | [Recording identity resolution](recording-identity-resolution.md) | Blocked by the labeled corpus and accepted automatic-link policy |
 | `one-time-playlist-copy` | Draft | [One-time playlist copy](one-time-playlist-copy.md) | Blocked by unresolved-entry policy and proven target write semantics |
-| `durable-operations-and-recovery` | Draft | [Durable operations and recovery](durable-operations-and-recovery.md) | Blocked by the persistence/lease/restart spike and operating targets |
+| `durable-operations-and-recovery` | Draft | [Durable operations and recovery](durable-operations-and-recovery.md) | Blocked by persistence/lease/restart evidence, operating targets, and cancellation recovery for uncertain writes (`OQ-010`) |
 
 ## Foundation evidence boundary
 

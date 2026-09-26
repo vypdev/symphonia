@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
 **Status:** open; nothing here is an accepted decision
-**Last reviewed:** 2026-09-22
+**Last reviewed:** 2026-09-26
 
 ## Decisions requiring owner input
 
@@ -71,6 +71,12 @@ Decide retention for immutable snapshots, operation detail, provider metadata, l
 ### OQ-009 — Which open-source license and contribution policy apply?
 
 The repository currently has no license. The license should be selected before accepting outside contributions. Contributor handling of provider fixtures, terms, security reports, and trademarks also needs a policy.
+
+### OQ-010 — How should cancellation recover after a worker loses an uncertain external write?
+
+If cancellation is requested while a provider write is in flight and the worker disappears before recording the response, the system cannot safely assume the write did not happen. Choose between a durable reconciliation-required phase that resumes only reconciliation, or a `waiting_user` state that blocks until an explicit manual action. The operation must not be reported as fully cancelled while the external outcome remains unknown.
+
+**Proposed default:** persist the in-flight step and reconcile it before finalizing cancellation; use `waiting_user` if the provider cannot safely confirm the outcome. The current operation state model does not yet define this recovery transition.
 
 ## Research/design gates (not owner preference alone)
 
