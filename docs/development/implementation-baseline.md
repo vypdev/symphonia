@@ -63,6 +63,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Runtime resources request a consistent online backup through the operation repository adapter while the service remains open, without reaching into its private connection.
 - Runtime resources can preflight backup integrity and required durable tables read-only before restore design is selected.
 - Backup publication validates the temporary SQLite copy before atomically replacing the destination.
+- Failed backup cleanup preserves the primary backup error and annotates a secondary temporary-file removal failure.
 - Runtime backups reject missing parent directories, directory destinations, and final-component symlinks before creating a temporary artifact.
 - Backup preflight rejects operation databases whose schema version is newer than the running foundation.
 - Runtime configuration and the public server factory validate host, port, database path, and Ingress base path before opening stores or binding a socket.

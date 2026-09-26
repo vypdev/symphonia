@@ -175,12 +175,18 @@ class RuntimeResources:
                 raise RuntimeError("SQLite backup integrity validation failed")
             os.replace(temporary_path, destination_path_object)
             temporary_path = None
-        finally:
+        except BaseException as backup_error:
             if temporary_path is not None:
                 try:
                     os.unlink(temporary_path)
                 except FileNotFoundError:
                     pass
+                except BaseException as cleanup_error:
+                    backup_error.add_note(
+                        "temporary backup cleanup also failed "
+                        f"({type(cleanup_error).__name__})"
+                    )
+            raise
 
     @classmethod
     def validate_backup(cls, backup_path: str) -> bool:
