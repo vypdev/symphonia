@@ -1,7 +1,7 @@
 # SQLite recovery and backup spike
 
 **Status:** research evidence only
-**Last reviewed:** 2026-09-22
+**Last reviewed:** 2026-09-26
 
 The repository now contains a small offline spike at
 [`tools/storage_recovery_spike.py`](../../tools/storage_recovery_spike.py). It
@@ -13,7 +13,7 @@ and validates an online SQLite backup.
 Run it from the repository root with:
 
 ```text
-PYTHONPATH=src:. python3 tools/storage_recovery_spike.py --operations 1000
+PYTHONPATH=src:. python3 tools/storage_recovery_spike.py --operations 1000 --payload-bytes 256
 ```
 
 The JSON result reports only fixture counts, state transition evidence, SQLite
@@ -22,6 +22,12 @@ for runtime open, operation creation, claim/recovery, checkpoint, and backup
 creation/validation. It contains no database path, operation payload, account
 identifier, or credential. Timings are observations for the machine and
 fixture size used; they are not product SLOs or a restore benchmark.
+
+`--payload-bytes` adds only repeated synthetic padding to each queued operation
+so storage and write timings can be sampled at several fixture sizes. Runs are
+capped at 64 MiB of total synthetic payload; the padding is not a model of real
+playlist contents, and the cap is tooling protection rather than a product
+limit.
 
 This spike supports the foundation claims that operation leases survive a
 process restart, concurrent SQLite workers respect the lease boundary, and

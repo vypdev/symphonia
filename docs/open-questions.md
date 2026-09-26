@@ -121,8 +121,10 @@ Compare SQLite and PostgreSQL for transaction boundaries, leases, crash recovery
 The current local evidence includes a [reproducible SQLite recovery and backup
 spike](development/storage-recovery-spike.md) covering an expired lease across
 runtime restart and read-only backup validation, with separate phase timings
-and the SQLite runtime version. It is an initial evidence point, not a storage
-choice, representative-scale conclusion, or production SLO.
+and the SQLite runtime version. Its synthetic per-operation payload size is
+configurable for sensitivity runs, but is not representative data. It is an
+initial evidence point, not a storage choice, representative-scale conclusion,
+or production SLO.
 
 ### RG-005 — Home Assistant native surface RFC
 
