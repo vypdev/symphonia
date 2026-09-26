@@ -83,6 +83,20 @@ def _load_json_object(value: str, *, label: str) -> dict[str, Any]:
     return parsed
 
 
+def _rollback_after_error(connection: sqlite3.Connection, error: BaseException) -> None:
+    """Release an interrupted transaction without hiding its primary failure."""
+
+    if not connection.in_transaction:
+        return
+    try:
+        connection.execute("ROLLBACK")
+    except BaseException as rollback_error:
+        error.add_note(
+            "SQLite transaction rollback also failed "
+            f"({type(rollback_error).__name__})"
+        )
+
+
 def _validate_payload_keys(payload: Any) -> None:
     forbidden: list[str] = []
     active_containers: set[int] = set()
@@ -199,8 +213,8 @@ class OperationRepository:
             raise RuntimeError(
                 f"operation store schema {current_version} is newer than supported {self.SCHEMA_VERSION}"
             )
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             self._connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS operations (
@@ -254,9 +268,8 @@ class OperationRepository:
                 )
             self._connection.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
             self._connection.execute("COMMIT")
-        except Exception:
-            if self._connection.in_transaction:
-                self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
 
     def create(
@@ -281,8 +294,8 @@ class OperationRepository:
         payload_json = json.dumps(
             payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
         )
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             self._connection.execute(
                 """
                 INSERT INTO operations (
@@ -301,16 +314,18 @@ class OperationRepository:
                 created_at=timestamp,
             )
             self._connection.execute("COMMIT")
-        except sqlite3.IntegrityError:
-            self._connection.execute("ROLLBACK")
+        except sqlite3.IntegrityError as error:
+            _rollback_after_error(self._connection, error)
+            if self._connection.in_transaction:
+                raise
             existing = self._by_idempotency(idempotency_key)
             if existing is None:
                 raise
             if existing.operation_type != operation_type or existing.payload != payload:
                 raise IdempotencyConflict("idempotency key is already bound to another operation")
             return existing
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -477,8 +492,8 @@ class OperationRepository:
             raise ValueError("lease_seconds must be positive")
         now_text = _utc(now)
         expires_text = _utc(now + timedelta(seconds=lease_seconds))
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -518,8 +533,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -548,8 +563,8 @@ class OperationRepository:
         parameters: tuple[Any, ...] = (now_text, now_text)
         if operation_type is not None:
             parameters += (operation_type,)
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 f"""
                 SELECT *
@@ -599,8 +614,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -620,8 +635,8 @@ class OperationRepository:
             raise ValueError("lease_seconds must be positive")
         now_text = _utc(now)
         expires_text = _utc(now + timedelta(seconds=lease_seconds))
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -644,8 +659,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -669,8 +684,8 @@ class OperationRepository:
         checkpoint_json = json.dumps(
             checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
         )
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -709,8 +724,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -718,8 +733,8 @@ class OperationRepository:
         """Request cooperative cancellation and preserve in-flight ownership."""
 
         now_text = _utc(now)
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -760,8 +775,8 @@ class OperationRepository:
                     created_at=now_text,
                 )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -769,8 +784,8 @@ class OperationRepository:
         """Re-admit a user-action operation after its external issue is resolved."""
 
         now_text = _utc(now)
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -791,8 +806,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -815,8 +830,8 @@ class OperationRepository:
         checkpoint_json = json.dumps(
             checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
         )
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -863,8 +878,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
@@ -887,8 +902,8 @@ class OperationRepository:
         checkpoint_json = json.dumps(
             checkpoint, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
         )
-        self._connection.execute("BEGIN IMMEDIATE")
         try:
+            self._connection.execute("BEGIN IMMEDIATE")
             row = self._connection.execute(
                 "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
             ).fetchone()
@@ -935,8 +950,8 @@ class OperationRepository:
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
+        except BaseException as error:
+            _rollback_after_error(self._connection, error)
             raise
         return self.get(operation_id)
 
