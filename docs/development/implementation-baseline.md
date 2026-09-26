@@ -15,6 +15,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Bounded redacted operation diagnostics for support and a future authenticated operations view, with hard item/event caps.
 - Diagnostic operation/event limits require bounded positive integers and reject booleans and fractional values.
 - Diagnostic payload/checkpoint key lists are capped at 100 entries and mark truncation.
+- Diagnostic key summaries select their bounded sorted window without sorting/materializing the complete key set.
 - Diagnostic event queries fetch only the requested window plus one row to determine truncation.
 - Bounded recent-operation diagnostics listing that exposes only redacted support views.
 - Aggregate operation queue summaries expose state counts, eligible age, and expired leases without payload data.

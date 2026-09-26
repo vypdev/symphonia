@@ -11,6 +11,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+import heapq
 import json
 import re
 import sqlite3
@@ -1075,7 +1076,7 @@ class OperationRepository:
 
     @staticmethod
     def _bounded_keys(value: dict[str, Any]) -> tuple[list[str], bool]:
-        keys = sorted(str(key) for key in value)
+        keys = heapq.nsmallest(_MAX_DIAGNOSTIC_KEYS + 1, (str(key) for key in value))
         return keys[:_MAX_DIAGNOSTIC_KEYS], len(keys) > _MAX_DIAGNOSTIC_KEYS
 
     @staticmethod
