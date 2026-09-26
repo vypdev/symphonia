@@ -23,7 +23,7 @@ def normalize_ingress_path(value: object) -> str:
 
 
 def _parse_port(value: object) -> int:
-    if isinstance(value, bool):
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
         raise ValueError("port must be an integer")
     if isinstance(value, float) and not value.is_integer():
         raise ValueError("port must be an integer")
