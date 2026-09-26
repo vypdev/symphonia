@@ -48,7 +48,7 @@ class OperationRunner:
                 raise TypeError("operation handler must return OperationRecord")
             if result.operation_id != operation.operation_id:
                 raise ValueError("operation handler returned a different operation")
-            return result
+            return self.operations.get(operation.operation_id)
         except Exception as error:
             # A handler must never strand a claimed operation in ``running``.
             # Persist only a stable exception class marker: provider details

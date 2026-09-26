@@ -24,7 +24,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Durable operation runner that atomically claims eligible work and fails unwired operation types before side effects.
-- The operation runner validates handler result type and operation identity before returning a claimed result.
+- The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a potentially stale handler object.
 - Cooperative single-process operation worker with interruptible polling and injected clock support.
 - Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
 - Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably.
