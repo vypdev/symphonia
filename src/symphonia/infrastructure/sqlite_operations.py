@@ -207,9 +207,9 @@ class OperationRepository:
                 return False
             if self._connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
                 return False
-            for row in self._connection.execute("SELECT * FROM operations").fetchall():
+            for row in self._connection.execute("SELECT * FROM operations"):
                 self._record(row)
-            for row in self._connection.execute("SELECT * FROM operation_events").fetchall():
+            for row in self._connection.execute("SELECT * FROM operation_events"):
                 self._event(row)
             return True
         except (sqlite3.Error, TypeError, ValueError):
