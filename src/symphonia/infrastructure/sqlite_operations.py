@@ -99,10 +99,11 @@ def _rollback_after_error(connection: sqlite3.Connection, error: BaseException) 
 
 
 def _validate_payload_keys(payload: Any, *, label: str = "operation payload") -> None:
-    forbidden: list[str] = []
+    forbidden_key_found = False
     active_containers: set[int] = set()
 
-    def walk(value: Any, path: str = "") -> None:
+    def walk(value: Any) -> None:
+        nonlocal forbidden_key_found
         if isinstance(value, Mapping):
             identity = id(value)
             if identity in active_containers:
@@ -113,11 +114,10 @@ def _validate_payload_keys(payload: Any, *, label: str = "operation payload") ->
                     if not isinstance(key, str):
                         raise ValueError(f"{label} object keys must be strings")
                     key_text = str(key)
-                    key_path = key_text if not path else f"{path}.{key_text}"
                     normalized_key = _CAMEL_CASE_BOUNDARY.sub("_", key_text)
                     if _SECRET_PAYLOAD_KEY.search(normalized_key):
-                        forbidden.append(key_path)
-                    walk(nested, key_path)
+                        forbidden_key_found = True
+                    walk(nested)
             finally:
                 active_containers.remove(identity)
             return
@@ -127,17 +127,14 @@ def _validate_payload_keys(payload: Any, *, label: str = "operation payload") ->
                 raise ValueError(f"{label} must not contain cyclic structures")
             active_containers.add(identity)
             try:
-                for index, nested in enumerate(value):
-                    walk(nested, f"{path}[{index}]")
+                for nested in value:
+                    walk(nested)
             finally:
                 active_containers.remove(identity)
 
     walk(payload)
-    if forbidden:
-        raise ValueError(
-            f"{label} contains forbidden credential keys: "
-            + ", ".join(sorted(forbidden))
-        )
+    if forbidden_key_found:
+        raise ValueError(f"{label} contains credential-shaped keys")
 
 
 def _validate_object_payload(payload: Any, *, label: str) -> None:
