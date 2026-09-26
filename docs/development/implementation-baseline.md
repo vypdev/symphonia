@@ -36,7 +36,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Authorization callback binding rejects unsafe schemes, fragments, credentials, whitespace, and non-loopback HTTP hosts.
 - Normalized provider errors and provider codes redact common bearer/token/secret/password/cookie forms at the provider boundary, including quoted JSON-like and query-like assignments.
 - Operation payloads and durable checkpoints recursively reject credential-shaped keys and cyclic structures before SQLite writes.
-- Durable operation intents, checkpoints, retries, and rate-limit waits require JSON-object payloads with string keys before SQLite writes.
+- Durable operation intents, checkpoints, retries, and rate-limit waits require JSON-object payloads with string keys and reject token-, password-, authorization-, and API-key-shaped fields before SQLite writes.
 - Durable operation JSON rejects non-finite numbers on write and read, and operation/worker identifiers are validated before lease transitions.
 - Shared SQLite JSON helpers apply deterministic serialization and reject non-standard numbers in capability and plan payloads as well as operation state.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.

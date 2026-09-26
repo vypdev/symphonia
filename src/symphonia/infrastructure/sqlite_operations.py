@@ -42,7 +42,7 @@ class LeaseConflict(RuntimeError):
 
 
 _SECRET_PAYLOAD_KEY = re.compile(
-    r"(?i)(?:^|[_-])(access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|password|cookie|authorization|secret[_-]?token)(?:$|[_-])|^(?:secret|token)$"
+    r"(?i)(?:^|[_-])(access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|api[_-]?key|password|cookie|authorization|secret[_-]?token)(?:$|[_-])|^(?:secret|token)$"
 )
 _MAX_DIAGNOSTIC_OPERATIONS = 100
 _MAX_DIAGNOSTIC_EVENTS = 100
