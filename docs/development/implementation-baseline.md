@@ -38,6 +38,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Operation payloads and durable checkpoints recursively reject credential-shaped keys and cyclic structures before SQLite writes.
 - Durable operation intents, checkpoints, retries, rate-limit waits, and audit events require JSON-object payloads with string keys and reject token-, password-, authorization-, and API-key-shaped fields in snake, kebab, and camel case on writes and reads, without echoing rejected key names in errors.
 - Durable operation JSON rejects non-finite numbers on write and read, and operation/worker identifiers are validated before lease transitions.
+- Persisted operation and audit-event timestamps must include a timezone; readiness fails closed instead of interpreting naive timestamps in the host's local zone.
 - Shared SQLite JSON helpers apply deterministic serialization and reject non-standard numbers in capability and plan payloads as well as operation state.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
 - Copy plans bind target connection and effective write-capability evidence into their digest.

@@ -26,7 +26,10 @@ def _utc(value: datetime) -> str:
 
 
 def _parse_utc(value: str) -> datetime:
-    return datetime.fromisoformat(value).astimezone(timezone.utc)
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("timestamps must be timezone-aware")
+    return parsed.astimezone(timezone.utc)
 
 
 class OperationNotFound(LookupError):
