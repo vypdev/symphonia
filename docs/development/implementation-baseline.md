@@ -93,6 +93,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Copy-plan reads and acceptance recompute the digest over execution-relevant content, rejecting tampering even when the stored digest field is unchanged.
 - The operation store applies its schema DDL, legacy column migration, and `user_version` marker in one transaction.
 - Operation-store transactions include transaction start in their protected scope, roll back on process-level interruptions when possible, and preserve the primary error if rollback also fails.
+- The durable operation repository serializes complete calls on its shared SQLite connection; cross-connection and cross-process correctness remains enforced by SQLite transactions and leases.
 - SQLite operation tests exercise real multi-connection races: one operation cannot be claimed twice and concurrent scheduler workers claim distinct queue items.
 - Versioned identity assessments and append-only SQLite storage for manual resolution decisions.
 - Lossless Unicode-safe identity normalization with explicit version-token and ISRC derived fields; no automatic matching thresholds are assumed.

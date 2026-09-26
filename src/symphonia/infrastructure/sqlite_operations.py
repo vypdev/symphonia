@@ -7,13 +7,15 @@ are introduced. The database is the authority; worker memory is not.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 import json
 import re
 import sqlite3
-from typing import Any
+from threading import RLock
+from typing import Any, Concatenate, ParamSpec, TypeVar
 import uuid
 
 from .sqlite_common import connect, initialize_with_cleanup
@@ -107,6 +109,27 @@ def _rollback_after_error(connection: sqlite3.Connection, error: BaseException) 
         )
 
 
+_RepositoryArgs = ParamSpec("_RepositoryArgs")
+_RepositoryResult = TypeVar("_RepositoryResult")
+
+
+def _serialize_repository_access(
+    method: Callable[Concatenate[Any, _RepositoryArgs], _RepositoryResult],
+) -> Callable[Concatenate[Any, _RepositoryArgs], _RepositoryResult]:
+    """Keep each use of a shared SQLite connection within one local critical section."""
+
+    @wraps(method)
+    def wrapped(
+        self: Any,
+        *args: _RepositoryArgs.args,
+        **kwargs: _RepositoryArgs.kwargs,
+    ) -> _RepositoryResult:
+        with self._connection_lock:
+            return method(self, *args, **kwargs)
+
+    return wrapped
+
+
 def _validate_payload_keys(payload: Any, *, label: str = "operation payload") -> None:
     forbidden_key_found = False
     active_containers: set[int] = set()
@@ -187,17 +210,21 @@ class OperationRepository:
     SCHEMA_VERSION = 3
 
     def __init__(self, path: str = ":memory:") -> None:
+        self._connection_lock = RLock()
         self._connection = connect(path)
         initialize_with_cleanup(self._connection, self._migrate)
 
+    @_serialize_repository_access
     def close(self) -> None:
         self._connection.close()
 
+    @_serialize_repository_access
     def backup_to(self, destination: sqlite3.Connection) -> None:
         """Copy this store's consistent SQLite snapshot to a destination."""
 
         self._connection.backup(destination)
 
+    @_serialize_repository_access
     def healthcheck(self) -> bool:
         """Return whether schema and durable operation values are readable."""
 
@@ -215,6 +242,7 @@ class OperationRepository:
         except (sqlite3.Error, TypeError, ValueError):
             return False
 
+    @_serialize_repository_access
     def _migrate(self) -> None:
         current_version = int(self._connection.execute("PRAGMA user_version").fetchone()[0])
         if current_version > self.SCHEMA_VERSION:
@@ -280,6 +308,7 @@ class OperationRepository:
             _rollback_after_error(self._connection, error)
             raise
 
+    @_serialize_repository_access
     def create(
         self,
         *,
@@ -337,6 +366,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def get(self, operation_id: str) -> OperationRecord:
         row = self._connection.execute(
             "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
@@ -345,6 +375,7 @@ class OperationRepository:
             raise OperationNotFound(operation_id)
         return self._record(row)
 
+    @_serialize_repository_access
     def events(self, operation_id: str) -> tuple[OperationEvent, ...]:
         """Return the immutable audit trail in transition order."""
 
@@ -360,6 +391,7 @@ class OperationRepository:
         ).fetchall()
         return tuple(self._event(row) for row in rows)
 
+    @_serialize_repository_access
     def diagnostic(self, operation_id: str, *, event_limit: int = 100) -> dict[str, Any]:
         """Return a bounded, redacted support view of one operation."""
 
@@ -407,6 +439,7 @@ class OperationRepository:
             ],
         }
 
+    @_serialize_repository_access
     def diagnostics(self, *, limit: int = 50, event_limit: int = 20) -> tuple[dict[str, Any], ...]:
         """Return a bounded list of redacted operation support views."""
 
@@ -425,6 +458,7 @@ class OperationRepository:
         ).fetchall()
         return tuple(self.diagnostic(row["operation_id"], event_limit=event_limit) for row in rows)
 
+    @_serialize_repository_access
     def queue_summary(self, *, now: datetime) -> dict[str, Any]:
         """Return aggregate queue health without exposing operation payloads."""
 
@@ -484,6 +518,7 @@ class OperationRepository:
             "cancellation_requested_count": int(cancellation_rows["count"]),
         }
 
+    @_serialize_repository_access
     def claim(
         self,
         operation_id: str,
@@ -545,6 +580,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def claim_next(
         self,
         *,
@@ -625,6 +661,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def renew_lease(
         self,
         operation_id: str,
@@ -669,6 +706,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def checkpoint(
         self,
         operation_id: str,
@@ -734,6 +772,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def cancel(self, operation_id: str, *, now: datetime) -> OperationRecord:
         """Request cooperative cancellation and preserve in-flight ownership."""
 
@@ -785,6 +824,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def resume(self, operation_id: str, *, now: datetime) -> OperationRecord:
         """Re-admit a user-action operation after its external issue is resolved."""
 
@@ -816,6 +856,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def schedule_retry(
         self,
         operation_id: str,
@@ -888,6 +929,7 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def schedule_rate_limit(
         self,
         operation_id: str,
@@ -960,12 +1002,14 @@ class OperationRepository:
             raise
         return self.get(operation_id)
 
+    @_serialize_repository_access
     def _by_idempotency(self, idempotency_key: str) -> OperationRecord | None:
         row = self._connection.execute(
             "SELECT * FROM operations WHERE idempotency_key = ?", (idempotency_key,)
         ).fetchone()
         return None if row is None else self._record(row)
 
+    @_serialize_repository_access
     def _append_event(
         self,
         *,
