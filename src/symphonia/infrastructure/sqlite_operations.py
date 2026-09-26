@@ -1276,7 +1276,24 @@ class OperationRepository:
         summary: dict[str, Any] = {
             "checkpoint_keys": checkpoint_keys,
             "checkpoint_keys_truncated": checkpoint_keys_truncated,
+            "unknown_step_present": checkpoint.get("unknown_step") is not None,
         }
+        reconciliation_required = checkpoint.get("reconciliation_required")
+        if isinstance(reconciliation_required, bool):
+            summary["reconciliation_required"] = reconciliation_required
+        recovery_reason = checkpoint.get("recovery_reason")
+        if isinstance(recovery_reason, str) and recovery_reason in {
+            "cancelled_worker_lease_expired",
+            "cancelled_during_unknown_outcome",
+            "cancelled_while_unknown_outcome",
+        }:
+            summary["recovery_reason"] = recovery_reason
+        cancellation_resolution = checkpoint.get("cancellation_resolution")
+        if isinstance(cancellation_resolution, str) and cancellation_resolution in {
+            "no_effect",
+            "effect_confirmed",
+        }:
+            summary["cancellation_resolution"] = cancellation_resolution
         for key in ("confirmed_occurrences", "issues"):
             value = checkpoint.get(key)
             if isinstance(value, (list, tuple, set)):

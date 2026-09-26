@@ -23,6 +23,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Bounded transient retry budgets for copy and import handlers with durable exhaustion outcomes.
 - Lease-expiry recovery is audited distinctly from first claims, with prior worker identity retained only as metadata.
 - An expired lease with cancellation requested is quarantined in `waiting_user` with durable reconciliation evidence, never sent through the ordinary handler, and can be finalized only through an explicit no-effect/effect-confirmed repository resolution; authenticated caller wiring remains out of scope.
+- Redacted operation diagnostics expose a bounded unknown-step indicator and only allowlisted reconciliation/recovery outcome metadata, never unknown step IDs or checkpoint values.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.

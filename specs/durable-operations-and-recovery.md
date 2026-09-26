@@ -222,7 +222,7 @@ If a cancellation request survives worker loss while a provider outcome is uncer
 
 ## 12. Observability and supportability
 
-Structured events include operation creation, eligibility, claim, renewal, checkpoint, wait, retry schedule, reconciliation, cancellation, and terminal transition. Each event includes operation ID, operation type, state, attempt count, adapter category, and bounded error code; it excludes credentials and unbounded content.
+Structured events include operation creation, eligibility, claim, renewal, checkpoint, wait, retry schedule, reconciliation, cancellation, and terminal transition. Each event includes operation ID, operation type, state, attempt count, adapter category, and bounded error code; it excludes credentials and unbounded content. Redacted operation diagnostics may expose only a boolean unknown-step indicator, a validated reconciliation-required flag, and allowlisted recovery/resolution enums; they never expose the unknown step identifier or checkpoint value.
 
 Metrics include queue depth, oldest eligible age, running leases, expired lease recoveries, cancellation-reconciliation-required count, state counts, execution latency, wait duration, attempt counts, unknown outcomes, reconciliation results, and terminal result ratios. Cardinality shall remain bounded.
 
