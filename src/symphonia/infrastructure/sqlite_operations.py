@@ -80,6 +80,12 @@ def _require_positive_int(value: Any, *, label: str) -> int:
     return value
 
 
+def _require_bounded_int(value: Any, *, label: str, maximum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= maximum:
+        raise ValueError(f"{label} must be an integer between 1 and {maximum}")
+    return value
+
+
 def _reject_non_finite_json(value: str) -> None:
     raise ValueError(f"non-standard JSON constant is not allowed: {value}")
 
@@ -398,8 +404,9 @@ class OperationRepository:
         """Return a bounded, redacted support view of one operation."""
 
         _require_text(operation_id, label="operation_id")
-        if not 0 < event_limit <= _MAX_DIAGNOSTIC_EVENTS:
-            raise ValueError(f"event_limit must be between 1 and {_MAX_DIAGNOSTIC_EVENTS}")
+        _require_bounded_int(
+            event_limit, label="event_limit", maximum=_MAX_DIAGNOSTIC_EVENTS
+        )
         record = self.get(operation_id)
         event_rows = self._connection.execute(
             """
@@ -446,10 +453,10 @@ class OperationRepository:
     def diagnostics(self, *, limit: int = 50, event_limit: int = 20) -> tuple[dict[str, Any], ...]:
         """Return a bounded list of redacted operation support views."""
 
-        if not 0 < limit <= _MAX_DIAGNOSTIC_OPERATIONS:
-            raise ValueError(f"limit must be between 1 and {_MAX_DIAGNOSTIC_OPERATIONS}")
-        if not 0 < event_limit <= _MAX_DIAGNOSTIC_EVENTS:
-            raise ValueError(f"event_limit must be between 1 and {_MAX_DIAGNOSTIC_EVENTS}")
+        _require_bounded_int(limit, label="limit", maximum=_MAX_DIAGNOSTIC_OPERATIONS)
+        _require_bounded_int(
+            event_limit, label="event_limit", maximum=_MAX_DIAGNOSTIC_EVENTS
+        )
         rows = self._connection.execute(
             """
             SELECT operation_id

@@ -13,6 +13,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Atomic scheduler-facing claim selection for queued, due-retry, and expired-lease operations.
 - Append-only SQLite operation event history for auditable transitions with sanitized checkpoint summaries.
 - Bounded redacted operation diagnostics for support and a future authenticated operations view, with hard item/event caps.
+- Diagnostic operation/event limits require bounded positive integers and reject booleans and fractional values.
 - Diagnostic payload/checkpoint key lists are capped at 100 entries and mark truncation.
 - Diagnostic event queries fetch only the requested window plus one row to determine truncation.
 - Bounded recent-operation diagnostics listing that exposes only redacted support views.
