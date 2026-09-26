@@ -723,7 +723,14 @@ class OperationRepository:
 
         _require_text(operation_id, label="operation_id")
         _require_text(worker_id, label="worker_id")
-        if state not in {"running", "succeeded", "partial", "failed", "cancelled", "waiting_user"}:
+        if not isinstance(state, str) or state not in {
+            "running",
+            "succeeded",
+            "partial",
+            "failed",
+            "cancelled",
+            "waiting_user",
+        }:
             raise ValueError("invalid checkpoint state")
         _validate_object_payload(checkpoint, label="checkpoint")
         now_text = _utc(now)
