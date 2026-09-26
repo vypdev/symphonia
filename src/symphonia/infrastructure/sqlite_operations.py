@@ -22,7 +22,7 @@ from .sqlite_common import connect, initialize_with_cleanup
 
 
 def _utc(value: datetime) -> str:
-    if value.tzinfo is None:
+    if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError("timestamps must be timezone-aware")
     return value.astimezone(timezone.utc).isoformat(timespec="microseconds")
 
