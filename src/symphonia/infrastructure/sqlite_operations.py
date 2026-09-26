@@ -368,6 +368,7 @@ class OperationRepository:
 
     @_serialize_repository_access
     def get(self, operation_id: str) -> OperationRecord:
+        _require_text(operation_id, label="operation_id")
         row = self._connection.execute(
             "SELECT * FROM operations WHERE operation_id = ?", (operation_id,)
         ).fetchone()
@@ -379,6 +380,7 @@ class OperationRepository:
     def events(self, operation_id: str) -> tuple[OperationEvent, ...]:
         """Return the immutable audit trail in transition order."""
 
+        _require_text(operation_id, label="operation_id")
         self.get(operation_id)
         rows = self._connection.execute(
             """
@@ -395,6 +397,7 @@ class OperationRepository:
     def diagnostic(self, operation_id: str, *, event_limit: int = 100) -> dict[str, Any]:
         """Return a bounded, redacted support view of one operation."""
 
+        _require_text(operation_id, label="operation_id")
         if not 0 < event_limit <= _MAX_DIAGNOSTIC_EVENTS:
             raise ValueError(f"event_limit must be between 1 and {_MAX_DIAGNOSTIC_EVENTS}")
         record = self.get(operation_id)
@@ -776,6 +779,7 @@ class OperationRepository:
     def cancel(self, operation_id: str, *, now: datetime) -> OperationRecord:
         """Request cooperative cancellation and preserve in-flight ownership."""
 
+        _require_text(operation_id, label="operation_id")
         now_text = _utc(now)
         try:
             self._connection.execute("BEGIN IMMEDIATE")
@@ -828,6 +832,7 @@ class OperationRepository:
     def resume(self, operation_id: str, *, now: datetime) -> OperationRecord:
         """Re-admit a user-action operation after its external issue is resolved."""
 
+        _require_text(operation_id, label="operation_id")
         now_text = _utc(now)
         try:
             self._connection.execute("BEGIN IMMEDIATE")
