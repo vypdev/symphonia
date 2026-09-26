@@ -72,6 +72,12 @@ def _require_text(value: Any, *, label: str) -> str:
     return value
 
 
+def _require_positive_int(value: Any, *, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{label} must be a positive integer")
+    return value
+
+
 def _reject_non_finite_json(value: str) -> None:
     raise ValueError(f"non-standard JSON constant is not allowed: {value}")
 
@@ -490,8 +496,7 @@ class OperationRepository:
 
         _require_text(operation_id, label="operation_id")
         _require_text(worker_id, label="worker_id")
-        if lease_seconds <= 0:
-            raise ValueError("lease_seconds must be positive")
+        _require_positive_int(lease_seconds, label="lease_seconds")
         now_text = _utc(now)
         expires_text = _utc(now + timedelta(seconds=lease_seconds))
         try:
@@ -557,8 +562,7 @@ class OperationRepository:
         _require_text(worker_id, label="worker_id")
         if operation_type is not None:
             _require_text(operation_type, label="operation_type")
-        if lease_seconds <= 0:
-            raise ValueError("lease_seconds must be positive")
+        _require_positive_int(lease_seconds, label="lease_seconds")
         now_text = _utc(now)
         expires_text = _utc(now + timedelta(seconds=lease_seconds))
         type_clause = " AND operation_type = ?" if operation_type is not None else ""
@@ -633,8 +637,7 @@ class OperationRepository:
 
         _require_text(operation_id, label="operation_id")
         _require_text(worker_id, label="worker_id")
-        if lease_seconds <= 0:
-            raise ValueError("lease_seconds must be positive")
+        _require_positive_int(lease_seconds, label="lease_seconds")
         now_text = _utc(now)
         expires_text = _utc(now + timedelta(seconds=lease_seconds))
         try:
