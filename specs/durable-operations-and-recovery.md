@@ -30,6 +30,7 @@ Evidence sources:
 - [System architecture](../docs/architecture/system-architecture.md)
 - [Provider specification](../docs/providers/provider-specification.md)
 - [Development specification](../docs/development/development-specification.md)
+- [SQLite recovery and backup spike](../docs/development/storage-recovery-spike.md)
 
 ## 3. Actors and authorization
 

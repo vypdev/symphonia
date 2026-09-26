@@ -368,6 +368,7 @@
       "evidence": [
         "docs/architecture/system-architecture.md",
         "docs/development/development-specification.md",
+        "docs/development/storage-recovery-spike.md",
         "docs/open-questions.md",
         "docs/providers/home-assistant-ecosystem-review.md"
       ],

@@ -12,6 +12,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
+import sqlite3
 import tempfile
 import time
 from typing import Any
@@ -25,15 +26,25 @@ BASE_TIME = datetime(2026, 9, 22, 12, 0, tzinfo=timezone.utc)
 def run_spike(*, operation_count: int = 1000) -> dict[str, Any]:
     """Run the disposable recovery scenario and return secret-free evidence."""
 
-    if not 1 <= operation_count <= 10_000:
-        raise ValueError("operation_count must be between 1 and 10000")
+    if (
+        isinstance(operation_count, bool)
+        or not isinstance(operation_count, int)
+        or not 1 <= operation_count <= 10_000
+    ):
+        raise ValueError("operation_count must be an integer between 1 and 10000")
 
     started = time.perf_counter()
+    phase_ms: dict[str, float] = {}
     with tempfile.TemporaryDirectory(prefix="symphonia-storage-spike-") as directory:
         source_path = Path(directory) / "symphonia.sqlite3"
         backup_path = Path(directory) / "backup.sqlite3"
 
+        phase_started = time.perf_counter()
         with RuntimeResources.open(str(source_path)) as resources:
+            phase_ms["initial_runtime_open"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
+            phase_started = time.perf_counter()
             for index in range(operation_count):
                 resources.operations.create(
                     operation_type="spike.copy",
@@ -42,21 +53,37 @@ def run_spike(*, operation_count: int = 1000) -> dict[str, Any]:
                     payload={"fixture_index": index},
                     now=BASE_TIME,
                 )
+            phase_ms["operation_creation"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
+            phase_started = time.perf_counter()
             claimed = resources.operations.claim(
                 "spike-operation-0",
                 worker_id="worker-before-restart",
                 now=BASE_TIME,
                 lease_seconds=1,
             )
+            phase_ms["initial_claim"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
 
+        phase_started = time.perf_counter()
         with RuntimeResources.open(str(source_path)) as resources:
+            phase_ms["restart_runtime_open"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
+            phase_started = time.perf_counter()
             recovered = resources.operations.claim(
                 claimed.operation_id,
                 worker_id="worker-after-restart",
                 now=BASE_TIME + timedelta(seconds=2),
                 lease_seconds=30,
             )
+            phase_ms["expired_lease_recovery"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
             recovered_worker_id = recovered.worker_id
+            phase_started = time.perf_counter()
             completed = resources.operations.checkpoint(
                 recovered.operation_id,
                 worker_id="worker-after-restart",
@@ -64,15 +91,27 @@ def run_spike(*, operation_count: int = 1000) -> dict[str, Any]:
                 now=BASE_TIME + timedelta(seconds=3),
                 state="succeeded",
             )
+            phase_ms["completion_checkpoint"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
             audit_event_count = len(resources.operations.events(recovered.operation_id))
+            phase_started = time.perf_counter()
             resources.backup_to(str(backup_path))
+            phase_ms["backup_creation"] = round(
+                (time.perf_counter() - phase_started) * 1000, 2
+            )
 
         source_bytes = source_path.stat().st_size
         backup_bytes = backup_path.stat().st_size
+        phase_started = time.perf_counter()
         backup_valid = RuntimeResources.validate_backup(str(backup_path))
+        phase_ms["backup_validation"] = round(
+            (time.perf_counter() - phase_started) * 1000, 2
+        )
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         return {
             "operation_count": operation_count,
+            "sqlite_version": sqlite3.sqlite_version,
             "recovered_operation_id": recovered.operation_id,
             "recovered_worker_id": recovered_worker_id,
             "recovered_state": completed.state,
@@ -80,6 +119,7 @@ def run_spike(*, operation_count: int = 1000) -> dict[str, Any]:
             "source_bytes": source_bytes,
             "backup_bytes": backup_bytes,
             "backup_valid": backup_valid,
+            "phase_ms": phase_ms,
             "elapsed_ms": elapsed_ms,
         }
 

@@ -16,11 +16,12 @@ Run it from the repository root with:
 PYTHONPATH=src:. python3 tools/storage_recovery_spike.py --operations 1000
 ```
 
-The JSON result reports only fixture counts, state transition evidence, file
-sizes, backup validity, and elapsed time. It contains no database path,
-operation payload, account identifier, or credential. The elapsed time is an
-observation for the machine and fixture size used; it is not a product SLO or
-a restore benchmark.
+The JSON result reports only fixture counts, state transition evidence, SQLite
+version, file sizes, backup validity, total elapsed time, and separate timings
+for runtime open, operation creation, claim/recovery, checkpoint, and backup
+creation/validation. It contains no database path, operation payload, account
+identifier, or credential. Timings are observations for the machine and
+fixture size used; they are not product SLOs or a restore benchmark.
 
 This spike supports the foundation claims that operation leases survive a
 process restart, concurrent SQLite workers respect the lease boundary, and
