@@ -78,6 +78,7 @@ The first implementation increment is intentionally narrower than any provider o
 - The current JSON health/readiness/version surface disables caching, MIME sniffing, and referrer propagation.
 - The HTTP handler suppresses the Python version header and returns generic JSON for parser/method errors, closing the connection without reflecting details.
 - The container health probe follows the configured runtime port and Ingress base path.
+- The container health probe follows the configured listener host, mapping IPv4/IPv6 wildcard binds to their loopback equivalents.
 - The runtime JSON surface rejects non-standard numeric values before writing a response.
 - Normalized provider contracts and a dependency-free playlist-page collector proving opaque identity namespaces, completeness, pagination safety, duplicate occurrences, and unavailable-item preservation.
 - Normalized provider identity, manifest, capability, entry, and page values reject non-textual or malformed boundary data before it reaches planning.

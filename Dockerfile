@@ -20,6 +20,6 @@ VOLUME ["/data"]
 EXPOSE 8099
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["python", "-c", "import os,urllib.request; port=os.getenv('SYMPHONIA_PORT','8099'); base=os.getenv('SYMPHONIA_INGRESS_PATH','/').rstrip('/'); urllib.request.urlopen(f'http://127.0.0.1:{port}{base}/ready', timeout=2)"]
+    CMD ["python", "-c", "import http.client,os,sys; host=os.getenv('SYMPHONIA_HOST','127.0.0.1'); host={'0.0.0.0':'127.0.0.1','::':'::1'}.get(host,host); port=int(os.getenv('SYMPHONIA_PORT','8099')); base=os.getenv('SYMPHONIA_INGRESS_PATH','/').rstrip('/'); connection=http.client.HTTPConnection(host,port,timeout=2); connection.request('GET',f'{base}/ready'); response=connection.getresponse(); response.read(); sys.exit(response.status != 200)"]
 
 ENTRYPOINT ["python", "-m", "symphonia"]
