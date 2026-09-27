@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 import http.client
 from pathlib import Path
+import socket
 import tempfile
 import threading
 import unittest
@@ -112,9 +113,12 @@ class RuntimeHTTPTests(unittest.TestCase):
     def test_composed_runtime_http_smoke_exposes_health_and_readiness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                    probe.bind(("127.0.0.1", 0))
+                    port = probe.getsockname()[1]
                 server = create_server(
                     host="127.0.0.1",
-                    port=0,
+                    port=port,
                     database_path=str(Path(directory) / "symphonia.sqlite3"),
                     ingress_path="/symphonia",
                 )

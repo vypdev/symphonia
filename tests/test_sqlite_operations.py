@@ -229,13 +229,14 @@ class OperationRepositoryTests(unittest.TestCase):
         )
         self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
 
-        with self.assertRaisesRegex(ValueError, "access_token"):
+        with self.assertRaisesRegex(ValueError, "checkpoint contains credential-shaped keys") as raised:
             self.repository.checkpoint(
                 operation.operation_id,
                 worker_id="worker-a",
                 checkpoint={"provider": {"access_token": "must-not-persist"}},
                 now=self.now + timedelta(seconds=1),
             )
+        self.assertNotIn("access_token", str(raised.exception))
 
         self.assertEqual(self.repository.get(operation.operation_id).checkpoint, {})
 
@@ -441,13 +442,14 @@ class OperationRepositoryTests(unittest.TestCase):
             )
 
     def test_operation_payload_rejects_nested_credentials(self) -> None:
-        with self.assertRaisesRegex(ValueError, r"provider.credentials\[0\]\.access_token"):
+        with self.assertRaisesRegex(ValueError, "operation payload contains credential-shaped keys") as raised:
             self.repository.create(
                 operation_type="copy",
                 idempotency_key="nested-credential-payload",
                 payload={"provider": {"credentials": [{"access_token": "must-not-persist"}]}},
                 now=self.now,
             )
+        self.assertNotIn("access_token", str(raised.exception))
 
     def test_operation_payload_rejects_cyclic_structures_before_json_encoding(self) -> None:
         payload: dict[str, object] = {}
