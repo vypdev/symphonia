@@ -6,9 +6,9 @@
 - Owners: Symphonia maintainers
 - Scope: establish the shared shell, component families, semantic tokens, host-context adaptation, accessibility, responsive behavior, component catalog, and visual compatibility evidence for every Symphonia web view.
 - Related requirements: `SYM-UI-001`–`SYM-UI-015`, `SYM-JOB-007`, `SYM-SEC-004`, `SYM-SEC-008`, `SYM-TEST-005`, `SYM-TEST-009`, `SYM-TEST-014`, `SYM-TEST-015`
-- Related decisions/research: [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI specification](../docs/product/home-assistant-ui-specification.md), [official platform research](../docs/providers/provider-research.md#home-assistant-platform), [Gateway/HA UI evidence](../docs/providers/home-assistant-ecosystem-review.md#home-assistant-native-ui-lessons-from-homeassistant-gateway)
+- Related decisions/research: [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0005](../docs/decisions/0005-lit-typescript-vite-ui.md), [UI specification](../docs/product/home-assistant-ui-specification.md), [official platform research](../docs/providers/provider-research.md#home-assistant-platform), [Gateway/HA UI evidence](../docs/providers/home-assistant-ecosystem-review.md#home-assistant-native-ui-lessons-from-homeassistant-gateway), [RG-006 host-context evidence](../docs/development/ui-spike/host-context-evidence.md)
 - Required review gates: product UX, Home Assistant platform, frontend architecture, accessibility, localization, testing/visual QA, documentation, security/privacy
-- Open decisions blocking implementation readiness: supported Home Assistant/browser matrix; frontend framework/build selection; verified theme/locale/direction/safe-area context contract across supported Home Assistant versions; accepted visual-reference capture/update procedure
+- Open decisions blocking implementation readiness: supported Home Assistant/browser matrix; verified public host-context/Ingress contract and deterministic fallbacks across that matrix; Lit/Vite compatibility and bundle evidence; accepted visual-reference capture/update procedure and visual/accessibility review
 
 ## 1. Executive summary
 
@@ -32,7 +32,7 @@ Without a shared UI contract, each feature can implement different cards, button
 
 ### 2.2 Current behavior
 
-No complete Symphonia UI or UI package exists. The repository has an experimental Ingress metadata scaffold, prospective feature SDDs, and an isolated [synthetic UI review fixture](../docs/development/ui-spike/README.md). The fixture is not served by the App, does not connect to application state, and has not passed browser visual/accessibility review. This SDD does not select or authorize a frontend framework or production implementation.
+No complete Symphonia UI or UI package exists. The repository has an experimental Ingress metadata scaffold, prospective feature SDDs, an isolated [synthetic UI review fixture](../docs/development/ui-spike/README.md), and a separate [Lit build spike](../docs/development/ui-lit-spike/README.md). Neither is served by the App or connected to application state; neither has passed browser visual/accessibility review. [ADR 0005](../docs/decisions/0005-lit-typescript-vite-ui.md) selects Lit, TypeScript, and Vite for future implementation; this SDD does not authorize production UI yet.
 
 ### 2.3 Evidence and unknowns
 
@@ -40,7 +40,10 @@ No complete Symphonia UI or UI package exists. The repository has an experimenta
 - Official evidence: Home Assistant design portal, frontend architecture/source, independent-component warning, current App/Ingress and safe-area contracts linked from the UI specification and platform research.
 - Community evidence: `vypdev/homeassistant-gateway` commit `1ed75be` demonstrates a presentation-only compatibility layer, HA-like component families, component catalog, official-demo reference captures, accessibility/responsive tests, and visual baselines.
 - Symphonia review evidence: the [isolated fixture](../docs/development/ui-spike/README.md) exercises a proposed App-interior shell and synthetic connection, library, copy, and operation states. Its structural tests are not production component, Ingress, visual, or WCAG evidence.
-- Unknowns: exact supported Home Assistant/browser versions; selected frontend/build tools; the public context actually available to an Ingress App at each supported version; long-term token mapping; reference capture automation and review ownership.
+- The [isolated Lit build spike](../docs/development/ui-lit-spike/README.md) proves a small typed/presentation-only build, relative output asset, and pure browser fallback tests. It does not prove full bundle cost, Ingress, real host context, or browser/accessibility behavior.
+- The [visual-reference procedure](../docs/development/ui-spike/visual-reference-plan.md) is drafted but has no accepted Symphonia baseline or reviewer approval.
+- Current [official-source review](../docs/development/ui-spike/host-context-evidence.md) finds `narrow`, `route`, and `safeAreaInsets` in the App properties message, but no theme, locale, direction, or timezone field. These cannot be assumed to follow Home Assistant user settings inside an iframe.
+- Unknowns: exact supported Home Assistant/browser versions; the public context actually available to an Ingress App at each supported version; Lit/Vite compatibility and bundle cost; long-term token mapping; reference capture automation and review ownership.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -112,7 +115,7 @@ Text equivalent: validated public host context or deterministic fallback feeds s
 ### 6.1 Happy path
 
 1. The shell resolves base path and renders readable fallback tokens without blocking on Home Assistant context.
-2. A context adapter accepts only the documented host message/origin/shape and maps supported theme, locale, direction, timezone, and safe-area facts.
+2. A context adapter accepts only documented, validated public host fields. Current App-properties research establishes narrow/route/safe-area hints, not theme/locale/direction/timezone; unsupported fields use deterministic browser/standalone fallbacks.
 3. Navigation loads a feature route and preserves history under the Ingress prefix.
 4. The feature requests application state; loading is textual and non-destructive.
 5. The view composes only approved component families and renders the durable state plus available actions.
@@ -146,8 +149,8 @@ Feature states such as partial, waiting-user, failed, and completed remain owned
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 | --- | --- | --- | --- | --- |
-| Theme mode | enum | follow validated Home Assistant context, then browser preference | `host/auto`, `light`, `dark` only if product permits override | user/browser preference; never domain state |
-| Locale | BCP 47 tag | validated HA locale, browser locale, then English | packaged supported locales with base-language fallback | user/browser; server retains typed values |
+| Theme mode | enum | validated public HA theme context **if proven**, otherwise browser preference | `host/auto`, `light`, `dark` only if product permits override | user/browser preference; never domain state |
+| Locale | BCP 47 tag | validated public HA locale **if proven**, browser locale, then English | packaged supported locales with base-language fallback | user/browser; server retains typed values |
 | Text direction | enum | derived from locale/public host context | `ltr`, `rtl` | derived, not arbitrary per component |
 | Safe-area handling | enum | supported host insets with zero fallback | host-managed or App-managed accepted profile | deployment/profile |
 | Visual reference manifest | versioned document | latest reviewed supported HA release/reference date | immutable historical entries plus current pointer | repository/release evidence |
@@ -254,7 +257,7 @@ Primary action: Review result
 ## 11. Security, permissions, and privacy
 
 1. Ingress identity is trusted only at the verified server boundary; theme/locale messages do not grant authorization.
-2. Parent-window messaging validates origin, type, correlation, and bounded schema; no wildcard data is executed or persisted blindly.
+2. Parent-window messaging validates source, origin, type, and bounded schema; correlation is required only if the supported public protocol supplies one. The inspected App-properties message supplies no correlation field, so stale updates require local fencing rather than a fictional host token. No wildcard data is executed or persisted blindly.
 3. Provider/user/diagnostic strings cannot become markup, CSS, script, unsafe URLs, route destinations, or component definitions.
 4. UI fixtures, screenshots, clipboard, downloads, browser logs, and error boundaries exclude secrets and real private account/library data.
 5. Destructive actions use explicit consequences and confirmation; visual similarity cannot weaken server authorization or idempotency.
@@ -335,7 +338,7 @@ Required human evidence reviews official Home Assistant references versus the ca
 
 ## 18. Implementation sequence
 
-1. Accept the supported Home Assistant/browser matrix, public context contract, visual-reference procedure, and frontend/build decision.
+1. Verify the supported Home Assistant/browser matrix, public context contract and fallbacks, Lit/Vite build/compatibility evidence, and visual-reference procedure. The frontend/build choice is recorded in ADR 0005; its compatibility evidence remains open.
 2. Establish reference manifest, semantic tokens, fallback context, package boundary, architecture/lint checks, and catalog harness.
 3. Add foundational components: headings/toolbars, navigation/tabs, cards/sections, buttons/icon buttons, fields/choices, status/alerts, loading/empty, and layouts.
 4. Add dialogs, settings/list rows, responsive data displays, safe-area/base-path shell, localization/direction, and full interaction/accessibility tests.
@@ -345,7 +348,7 @@ Required human evidence reviews official Home Assistant references versus the ca
 ## 19. Definition of Done
 
 - [ ] Status is `Ready for implementation` and explicit owner approval to implement exists.
-- [ ] Supported HA/browser matrix, frontend/build, context/safe-area, and reference procedures are accepted.
+- [ ] Supported HA/browser matrix, Lit/Vite compatibility/build evidence, context/safe-area/fallbacks, and reference procedures are accepted.
 - [ ] Every `SYM-UI-*` requirement maps to acceptance and deterministic or explicit human evidence.
 - [ ] At least 84 distinct cases and architecture/lint/secret gates pass.
 - [ ] Every required component family is available only through the public package and complete in the catalog.
@@ -360,6 +363,6 @@ Required human evidence reviews official Home Assistant references versus the ca
 - Primary sources: official Home Assistant links in the [UI specification](../docs/product/home-assistant-ui-specification.md) and [platform research](../docs/providers/provider-research.md#home-assistant-platform).
 - Community evidence: pinned `vypdev/homeassistant-gateway` sources listed in the UI specification and ecosystem review.
 - Related SDDs: [App runtime/Ingress](home-assistant-app-runtime-and-ingress.md), [provider connections](provider-connections-and-authorization.md), [imports](library-import-and-provider-projections.md), [identity resolution](recording-identity-resolution.md), [playlist copy](one-time-playlist-copy.md), [durable operations](durable-operations-and-recovery.md).
-- Accepted: Home Assistant-native-adjacent direction, owned compatibility layer, no private HA frontend runtime dependency, shared Ingress/standalone semantics, dated catalog/reference evidence.
-- Open: framework/build stack, supported matrix, public App context details, reference capture/update automation.
+- Accepted: Home Assistant-native-adjacent direction, owned compatibility layer, no private HA frontend runtime dependency, shared Ingress/standalone semantics, Lit + TypeScript + Vite direction (ADR 0005), dated catalog/reference evidence.
+- Open: supported matrix, verified public App context and fallbacks, Lit/Vite bundle/Ingress evidence, reference capture/update automation and visual review.
 - Rejected: generic SaaS dashboard, private HA component imports by default, frozen pixel copy, decorative ambient UI, feature-local duplicate primitives.

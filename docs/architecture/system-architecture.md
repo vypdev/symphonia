@@ -1,7 +1,7 @@
 # System architecture
 
-**Status:** Home Assistant-first deployment accepted; logical boundaries proposed; technology stack open
-**Last reviewed:** 2026-09-20
+**Status:** Home Assistant-first deployment and UI stack direction accepted; logical boundaries proposed; other technology choices open
+**Last reviewed:** 2026-09-27
 
 ## Architectural drivers
 
@@ -19,7 +19,7 @@ The architecture is derived from these needs:
 - a future native Home Assistant surface without duplicating domain policy; and
 - simple backup, restore, upgrade, and diagnostics.
 
-These drivers do not yet justify a programming language, web framework, frontend framework, or database product. The observable UI direction and compatibility-layer boundary are accepted separately in [ADR 0004](../decisions/0004-home-assistant-native-ui.md); that decision does not select a framework.
+These drivers do not yet justify a backend framework or database product. The UI direction and compatibility-layer boundary are accepted in [ADR 0004](../decisions/0004-home-assistant-native-ui.md); the owner subsequently selected Lit, TypeScript, and Vite in [ADR 0005](../decisions/0005-lit-typescript-vite-ui.md). That selection does not close the UI compatibility/release evidence gate.
 
 ## Context and trust boundaries
 
@@ -305,11 +305,10 @@ The MVP may render metrics in its UI and logs; choosing Prometheus/OpenTelemetry
 | Concern | Reason not yet chosen | Evidence needed |
 | --- | --- | --- |
 | Backend language/framework | Provider SDK maturity, job ergonomics, footprint, HA App maintainability | Thin vertical spike and maintainer preference |
-| UI framework/build tooling | The Home Assistant-native component, accessibility, catalog, Ingress, and standalone contracts are accepted, but the implementation technology remains reversible | `RG-006` prototype proving public context, package boundaries, bundle/compatibility cost, catalog and browser evidence |
 | SQLite versus PostgreSQL | Concurrency, backup, migration, and library scale unmeasured | Storage/job lease spike and target sizes |
 | Job library versus internal durable runner | Retry/idempotency needs are specific; external brokers add operations | Failure/restart spike |
 | Secret encryption/key source | HA App secret facilities and portable standalone behavior differ | Threat model and backup/restore test |
 | Companion integration transport | Need push, authentication, discovery, and version compatibility | Home Assistant integration RFC |
 | Public API/event protocol | Only internal UI needs are currently concrete | UI and companion-integration contract design |
 
-No implementation agent should infer these technology choices from examples in `homeassistant-gateway`. The Gateway informs the accepted presentation boundary and verification approach, not an automatic dependency or stack selection.
+The remaining choices must not be inferred from `homeassistant-gateway`. The UI stack is a separate, explicit owner decision in ADR 0005, not an automatic dependency selection. `RG-006` still requires public-context, package-boundary, bundle, Ingress, catalog, browser, and visual evidence before production UI work.

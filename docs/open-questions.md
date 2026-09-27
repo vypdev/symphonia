@@ -132,17 +132,17 @@ Define what belongs in the App UI versus a companion custom integration. Decide 
 
 ### RG-006 — Home Assistant UI compatibility and host-context spike
 
-The owner has accepted the Home Assistant-native-adjacent direction, independent compatibility layer, and no-private-frontend-dependency boundary in [ADR 0004](decisions/0004-home-assistant-native-ui.md). Before the [UI foundation SDD](../specs/home-assistant-native-ui.md) becomes `Ready for implementation`, a documentation/prototype spike must:
+The owner has accepted the Home Assistant-native-adjacent direction, independent compatibility layer, and no-private-frontend-dependency boundary in [ADR 0004](decisions/0004-home-assistant-native-ui.md), and selected Lit + TypeScript + Vite in [ADR 0005](decisions/0005-lit-typescript-vite-ui.md). [Current official-source research](development/ui-spike/host-context-evidence.md) finds no theme/locale/timezone fields in the inspected App-properties message. Before the [UI foundation SDD](../specs/home-assistant-native-ui.md) becomes `Ready for implementation`, a documentation/prototype spike must:
 
 - declare the supported Home Assistant and evergreen-browser matrix;
 - verify arbitrary Ingress base paths, deep links, refresh, assets, HTTP, and any WebSocket/SSE transport;
 - capture the exact supported public contract for theme, locale, direction, timezone, safe-area insets, and context changes, including origin/message/schema validation and deterministic fallback;
-- compare candidate frontend/build approaches against component-package isolation, bundle/old-device cost, accessibility, localization, catalog, and standalone reuse;
+- verify the selected Lit/Vite approach against component-package isolation, bundle/old-device cost, accessibility, localization, catalog, and standalone reuse;
 - create a dated official Home Assistant reference manifest with public-data provenance, light/dark availability, phone/wide viewports, human review ownership, and immutable history;
 - prototype representative navigation, card, button, form, status/alert, dialog, progress/empty, settings/list row, dense data, and ordered-evidence components without production feature behavior; and
 - prove keyboard/focus/announcement, reduced-motion, contrast, long/RTL text, safe-area/zoom/virtual-keyboard, no document overflow, and bounded table/diagnostic scrolling.
 
-The result selects the presentation implementation/tooling and supported matrix. It does not authorize production UI work until the SDD is ready and the owner explicitly approves implementation.
+The tooling choice is accepted; the result must still establish a supported matrix and validated host/visual contracts. It does not authorize production UI work until the SDD is ready and the owner explicitly approves implementation.
 
 ## Future synchronization questions
 
@@ -161,7 +161,7 @@ These do not block the copy MVP but block sync implementation:
 ## Implementation decisions intentionally deferred
 
 - backend language and framework;
-- UI framework/build tooling and supported HA/browser matrix; the Home Assistant-native design-system contract itself is accepted by ADR 0004;
+- supported HA/browser matrix and Lit/Vite compatibility evidence; the UI stack is accepted by ADR 0005 and the design-system contract by ADR 0004;
 - SQLite versus PostgreSQL;
 - internal durable runner versus job library;
 - secret encryption primitive and key source;
@@ -206,4 +206,4 @@ These need evidence and small RFCs; popularity is not evidence.
 
 After those tasks, revisit playlist ownership (`OQ-002`) before creating any persistent-synchronization SDD. The Home Assistant native surface (`RG-005`) can proceed in parallel once the service API shape is stable, but it is not a prerequisite for the copy MVP.
 
-The UI compatibility spike (`RG-006`) can also proceed in parallel as non-production evidence. It must settle the supported host/browser/context/tooling matrix before any production frontend work, while feature content and behavior continue to be owned by their existing SDDs.
+The UI compatibility spike (`RG-006`) can also proceed in parallel as non-production evidence. It must prove the supported host/browser/context matrix and selected Lit/Vite tooling before any production frontend work, while feature content and behavior continue to be owned by their existing SDDs.

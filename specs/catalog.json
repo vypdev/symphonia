@@ -119,11 +119,15 @@
       ],
       "evidence": [
         "docs/decisions/0004-home-assistant-native-ui.md",
+        "docs/decisions/0005-lit-typescript-vite-ui.md",
         "docs/product/home-assistant-ui-specification.md",
         "docs/architecture/system-architecture.md",
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md",
-        "docs/development/ui-spike/README.md"
+        "docs/development/ui-spike/README.md",
+        "docs/development/ui-spike/host-context-evidence.md",
+        "docs/development/ui-spike/visual-reference-plan.md",
+        "docs/development/ui-lit-spike/README.md"
       ],
       "implementationEvidence": {
         "code": [],
@@ -132,9 +136,9 @@
       },
       "blockers": [
         "Supported Home Assistant and browser matrix",
-        "Frontend framework and build-tool selection",
-        "RG-006 verified theme, locale, direction, safe-area, and Ingress context contract",
-        "Accepted dated visual-reference capture and update procedure"
+        "RG-006 verified public host context and deterministic theme, locale, direction, timezone, and safe-area fallbacks",
+        "Lit/Vite Ingress, bundle, accessibility, and browser compatibility evidence",
+        "Accepted dated visual-reference capture/update procedure and reviewed visuals"
       ]
     },
     {

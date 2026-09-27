@@ -1,8 +1,10 @@
 # Home Assistant-adjacent UI spike (review fixture)
 
-This is a **non-production, synthetic-data-only** visual/interaction fixture for the [UI foundation SDD](../../../specs/home-assistant-native-ui.md). It is not served by the App, has no application/API calls, does not perform copy or connect providers, and does not select Symphonia's frontend framework. Open `index.html` locally to inspect the shell. The controls only change the local fixture view/theme.
+This is a **non-production, synthetic-data-only** visual/interaction fixture for the [UI foundation SDD](../../../specs/home-assistant-native-ui.md). It is not served by the App, has no application/API calls, and does not perform copy or connect providers. It predates the [Lit/TypeScript/Vite decision](../../decisions/0005-lit-typescript-vite-ui.md) and is not a test of that stack. Open `index.html` locally to inspect the shell. The controls only change the local fixture view/theme.
 
 Automated browser inspection of this local file was blocked by the current browser security policy on 2026-09-27. The repository tests check structure and isolation, but **no Symphonia screenshot, visual parity, responsive layout, or browser accessibility result has been approved**. A reviewer must perform the inspection below in an authorized environment; a future release cannot substitute static tests for it.
+
+The [host-context evidence](host-context-evidence.md) records what current official sources expose, and the [visual-reference procedure](visual-reference-plan.md) is a proposal awaiting reviewer approval.
 
 ## Evidence and intentional choices
 
@@ -20,4 +22,4 @@ Automated browser inspection of this local file was blocked by the current brows
 
 ## Remaining gates
 
-`RG-006` still needs a real supported Home Assistant/browser matrix, verified public host-context/Ingress contract, frontend/build selection, and approved capture/update/reviewer procedure. This spike does not satisfy the SDD's 84-case production test budget or authorize production UI implementation.
+`RG-006` still needs a real supported Home Assistant/browser matrix, verified public [host-context/Ingress contract](host-context-evidence.md), Lit/Vite build/compatibility evidence, and approved capture/update/reviewer procedure. This spike does not satisfy the SDD's 84-case production test budget or authorize production UI implementation.

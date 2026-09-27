@@ -11,7 +11,7 @@ The primary target is the authenticated Home Assistant Ingress panel. A standalo
 
 ## Decision and evidence status
 
-The owner has accepted the requirement that Symphonia's UI and components be as close as practical to native Home Assistant. [ADR 0004](../decisions/0004-home-assistant-native-ui.md) records the architectural consequences.
+The owner has accepted the requirement that Symphonia's UI and components be as close as practical to native Home Assistant. [ADR 0004](../decisions/0004-home-assistant-native-ui.md) records the architectural consequences, and [ADR 0005](../decisions/0005-lit-typescript-vite-ui.md) selects Lit, TypeScript, and Vite for the future presentation layer. [RG-006 evidence](../development/ui-spike/host-context-evidence.md) keeps public host-context behavior separate from unverified theme/locale assumptions.
 
 Evidence reviewed on 2026-09-20:
 
@@ -22,7 +22,7 @@ Evidence reviewed on 2026-09-20:
 - official [2026.8 App/custom-panel guidance](https://developers.home-assistant.io/blog/2026/07/31/frontend-component-updates-2026.8/), including App-iframe safe-area propagation;
 - `vypdev/homeassistant-gateway` commit [`1ed75be`](https://github.com/vypdev/homeassistant-gateway/tree/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42), especially its [frontend direction](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-design.md), [design system](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-design-system.md), [UI catalog](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-ui-catalog.md), [testing strategy](https://github.com/vypdev/homeassistant-gateway/blob/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/frontend-testing-strategy.md), and dated [Home Assistant reference set](https://github.com/vypdev/homeassistant-gateway/tree/1ed75be9f8fabdab386db0fe4320cfb0f67d4f42/docs/ui-reference/home-assistant).
 
-The official sources define the target. The Gateway is community implementation evidence, not a permanent Home Assistant guarantee and not a dependency selection.
+The official sources define the target. The Gateway is community implementation evidence, not a permanent Home Assistant guarantee; the later explicit owner decision in ADR 0005, not the Gateway itself, selects the stack.
 
 ## Terminology
 

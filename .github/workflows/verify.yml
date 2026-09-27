@@ -44,3 +44,30 @@ jobs:
           fi
       - name: Run offline test suite
         run: PYTHONPATH=src:. python -m unittest discover -s tests -v
+
+  ui-lit-spike:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/development/ui-lit-spike
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: docs/development/ui-lit-spike/package-lock.json
+      - name: Install pinned spike dependencies
+        run: npm ci --ignore-scripts
+      - name: Check types
+        run: npm run check
+      - name: Check presentation boundary
+        run: npm run check-boundary
+      - name: Run pure fallback tests
+        run: npm test
+      - name: Build isolated UI spike
+        run: npm run build
+      - name: Inspect relative assets
+        run: npm run verify-output

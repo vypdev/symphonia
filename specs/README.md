@@ -127,7 +127,10 @@ PYTHONPATH=. python3 tools/validate_specs.py
 The validator checks that `catalog.json` parses, referenced files exist, each
 SDD has one known catalog capability ID, catalog statuses and paths agree with
 `CATALOG.md`, requirement IDs are present in the horizontal specifications,
-and local Markdown links resolve.
+and local Markdown links resolve. Generated/vendor directories such as
+`node_modules`, `dist`, and virtual environments are excluded from Markdown
+scanning; owned documentation is still checked even when dependencies are
+installed locally.
 
 Also verify:
 

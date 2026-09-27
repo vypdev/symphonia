@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 
 CAPABILITY_ID_RE = re.compile(r"^\s*-\s+Catalog capability ID:\s+`([^`]+)`\s*$", re.MULTILINE)
@@ -32,6 +33,26 @@ CATALOG_STATUSES = {
     "superseded": "Superseded",
 }
 EXCLUDED_SPEC_MARKDOWN = {"README.md", "CATALOG.md", "_template.md"}
+GENERATED_MARKDOWN_DIRS = {
+    ".git",
+    ".repowise",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "graphify-out",
+    "node_modules",
+}
+
+
+def _repository_markdown(root: Path) -> Iterator[Path]:
+    """Yield owned Markdown, excluding generated/vendor trees at any depth."""
+
+    for directory, children, files in os.walk(root):
+        children[:] = sorted(child for child in children if child not in GENERATED_MARKDOWN_DIRS)
+        for name in sorted(files):
+            if name.endswith(".md"):
+                yield Path(directory) / name
 
 
 def _add(errors: list[str], message: str) -> None:
@@ -161,7 +182,7 @@ def _validate_sdds(root: Path, capabilities: list[dict[str, Any]], errors: list[
 
 def _validate_requirements(root: Path, capabilities: list[dict[str, Any]], errors: list[str]) -> None:
     known: set[str] = set()
-    for path in (root / "docs").rglob("*.md"):
+    for path in _repository_markdown(root / "docs"):
         known.update(REQUIREMENT_RE.findall(path.read_text(encoding="utf-8")))
     for capability in capabilities:
         for requirement in capability.get("requirements", []):
@@ -189,9 +210,7 @@ def _validate_catalog_markdown(root: Path, capabilities: list[dict[str, Any]], e
 
 
 def _validate_markdown_links(root: Path, errors: list[str]) -> None:
-    for path in sorted(root.rglob("*.md")):
-        if ".git" in path.parts:
-            continue
+    for path in _repository_markdown(root):
         text = path.read_text(encoding="utf-8")
         for match in MARKDOWN_LINK_RE.finditer(text):
             target = match.group(1) or match.group(2)
