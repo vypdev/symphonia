@@ -1,7 +1,7 @@
 # Provider specification
 
 **Status:** proposed contract; specific support is a dated research fact
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-27
 
 ## Purpose
 
@@ -151,6 +151,8 @@ Exact language signatures are deferred, but an adapter must cover these behavior
 - where supported, remove, reorder, replace, rename, or delete;
 - return revision identifiers and per-item/batch outcomes; and
 - provide a reconciliation read for unknown write outcomes.
+
+For reconciliation, adapters and application ports MUST distinguish an effect-confirmed result, a proven no-effect result, and an inconclusive result. An absent item in an eventually consistent or duplicate-bearing read is not proof of no effect. A repeated mutation is safe only after a provider-specific idempotency guarantee or positive proof of no effect; inconclusive outcomes remain action-required and MUST NOT be replayed automatically. These guarantees require dated official evidence and a dedicated-account feasibility spike where behavior depends on account or playlist state.
 
 ## Adapter requirements
 

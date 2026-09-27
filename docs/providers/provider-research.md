@@ -1,7 +1,7 @@
 # Provider and platform research
 
 **Status:** research snapshot, not an architectural decision
-**Reviewed:** 2026-09-22
+**Reviewed:** 2026-09-27
 **Source policy:** official documentation only; revalidate before implementation and every release
 
 ## How to read this document
@@ -9,6 +9,20 @@
 This snapshot separates what Symphonia needs from what an official API documents. It does not prove behavior for a particular account, market, application mode, or Home Assistant network setup. A live feasibility spike is required before either provider adapter is committed to the MVP.
 
 Existing Home Assistant and community implementations are reviewed separately in [Home Assistant music ecosystem review](home-assistant-ecosystem-review.md). They provide valuable implementation evidence but do not replace an official provider contract.
+
+## 2026-09-27 write-outcome and reconciliation update
+
+This is a dated review of official API documentation only, not a live provider feasibility spike. The official pages describe mutation requests and successful responses, but do not document a general client idempotency-key contract or a provider-independent way to prove whether a timed-out request took effect.
+
+| Provider | Officially documented behavior | Recovery consequence for Symphonia |
+| --- | --- | --- |
+| Spotify | [Create Playlist](https://developer.spotify.com/documentation/web-api/reference/create-playlist) returns a playlist resource; names need not be unique and public visibility defaults to `true`. [Add Items](https://developer.spotify.com/documentation/web-api/reference/add-items-to-playlist) appends or inserts ordered URIs, accepts up to 100 per request, and returns a `snapshot_id`. The request reference does not list a client idempotency key or promise duplicate suppression. | A snapshot identifies playlist state/version, not which timed-out occurrence was applied. Duplicate tracks and concurrent edits prevent inferring a particular write from presence alone. Creation by name cannot safely reconcile a timeout. |
+| YouTube Data API | [PlaylistItems: insert](https://developers.google.com/youtube/v3/docs/playlistItems/insert) creates one playlist-item resource from `playlistId` and `resourceId`, can accept a position, returns the created resource on success, and costs 50 quota units. A requested position requires manual playlist sorting. The reference does not document an idempotency key or replay guarantee. | A returned playlist-item ID is useful only when the response is received. On timeout, matching a video in the playlist does not identify which duplicate occurrence belongs to the attempt; a dedicated-account spike must prove any stronger strategy. |
+| Apple Music | [Add Tracks to a Library Playlist](https://developer.apple.com/documentation/applemusicapi/add-tracks-to-a-library-playlist) appends tracks and reports HTTP 204 on success; its documentation warns that a new resource may take time to appear. The request contract does not document an idempotency key or a reconciliation guarantee. | An immediate read that does not show the track cannot prove no effect. Treat timeout/read lag as inconclusive and do not repeat automatically. |
+
+**Inference, not a provider guarantee:** until a dedicated-account spike demonstrates reliable positive and no-effect reconciliation for an exact operation, Symphonia must checkpoint a provider step as in-flight before the mutation, reconcile before any replay, and leave inconclusive results in `waiting_user`. Absence of an idempotency guarantee from these pages is not proof that no provider-specific strategy exists.
+
+The YouTube `playlistItems.insert` reference reported a last-updated date of 2026-09-14 UTC when reviewed here; Spotify and Apple pages were re-opened on 2026-09-27.
 
 ## 2026-09-22 verification update
 

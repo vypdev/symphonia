@@ -316,6 +316,7 @@
         "docs/domain/domain-model.md",
         "docs/product/product-specification.md",
         "docs/providers/provider-research.md",
+        "docs/providers/provider-specification.md",
         "docs/development/implementation-baseline.md"
       ],
       "implementationEvidence": {
