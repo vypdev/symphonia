@@ -109,6 +109,47 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(operation.state, "succeeded")
         self.assertEqual(self.writer.reconciled, [step_key])
 
+    def test_unknown_target_creation_is_not_repeated_until_reconciled(self) -> None:
+        class UnknownTargetWriter(FakeWriter):
+            def __init__(self) -> None:
+                super().__init__()
+                self.create_attempts = 0
+                self.target_reconciliation_attempts = 0
+                self.reconciled_target: TargetPlaylist | None = None
+
+            def ensure_target_playlist(
+                self, *, provider: str, name: str, visibility: str, idempotency_key: str
+            ) -> TargetPlaylist:
+                self.create_attempts += 1
+                raise ProviderWriteError(WriteOutcome.UNKNOWN_OUTCOME, "timeout after create request")
+
+            def reconcile_target_playlist(self, *, idempotency_key: str) -> TargetPlaylist | None:
+                self.target_reconciliation_attempts += 1
+                return self.reconciled_target
+
+        digest = self.accepted_digest()
+        writer = UnknownTargetWriter()
+        operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["unknown_step"], "target")
+        self.assertNotIn("target_playlist_id", operation.checkpoint)
+        self.assertEqual(writer.create_attempts, 1)
+        self.assertEqual(writer.added, [])
+
+        self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
+        pending = self.executor.execute(digest, writer=writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
+        self.assertEqual(pending.state, "waiting_user")
+        self.assertEqual(writer.create_attempts, 1)
+        self.assertEqual(writer.target_reconciliation_attempts, 2)
+
+        writer.reconciled_target = writer.target
+        self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=2))
+        reconciled = self.executor.execute(digest, writer=writer, worker_id="worker-c", now=NOW + timedelta(seconds=2))
+        self.assertEqual(reconciled.state, "succeeded")
+        self.assertEqual(reconciled.checkpoint["target_playlist_id"], writer.target.provider_playlist_id)
+        self.assertEqual(writer.create_attempts, 1)
+        self.assertEqual(writer.added, [(f"{digest}:entry:occ-1", "target-1")])
+
     def test_unknown_write_without_reconciliation_requires_user(self) -> None:
         digest = self.accepted_digest()
         step_key = f"{digest}:entry:occ-1"
