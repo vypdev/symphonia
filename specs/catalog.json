@@ -225,17 +225,32 @@
         "docs/domain/domain-model.md",
         "docs/providers/provider-specification.md",
         "docs/providers/provider-research.md",
-        "docs/open-questions.md"
+        "docs/open-questions.md",
+        "docs/development/implementation-baseline.md"
       ],
       "implementationEvidence": {
-        "code": [],
-        "tests": [],
-        "documentation": []
+        "code": [
+          "src/symphonia/providers/importing.py",
+          "src/symphonia/application/library_import.py",
+          "src/symphonia/application/library_import_execution.py",
+          "src/symphonia/infrastructure/sqlite_library.py"
+        ],
+        "tests": [
+          "tests/test_provider_import.py",
+          "tests/test_library_import.py",
+          "tests/test_library_import_execution.py",
+          "tests/test_sqlite_library.py"
+        ],
+        "documentation": [
+          "docs/development/implementation-baseline.md",
+          "specs/library-import-and-provider-projections.md"
+        ]
       },
       "blockers": [
         "RG-001 collection semantics and completeness per provider",
         "OQ-008 local data retention and export policy",
         "OQ-007 representative library sizes and import-duration targets",
+        "Durable page-level staging/checkpoints and memory bounds",
         "Provider-specific refresh and deletion obligations"
       ]
     },

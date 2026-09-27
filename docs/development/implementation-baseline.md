@@ -33,7 +33,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Cooperative single-process operation worker with interruptible polling and injected clock support.
 - Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
 - Copy execution durably marks a target-create or entry-add step in-flight before the provider call; a resumed step is reconciled before any repeated mutation, and inconclusive evidence or reconciliation errors stay in `waiting_user`. The current boolean entry-reconciliation port treats `false` only as inconclusive and cannot represent proven no-effect; a richer provider contract and the full copy capability remain blocked in the Draft SDD.
-- Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably.
+- Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably. Current scope is one playlist: pages are materialized in memory, and transient retries re-read from the beginning because page-level durable staging/checkpoints are not implemented; full library-import behavior remains blocked in its Draft SDD.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Direct-callback authorization can resolve a durable attempt by the returned state digest after restart without persisting raw state; ambiguous digests fail closed.
 - Authorization consumption is covered across independent SQLite connections so callback replay races produce exactly one consumed attempt.

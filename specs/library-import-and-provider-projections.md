@@ -1,14 +1,14 @@
 # Library import and provider projections
 
 - Status: Draft
-- Date: 2026-09-20
+- Date: 2026-09-27
 - Catalog capability ID: `library-import-and-provider-projections`
 - Owners: Symphonia maintainers
 - Scope: import approved provider collections and ordered playlists into complete, provenance-rich provider projections without confusing them with provider-independent recordings.
 - Related requirements: `SYM-PROD-003`, `SYM-LIB-001`–`SYM-LIB-006`, `SYM-PROV-004`–`SYM-PROV-014`, `SYM-PROV-018`, `SYM-ARCH-004`–`SYM-ARCH-005`
 - Related decisions/research: [domain model](../docs/domain/domain-model.md), [provider specification](../docs/providers/provider-specification.md), [provider research](../docs/providers/provider-research.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `RG-001`, `OQ-007`, `OQ-008`
 - Required review gates: product UX, domain, architecture, provider feasibility/policy, testing, documentation, privacy/operations
-- Open decisions blocking readiness: proven collection semantics/completeness per MVP provider; retention/export policy; representative library sizes/import targets; provider-specific refresh/deletion obligations
+- Open decisions blocking readiness: proven collection semantics/completeness per MVP provider; retention/export policy; representative library sizes/import targets; durable page-level staging/checkpoints and memory bounds; provider-specific refresh/deletion obligations
 
 ## 1. Executive summary
 
@@ -31,7 +31,9 @@ Provider libraries differ in collection meaning, pagination, unavailable/local/n
 
 ### 2.2 Current behavior
 
-There is no importer or persistence implementation. The domain model and provider contract establish the required representation and completeness semantics; provider-specific facts still require live spikes.
+There is no complete multi-collection library importer. The owner-approved foundation currently supports one playlist at a time: normalized provider pages are materialized in memory, checked for completeness, and a complete result is published as an immutable SQLite snapshot; an incomplete result retains the prior complete snapshot. Snapshot publication is idempotent for the same content and rejects reuse of a snapshot ID for different content.
+
+The durable wrapper persists import intent before provider reads and records terminal publication details, authentication waits, rate-limit waits, and bounded transient retries. It does not durably checkpoint individual pages or stage them incrementally; after a transient failure it re-reads the playlist from the beginning. Saved-track collections, multi-collection sessions, retention/deletion scheduling, export policy, and representative-size guarantees are not part of this foundation evidence. This paragraph is an as-built foundation boundary, not a claim that the SDD capability is implemented.
 
 ### 2.3 Evidence and unknowns
 
@@ -39,6 +41,8 @@ There is no importer or persistence implementation. The domain model and provide
 - Adapter contract: [pagination, unknown media, completeness, freshness](../docs/providers/provider-specification.md).
 - Official API evidence and policy constraints: [provider research](../docs/providers/provider-research.md).
 - Comparative warning: existing YT Music implementations may cap dynamic playlists or skip unavailable entries; [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md#youtube-music).
+- As-built foundation evidence: [page collector](../src/symphonia/providers/importing.py), [playlist import use case](../src/symphonia/application/library_import.py), [durable import executor](../src/symphonia/application/library_import_execution.py), [atomic snapshot repository](../src/symphonia/infrastructure/sqlite_library.py), and the [implementation baseline](../docs/development/implementation-baseline.md).
+- Existing deterministic evidence for this foundation slice: [provider import contracts](../tests/test_provider_import.py), [import use case](../tests/test_library_import.py), [durable import outcomes](../tests/test_library_import_execution.py), and [snapshot persistence](../tests/test_sqlite_library.py). Listing these files is not a statement that the complete SDD test budget has passed.
 - Unknowns: provider collection parity, target sizes, refresh cadence, raw payload retention, incremental cursor reliability.
 
 ## 3. Actors, surfaces, and terminology
