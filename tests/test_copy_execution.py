@@ -105,7 +105,23 @@ class CopyExecutionTests(unittest.TestCase):
             worker_id="worker-b",
             now=NOW + timedelta(seconds=1),
         )
-        self.assertEqual(resumed.state, "succeeded")
+        self.assertEqual(resumed.state, "waiting_user")
+        self.assertEqual(resumed.checkpoint["unknown_step"], "occ-1")
+        self.assertEqual(self.writer.added, [(step_key, "target-1")])
+        self.assertEqual(self.writer.reconciled, [step_key, step_key])
+
+        self.writer.reconcile_results[step_key] = True
+        self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=2))
+        reconciled = self.executor.execute(
+            digest,
+            writer=self.writer,
+            worker_id="worker-c",
+            now=NOW + timedelta(seconds=2),
+        )
+        self.assertEqual(reconciled.state, "succeeded")
+        self.assertEqual(reconciled.checkpoint["confirmed_occurrences"], ["occ-1"])
+        self.assertNotIn("unknown_step", reconciled.checkpoint)
+        self.assertEqual(self.writer.added, [(step_key, "target-1")])
 
     def test_retryable_write_releases_operation_until_scheduled(self) -> None:
         digest = self.accepted_digest()
