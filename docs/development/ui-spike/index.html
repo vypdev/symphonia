@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Symphonia · UI review fixture</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="demo.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="app-bar">
+      <div class="app-bar-inner">
+        <span class="app-mark" aria-hidden="true">♫</span>
+        <div class="app-identity"><strong>Symphonia</strong><span>Music library</span></div>
+        <span class="fixture-label">UI review fixture</span>
+        <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch to dark theme" title="Switch theme">◐</button>
+      </div>
+    </header>
+    <nav class="section-nav" aria-label="Symphonia sections">
+      <div class="section-nav-inner">
+        <a href="#connections" data-section="connections" aria-current="page">Connections</a>
+        <a href="#library" data-section="library">Library</a>
+        <a href="#copy" data-section="copy">Copy playlist</a>
+        <a href="#activity" data-section="activity">Activity</a>
+      </div>
+    </nav>
+    <main id="main" tabindex="-1">
+      <section id="connections" class="view" aria-labelledby="connections-title">
+        <div class="page-heading"><div><h1 id="connections-title">Connections</h1><p>Manage music services available to Symphonia.</p></div><button type="button" class="button primary" disabled>Add connection</button></div>
+        <p class="fixture-note">Preview only. Connecting a provider is not available in this fixture.</p>
+        <div class="card settings-card" aria-label="Provider connections">
+          <div class="settings-row"><span class="provider-icon" aria-hidden="true">S</span><div class="row-copy"><strong>Source service</strong><span>Library imported today at 09:14 · 12 playlists</span></div><span class="status success">Connected</span></div>
+          <div class="settings-row"><span class="provider-icon secondary-icon" aria-hidden="true">T</span><div class="row-copy"><strong>Target service</strong><span>Ready for a reviewed, one-time copy</span></div><span class="status success">Connected</span></div>
+        </div>
+        <div class="section-heading"><h2>Before copying</h2><p>Review source freshness and unresolved recordings before writing to a destination.</p></div>
+        <div class="card information-card"><span class="round-icon" aria-hidden="true">i</span><div><strong>Connections do not start a copy</strong><p>A copy requires a separate preview, explicit omissions, and confirmation. The original playlist remains unchanged.</p></div></div>
+      </section>
+
+      <section id="library" class="view" aria-labelledby="library-title" hidden>
+        <div class="page-heading"><div><h1 id="library-title">Library</h1><p>Imported playlists and their most recent confirmed state.</p></div><button type="button" class="button secondary" disabled>Refresh library</button></div>
+        <div class="alert warning" role="status"><strong>Import needs attention</strong><p>The latest import is incomplete. The complete library from 09:14 remains visible. Retry the failed playlist when the service is available; no existing entries were removed.</p></div>
+        <div class="metric-grid"><div class="card metric"><span>Playlists</span><strong>12</strong><small>Last complete import</small></div><div class="card metric"><span>Recordings</span><strong>348</strong><small>Known entries</small></div><div class="card metric"><span>Needs review</span><strong>4</strong><small>Identity unresolved</small></div></div>
+        <div class="card list-card"><div class="card-heading"><h2>Playlists</h2><span class="status neutral">12 total</span></div><div class="result-row"><div><strong>Evening listening</strong><span>38 recordings · source snapshot at 09:14</span></div><span class="status success">Current</span></div><div class="result-row"><div><strong>Weekend discoveries</strong><span>24 recordings · complete version retained</span></div><span class="status warning">Retry needed</span></div><div class="result-row"><div><strong>Long title to verify responsive wrapping in a narrow Home Assistant App viewport</strong><span>17 recordings · source snapshot at 09:14</span></div><span class="status neutral">Current</span></div></div>
+      </section>
+
+      <section id="copy" class="view" aria-labelledby="copy-title" hidden>
+        <div class="page-heading"><div><h1 id="copy-title">Copy playlist</h1><p>Preview a one-time copy before any destination write.</p></div><span class="status warning">Review required</span></div>
+        <div class="step-list" aria-label="Copy progress"><span class="step done">1 · Choose</span><span class="step active">2 · Review</span><span class="step">3 · Confirm</span><span class="step">4 · Result</span></div>
+        <div class="card copy-summary"><div><h2>Evening listening</h2><p>Source service → Target service</p></div><span class="status neutral">Preview only</span></div>
+        <div class="metric-grid"><div class="card metric"><span>Ready to copy</span><strong>34</strong><small>Ordered occurrences</small></div><div class="card metric"><span>Unresolved</span><strong>4</strong><small>Require a decision</small></div><div class="card metric"><span>Writes so far</span><strong>0</strong><small>No destination changes</small></div></div>
+        <div class="alert warning" role="status"><strong>Action required before confirmation</strong><p>Four recordings have no safe destination match. Review each result or explicitly accept its omission. Copy remains unavailable until then.</p></div>
+        <div class="card list-card"><div class="card-heading"><h2>Recording review</h2><span class="status warning">4 unresolved</span></div><div class="result-row"><div><strong>Unresolved recording · position 11</strong><span>No confident destination match. Source identity is preserved for review.</span></div><span class="status warning">Needs decision</span></div><div class="result-row"><div><strong>Unresolved recording · position 27</strong><span>Several plausible candidates. No automatic choice was made.</span></div><span class="status warning">Needs decision</span></div></div>
+        <div class="form-actions"><button type="button" class="button secondary" disabled>Review recordings</button><button type="button" class="button primary" disabled>Confirm copy</button></div><p class="disabled-explanation">Demo actions are disabled. In the product, confirmation is also blocked until every unresolved entry is decided.</p>
+      </section>
+
+      <section id="activity" class="view" aria-labelledby="activity-title" hidden>
+        <div class="page-heading"><div><h1 id="activity-title">Activity</h1><p>Confirmed operation status and recovery guidance.</p></div><button type="button" class="button secondary" disabled>Refresh</button></div>
+        <div class="card list-card"><div class="card-heading"><h2>Recent operations</h2><span class="status neutral">Synthetic examples</span></div><div class="result-row"><div><strong>One-time copy · Evening listening</strong><span>113 entries confirmed; 4 accepted omissions remain listed. Review the result for details.</span></div><span class="status warning">Completed with omissions</span></div><div class="result-row"><div><strong>Import · Weekend discoveries</strong><span>Current result unavailable. The last complete import remains visible; retry when service returns.</span></div><span class="status warning">Partial</span></div><div class="result-row"><div><strong>Copy · Unconfirmed destination outcome</strong><span>The response was lost after a write attempt. Inspect the durable operation before retrying; no success is inferred.</span></div><span class="status danger">Needs reconciliation</span></div></div>
+      </section>
+    </main>
+    <footer>Symphonia UI review fixture · synthetic data · no provider or Home Assistant connection</footer>
+  </body>
+</html>

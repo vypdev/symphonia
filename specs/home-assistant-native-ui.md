@@ -1,7 +1,7 @@
 # Home Assistant-native UI foundation
 
 - Status: Ready for review
-- Date: 2026-09-20
+- Date: 2026-09-27
 - Catalog capability ID: `home-assistant-native-ui`
 - Owners: Symphonia maintainers
 - Scope: establish the shared shell, component families, semantic tokens, host-context adaptation, accessibility, responsive behavior, component catalog, and visual compatibility evidence for every Symphonia web view.
@@ -32,13 +32,14 @@ Without a shared UI contract, each feature can implement different cards, button
 
 ### 2.2 Current behavior
 
-No complete Symphonia UI or UI package exists. The repository has an experimental Ingress metadata scaffold and prospective feature SDDs. This SDD does not select or authorize a frontend framework or production implementation.
+No complete Symphonia UI or UI package exists. The repository has an experimental Ingress metadata scaffold, prospective feature SDDs, and an isolated [synthetic UI review fixture](../docs/development/ui-spike/README.md). The fixture is not served by the App, does not connect to application state, and has not passed browser visual/accessibility review. This SDD does not select or authorize a frontend framework or production implementation.
 
 ### 2.3 Evidence and unknowns
 
 - Accepted repository direction: [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md) and the [UI specification](../docs/product/home-assistant-ui-specification.md).
 - Official evidence: Home Assistant design portal, frontend architecture/source, independent-component warning, current App/Ingress and safe-area contracts linked from the UI specification and platform research.
 - Community evidence: `vypdev/homeassistant-gateway` commit `1ed75be` demonstrates a presentation-only compatibility layer, HA-like component families, component catalog, official-demo reference captures, accessibility/responsive tests, and visual baselines.
+- Symphonia review evidence: the [isolated fixture](../docs/development/ui-spike/README.md) exercises a proposed App-interior shell and synthetic connection, library, copy, and operation states. Its structural tests are not production component, Ingress, visual, or WCAG evidence.
 - Unknowns: exact supported Home Assistant/browser versions; selected frontend/build tools; the public context actually available to an Ingress App at each supported version; long-term token mapping; reference capture automation and review ownership.
 
 ## 3. Actors, surfaces, and terminology
