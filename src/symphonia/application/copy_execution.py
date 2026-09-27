@@ -266,7 +266,7 @@ class CopyExecutionService:
                 return operation
 
         for entry in writable_entries:
-            if entry.occurrence_id in confirmed:
+            if entry.occurrence_id in confirmed or entry.occurrence_id in failed_steps:
                 continue
             step_key = f"{digest}:entry:{entry.occurrence_id}"
             if unknown_step == entry.occurrence_id:
@@ -383,6 +383,7 @@ class CopyExecutionService:
                 return self._schedule_rate_limit(operation, worker_id, checkpoint, now, result.retry_at)
             if result.outcome is WriteOutcome.PERMANENT_FAILURE:
                 checkpoint.pop("unknown_step", None)
+                failed_steps.add(entry.occurrence_id)
                 issues.append(
                     {
                         "step": entry.occurrence_id,

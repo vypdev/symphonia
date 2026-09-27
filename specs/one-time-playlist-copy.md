@@ -197,7 +197,7 @@ Status shall never rely only on color. Keyboard navigation, visible focus, seman
 | Target creation may have an unknown outcome, including process loss during the call | Persist the target step as in-flight before the create call; on every resume reconcile the stored idempotency key before any create call; an inconclusive result stays `waiting_user` | Wait for provider-aware reconciliation or inspect candidates; never blindly create again |
 | Entry write may have an unknown outcome, including process loss during the call | Persist the occurrence as in-flight before the add call; on every resume reconcile that occurrence before any add call; only positive confirmation or a proven no-effect result permits progress; inconclusive evidence stays `waiting_user` | Resume only after provider-aware evidence; otherwise wait for operator review |
 | Rate limit | Enter `waiting_rate_limit` with next eligible time | Automatic bounded resume; cancellation remains available |
-| Some items fail permanently | Finish as `partial` with per-item reasons | Create a new remediation plan for failed entries |
+| Some items fail permanently | Checkpoint each failure as a terminal item issue; never resend that occurrence when a later step waits or resumes; finish as `partial` with per-item reasons | Create a new remediation plan for failed entries |
 | Process or host restarts | Resume from durable checkpoint and lease rules | No manual action unless state becomes uncertain |
 | User cancels | Stop scheduling further writes; preserve confirmed results | Review partial result; cancellation is not rollback |
 

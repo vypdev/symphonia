@@ -359,7 +359,9 @@
         "code": [
           "src/symphonia/application/copy_execution.py"
         ],
-        "tests": [],
+        "tests": [
+          "tests/test_copy_execution.py"
+        ],
         "documentation": [
           "docs/development/implementation-baseline.md",
           "specs/one-time-playlist-copy.md"

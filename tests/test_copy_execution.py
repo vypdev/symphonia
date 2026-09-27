@@ -47,15 +47,35 @@ class CopyExecutionTests(unittest.TestCase):
         self.plans.close()
         self.operations.close()
 
-    def snapshot(self, *, policy: CopyPolicy = CopyPolicy.STRICT, include_unmatched: bool = False) -> tuple[object, CopyPolicy]:
+    def snapshot(
+        self,
+        *,
+        policy: CopyPolicy = CopyPolicy.STRICT,
+        include_unmatched: bool = False,
+        include_second_ready: bool = False,
+    ) -> tuple[PlaylistSnapshot, CopyPolicy]:
         entries = [SourcePlaylistEntry("occ-1", 0, "source-1", EntryClassification.READY, "target-1")]
+        if include_second_ready:
+            entries.append(SourcePlaylistEntry("occ-2", 1, "source-2", EntryClassification.READY, "target-2"))
         if include_unmatched:
-            entries.append(SourcePlaylistEntry("occ-2", 1, "source-2", EntryClassification.UNMATCHED))
+            entries.append(
+                SourcePlaylistEntry(f"occ-{len(entries) + 1}", len(entries), "source-3", EntryClassification.UNMATCHED)
+            )
         source = PlaylistSnapshot("snapshot-1", "spotify", "playlist-1", tuple(entries))
         return source, policy
 
-    def accepted_digest(self, *, policy: CopyPolicy = CopyPolicy.STRICT, include_unmatched: bool = False) -> str:
-        source, policy = self.snapshot(policy=policy, include_unmatched=include_unmatched)
+    def accepted_digest(
+        self,
+        *,
+        policy: CopyPolicy = CopyPolicy.STRICT,
+        include_unmatched: bool = False,
+        include_second_ready: bool = False,
+    ) -> str:
+        source, policy = self.snapshot(
+            policy=policy,
+            include_unmatched=include_unmatched,
+            include_second_ready=include_second_ready,
+        )
         stored = self.workflow.create_plan(
             source,
             target_provider="youtube",
@@ -122,6 +142,31 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(reconciled.checkpoint["confirmed_occurrences"], ["occ-1"])
         self.assertNotIn("unknown_step", reconciled.checkpoint)
         self.assertEqual(self.writer.added, [(step_key, "target-1")])
+
+    def test_resume_skips_permanent_failure_before_reconciling_later_unknown_write(self) -> None:
+        digest = self.accepted_digest(include_second_ready=True)
+        first_key = f"{digest}:entry:occ-1"
+        second_key = f"{digest}:entry:occ-2"
+        self.writer.results[first_key] = WriteResult(WriteOutcome.PERMANENT_FAILURE, provider_code="unavailable")
+        self.writer.results[second_key] = WriteResult(WriteOutcome.UNKNOWN_OUTCOME, detail="provider timeout")
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["unknown_step"], "occ-2")
+        self.assertEqual(self.writer.added, [(first_key, "target-1"), (second_key, "target-2")])
+
+        self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
+        pending = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
+        self.assertEqual(pending.state, "waiting_user")
+        self.assertEqual(self.writer.added, [(first_key, "target-1"), (second_key, "target-2")])
+
+        self.writer.reconcile_results[second_key] = True
+        self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=2))
+        reconciled = self.executor.execute(digest, writer=self.writer, worker_id="worker-c", now=NOW + timedelta(seconds=2))
+        self.assertEqual(reconciled.state, "partial")
+        self.assertEqual(reconciled.checkpoint["confirmed_occurrences"], ["occ-2"])
+        self.assertEqual([issue["step"] for issue in reconciled.checkpoint["issues"]], ["occ-1"])
+        self.assertEqual(self.writer.added, [(first_key, "target-1"), (second_key, "target-2")])
 
     def test_retryable_write_releases_operation_until_scheduled(self) -> None:
         digest = self.accepted_digest()
