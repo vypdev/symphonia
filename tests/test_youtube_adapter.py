@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
+from urllib.error import URLError
 
 from symphonia.providers import (
     Capability,
@@ -61,6 +63,22 @@ class FakeClient:
 
 
 class YouTubeDataAdapterTests(unittest.TestCase):
+    def test_default_transport_reports_youtube_network_failures_without_secrets(self) -> None:
+        adapter = YouTubeDataAdapter(None, lambda connection_id: "token=private-value")
+        for failure, category in (
+            (TimeoutError("private-value"), ProviderErrorCategory.TIMEOUT),
+            (URLError("private-value"), ProviderErrorCategory.NETWORK_ERROR),
+        ):
+            with self.subTest(category=category), patch(
+                "symphonia.providers.http_json.urlopen", side_effect=failure
+            ):
+                with self.assertRaises(ProviderApiError) as raised:
+                    adapter.capabilities("google-connection-1")
+                self.assertEqual(raised.exception.category, category)
+                self.assertIn("YouTube Data", str(raised.exception))
+                self.assertNotIn("Spotify", str(raised.exception))
+                self.assertNotIn("private-value", str(raised.exception))
+
     def test_official_video_playlist_pages_preserve_unavailable_items(self) -> None:
         client = FakeClient()
         adapter = YouTubeDataAdapter(client, lambda connection_id: "access-token", page_size=2, api_key="public-key")

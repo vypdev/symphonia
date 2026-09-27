@@ -22,7 +22,7 @@ from .contracts import (
     ProviderPlaylistPage,
 )
 from .errors import ProviderApiError, ProviderErrorCategory
-from .spotify import JsonClient, UrllibJsonClient
+from .http_json import JsonClient, UrllibJsonClient
 
 
 class YouTubeDataAdapter(ProviderAdapter):
@@ -50,7 +50,10 @@ class YouTubeDataAdapter(ProviderAdapter):
             raise ValueError("YouTube playlist page_size must be between 1 and 50")
         if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages <= 0:
             raise ValueError("YouTube max_pages must be positive")
-        self._client = client or UrllibJsonClient("https://www.googleapis.com/youtube/v3")
+        self._client = client or UrllibJsonClient(
+            "https://www.googleapis.com/youtube/v3",
+            provider_label="YouTube Data",
+        )
         self._token_for_connection = token_for_connection
         self._page_size = page_size
         self._api_key = api_key

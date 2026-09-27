@@ -37,6 +37,8 @@ The durable wrapper persists import intent before provider reads and records ter
 
 The foundation executor checks stored playlist identifier types and the operation/playlist provider binding before invoking an adapter; malformed persisted intent fails without a provider read.
 
+The official Spotify and YouTube Data foundation adapters use a shared JSON transport instead of importing one adapter through the other. Offline tests confirm provider-specific, secret-safe timeout and network error classification; this does not establish the full provider import capability.
+
 ### 2.3 Evidence and unknowns
 
 - Shared model: [provider track, playlist, snapshot, and import invariants](../docs/domain/domain-model.md).

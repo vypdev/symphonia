@@ -56,6 +56,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
 - Concrete provider manifests expose upstream dependencies and a dated research review marker.
 - Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories.
+- Spotify and YouTube Data share a provider-neutral JSON transport; the YouTube adapter no longer imports the Spotify adapter, and default transport errors identify the correct provider without echoing tokens.
 - Spotify write adapters reject blank playlist/entry identifiers and unknown visibility values before issuing provider requests.
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.
 - Experimental official Apple Music library-playlist reader with separate developer/user token inputs.

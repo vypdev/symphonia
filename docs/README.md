@@ -18,6 +18,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | [Provider research](providers/provider-research.md) | Dated, sourced facts about provider APIs | Product policy or permanent architecture |
 | [Home Assistant music ecosystem review](providers/home-assistant-ecosystem-review.md) | Reusable patterns and cautions from existing HA music projects | Dependency selection or provider guarantees |
 | [Development specification](development/development-specification.md) | Specification workflow, testing and delivery gates | Product scope |
+| [Local quality audit](development/quality-audit.md) | Reproducible offline RepoWise/Graphify review and current architecture/test debt | A release or SDD readiness claim |
 | [ADRs](decisions/README.md) | Decisions that have actually been accepted | Proposals and guesses |
 | [Open questions](open-questions.md) | Decisions needed, assumptions, risk register, next design work | Accepted requirements |
 

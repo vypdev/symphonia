@@ -252,12 +252,14 @@
       "implementationEvidence": {
         "code": [
           "src/symphonia/providers/importing.py",
+          "src/symphonia/providers/http_json.py",
           "src/symphonia/application/library_import.py",
           "src/symphonia/application/library_import_execution.py",
           "src/symphonia/infrastructure/sqlite_library.py"
         ],
         "tests": [
           "tests/test_provider_import.py",
+          "tests/test_youtube_adapter.py",
           "tests/test_library_import.py",
           "tests/test_library_import_execution.py",
           "tests/test_sqlite_library.py"
