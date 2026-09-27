@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 
 from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
@@ -234,6 +236,101 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(reconciled.checkpoint["confirmed_occurrences"], ["occ-1"])
         self.assertNotIn("unknown_step", reconciled.checkpoint)
         self.assertEqual(self.writer.added, [(step_key, "target-1")])
+
+    def test_process_loss_after_entry_write_reconciles_without_duplicate(self) -> None:
+        """A lost response must survive SQLite reopen and a new worker lease."""
+
+        class SimulatedProcessLoss(BaseException):
+            pass
+
+        class CrashAfterEntry(FakeWriter):
+            def add_entry(self, *, target_playlist_id: str, provider_track_id: str, idempotency_key: str) -> WriteResult:
+                self.added.append((idempotency_key, provider_track_id))
+                raise SimulatedProcessLoss()
+
+        with TemporaryDirectory() as directory:
+            path = str(Path(directory) / "copy.sqlite3")
+            plans = CopyPlanRepository(path)
+            operations = OperationRepository(path)
+            try:
+                workflow = CopyWorkflowService(CopyPlanningService(), plans, operations)
+                source, policy = self.snapshot()
+                stored = workflow.create_plan(
+                    source,
+                    target_provider="youtube",
+                    target_playlist_name="Rock",
+                    target_visibility="private",
+                    policy=policy,
+                    now=NOW,
+                )
+                digest = workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
+                queued = workflow.enqueue_accepted_plan(digest, now=NOW)
+                writer = CrashAfterEntry()
+                with self.assertRaises(SimulatedProcessLoss):
+                    CopyExecutionService(plans, operations).execute(
+                        digest, writer=writer, worker_id="worker-before-crash", now=NOW
+                    )
+                interrupted = operations.get(queued.operation_id)
+                self.assertEqual(interrupted.state, "running")
+                self.assertEqual(interrupted.checkpoint["unknown_step"], "occ-1")
+            finally:
+                operations.close()
+                plans.close()
+
+            plans = CopyPlanRepository(path)
+            operations = OperationRepository(path)
+            try:
+                step_key = f"{digest}:entry:occ-1"
+                writer.reconcile_results[step_key] = True
+                resumed = CopyExecutionService(plans, operations).execute(
+                    digest,
+                    writer=writer,
+                    worker_id="worker-after-restart",
+                    now=NOW + timedelta(seconds=31),
+                )
+                self.assertEqual(resumed.state, "succeeded")
+                self.assertEqual(resumed.checkpoint["confirmed_occurrences"], ["occ-1"])
+                self.assertEqual(writer.reconciled, [step_key])
+                self.assertEqual(writer.added, [(step_key, "target-1")])
+            finally:
+                operations.close()
+                plans.close()
+
+    def test_process_loss_after_target_creation_reconciles_before_any_entry(self) -> None:
+        class SimulatedProcessLoss(BaseException):
+            pass
+
+        class CrashAfterTarget(FakeWriter):
+            def __init__(self) -> None:
+                super().__init__()
+                self.create_attempts = 0
+                self.reconcile_attempts = 0
+
+            def ensure_target_playlist(
+                self, *, provider: str, name: str, visibility: str, idempotency_key: str
+            ) -> TargetPlaylist:
+                self.create_attempts += 1
+                raise SimulatedProcessLoss()
+
+            def reconcile_target_playlist(self, *, idempotency_key: str) -> TargetPlaylist | None:
+                self.reconcile_attempts += 1
+                return self.target
+
+        digest = self.accepted_digest()
+        writer = CrashAfterTarget()
+        with self.assertRaises(SimulatedProcessLoss):
+            self.executor.execute(digest, writer=writer, worker_id="worker-before-crash", now=NOW)
+
+        recovered = CopyExecutionService(self.plans, self.operations).execute(
+            digest,
+            writer=writer,
+            worker_id="worker-after-restart",
+            now=NOW + timedelta(seconds=31),
+        )
+        self.assertEqual(recovered.state, "succeeded")
+        self.assertEqual(writer.create_attempts, 1)
+        self.assertEqual(writer.reconcile_attempts, 1)
+        self.assertEqual(writer.added, [(f"{digest}:entry:occ-1", "target-1")])
 
     def test_resume_skips_permanent_failure_before_reconciling_later_unknown_write(self) -> None:
         digest = self.accepted_digest(include_second_ready=True)
