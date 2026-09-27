@@ -163,14 +163,14 @@ class CopyExecutionService:
                 (
                     entry.occurrence_id
                     for entry in writable_entries
-                    if entry.occurrence_id not in confirmed and entry.occurrence_id not in failed_steps
+                    if entry.occurrence_id not in confirmed_ids and entry.occurrence_id not in failed_steps
                 ),
                 None,
             )
             if unknown_step != "target" and (
                 not isinstance(unknown_step, str)
                 or unknown_step not in writable_ids
-                or unknown_step in confirmed
+                or unknown_step in confirmed_ids
                 or unknown_step != first_unconfirmed
                 or target_id is None
             ):
@@ -298,7 +298,7 @@ class CopyExecutionService:
                 return operation
 
         for entry in writable_entries:
-            if entry.occurrence_id in confirmed or entry.occurrence_id in failed_steps:
+            if entry.occurrence_id in confirmed_ids or entry.occurrence_id in failed_steps:
                 continue
             step_key = f"{digest}:entry:{entry.occurrence_id}"
             if unknown_step == entry.occurrence_id:
@@ -321,15 +321,8 @@ class CopyExecutionService:
                     return self._wait_for_user(operation, worker_id, checkpoint, now)
                 if not reconciled:
                     return self._wait_for_user(operation, worker_id, checkpoint, now)
-                confirmed.append(entry.occurrence_id)
-                checkpoint["confirmed_occurrences"] = confirmed
-                checkpoint.pop("unknown_step", None)
-                operation = self.operations.checkpoint(
-                    operation.operation_id,
-                    worker_id=worker_id,
-                    checkpoint=checkpoint,
-                    now=now,
-                    state="running",
+                operation = self._record_confirmation(
+                    operation, worker_id, checkpoint, confirmed, confirmed_ids, entry.occurrence_id, now
                 )
                 if operation.state != "running":
                     return operation
@@ -391,15 +384,8 @@ class CopyExecutionService:
                 except Exception:
                     return self._wait_for_user(operation, worker_id, checkpoint, now)
                 if reconciled:
-                    confirmed.append(entry.occurrence_id)
-                    checkpoint["confirmed_occurrences"] = confirmed
-                    checkpoint.pop("unknown_step", None)
-                    operation = self.operations.checkpoint(
-                        operation.operation_id,
-                        worker_id=worker_id,
-                        checkpoint=checkpoint,
-                        now=now,
-                        state="running",
+                    operation = self._record_confirmation(
+                        operation, worker_id, checkpoint, confirmed, confirmed_ids, entry.occurrence_id, now
                     )
                     if operation.state != "running":
                         return operation
@@ -434,15 +420,8 @@ class CopyExecutionService:
                 if operation.state != "running":
                     return operation
                 continue
-            confirmed.append(entry.occurrence_id)
-            checkpoint["confirmed_occurrences"] = confirmed
-            checkpoint.pop("unknown_step", None)
-            operation = self.operations.checkpoint(
-                operation.operation_id,
-                worker_id=worker_id,
-                checkpoint=checkpoint,
-                now=now,
-                state="running",
+            operation = self._record_confirmation(
+                operation, worker_id, checkpoint, confirmed, confirmed_ids, entry.occurrence_id, now
             )
             if operation.state != "running":
                 return operation
@@ -452,6 +431,28 @@ class CopyExecutionService:
         checkpoint["issues"] = issues
         terminal = "partial" if stored.plan.omitted_entries or issues else "succeeded"
         return self._finish(operation, worker_id, checkpoint, now, terminal)
+
+    def _record_confirmation(
+        self,
+        operation: OperationRecord,
+        worker_id: str,
+        checkpoint: dict[str, Any],
+        confirmed: list[str],
+        confirmed_ids: set[str],
+        occurrence_id: str,
+        now: datetime,
+    ) -> OperationRecord:
+        confirmed.append(occurrence_id)
+        confirmed_ids.add(occurrence_id)
+        checkpoint["confirmed_occurrences"] = confirmed
+        checkpoint.pop("unknown_step", None)
+        return self.operations.checkpoint(
+            operation.operation_id,
+            worker_id=worker_id,
+            checkpoint=checkpoint,
+            now=now,
+            state="running",
+        )
 
     def _renew_or_stop(
         self,

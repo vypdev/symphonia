@@ -110,6 +110,40 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual([track for _, track in self.writer.added], ["target-1"])
         self.assertEqual(operation.checkpoint["confirmed_occurrences"], ["occ-1"])
 
+    def test_duplicate_target_tracks_keep_distinct_ordered_occurrences(self) -> None:
+        source = PlaylistSnapshot(
+            "snapshot-duplicates",
+            "spotify",
+            "playlist-1",
+            (
+                SourcePlaylistEntry("occ-1", 0, "source-1", EntryClassification.READY, "target-shared"),
+                SourcePlaylistEntry("occ-2", 1, "source-1", EntryClassification.READY, "target-shared"),
+                SourcePlaylistEntry("occ-3", 2, "source-2", EntryClassification.READY, "target-other"),
+            ),
+        )
+        stored = self.workflow.create_plan(
+            source,
+            target_provider="youtube",
+            target_playlist_name="Duplicates",
+            target_visibility="private",
+            policy=CopyPolicy.STRICT,
+            now=NOW,
+        )
+        digest = self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(operation.state, "succeeded")
+        self.assertEqual(operation.checkpoint["confirmed_occurrences"], ["occ-1", "occ-2", "occ-3"])
+        self.assertEqual(
+            self.writer.added,
+            [
+                (f"{digest}:entry:occ-1", "target-shared"),
+                (f"{digest}:entry:occ-2", "target-shared"),
+                (f"{digest}:entry:occ-3", "target-other"),
+            ],
+        )
+
     def test_best_effort_omission_is_partial_not_success(self) -> None:
         digest = self.accepted_digest(policy=CopyPolicy.BEST_EFFORT, include_unmatched=True)
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
