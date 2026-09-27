@@ -26,11 +26,13 @@ class FakeAdapter:
     def __init__(self, *, error: ProviderApiError | None = None, complete: bool = True) -> None:
         self.error = error
         self.complete = complete
+        self.read_calls = 0
 
     def capabilities(self, connection_id: str):
         raise AssertionError("not used")
 
     def read_playlist_pages(self, connection_id: str, playlist: ProviderObjectRef, cursor: str | None = None):
+        self.read_calls += 1
         if self.error is not None:
             raise self.error
         entry = ProviderPlaylistEntry(
@@ -117,6 +119,61 @@ class LibraryImportExecutionTests(unittest.TestCase):
 
         self.assertEqual(failed.state, "failed")
         self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
+
+    def test_malformed_persisted_playlist_id_never_reaches_adapter(self) -> None:
+        adapter = FakeAdapter()
+        created = self.operations.create(
+            operation_type="import_playlist",
+            idempotency_key="malformed-import-payload",
+            payload={
+                "provider": "spotify",
+                "connection_id": "connection-1",
+                "playlist": {
+                    "provider": "spotify",
+                    "object_type": "playlist",
+                    "object_id": ["not", "an", "id"],
+                    "namespace": "connection-1",
+                },
+                "snapshot_id": "snapshot-malformed",
+                "observed_at": NOW.isoformat(),
+            },
+            now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+
+        result = self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(result.state, "failed")
+        self.assertEqual(adapter.read_calls, 0)
+        self.assertIsNone(
+            self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
+        )
+
+    def test_conflicting_persisted_provider_never_reaches_adapter(self) -> None:
+        adapter = FakeAdapter()
+        created = self.operations.create(
+            operation_type="import_playlist",
+            idempotency_key="conflicting-import-provider",
+            payload={
+                "provider": "youtube",
+                "connection_id": "connection-1",
+                "playlist": {
+                    "provider": "spotify",
+                    "object_type": "playlist",
+                    "object_id": "playlist-1",
+                    "namespace": "connection-1",
+                },
+                "snapshot_id": "snapshot-conflicting",
+                "observed_at": NOW.isoformat(),
+            },
+            now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+
+        result = self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(result.state, "failed")
+        self.assertEqual(adapter.read_calls, 0)
 
 
 if __name__ == "__main__":

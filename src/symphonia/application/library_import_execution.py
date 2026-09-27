@@ -203,14 +203,16 @@ class LibraryImportExecutionService:
             raise ValueError("import operation payload has no playlist reference")
         try:
             playlist = ProviderObjectRef(
-                str(raw_playlist["provider"]),
-                str(raw_playlist["object_type"]),
-                str(raw_playlist["object_id"]),
-                str(raw_playlist["namespace"]),
+                raw_playlist["provider"],
+                raw_playlist["object_type"],
+                raw_playlist["object_id"],
+                raw_playlist["namespace"],
             )
             parsed_observed_at = datetime.fromisoformat(observed_at)
         except (KeyError, TypeError, ValueError) as error:
             raise ValueError("import operation payload has an invalid playlist or timestamp") from error
+        if payload.get("provider") != playlist.provider:
+            raise ValueError("import operation provider does not match playlist")
         if parsed_observed_at.tzinfo is None:
             raise ValueError("import operation observed_at must be timezone-aware")
         return connection_id, playlist, snapshot_id, parsed_observed_at.astimezone(timezone.utc)

@@ -35,6 +35,8 @@ There is no complete multi-collection library importer. The owner-approved found
 
 The durable wrapper persists import intent before provider reads and records terminal publication details, authentication waits, rate-limit waits, and bounded transient retries. It does not durably checkpoint individual pages or stage them incrementally; after a transient failure it re-reads the playlist from the beginning. Saved-track collections, multi-collection sessions, retention/deletion scheduling, export policy, and representative-size guarantees are not part of this foundation evidence. This paragraph is an as-built foundation boundary, not a claim that the SDD capability is implemented.
 
+The foundation executor checks stored playlist identifier types and the operation/playlist provider binding before invoking an adapter; malformed persisted intent fails without a provider read.
+
 ### 2.3 Evidence and unknowns
 
 - Shared model: [provider track, playlist, snapshot, and import invariants](../docs/domain/domain-model.md).

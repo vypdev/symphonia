@@ -36,6 +36,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Copy execution retains permanently failed occurrences as itemized issues across waits and restarts; resuming a later uncertain write does not repeat those failed writes.
 - Before resumed writes, copy execution rejects malformed, duplicated, out-of-plan, out-of-order, or contradictory item progress and invalid target identifiers into `waiting_user` for review.
 - Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably. Current scope is one playlist: pages are materialized in memory, and transient retries re-read from the beginning because page-level durable staging/checkpoints are not implemented; full library-import behavior remains blocked in its Draft SDD.
+- Resumed playlist imports reject non-textual stored playlist identifiers and conflicting provider bindings before any adapter read; malformed intent is not coerced into a new external identity.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Direct-callback authorization can resolve a durable attempt by the returned state digest after restart without persisting raw state; ambiguous digests fail closed.
 - Authorization consumption is covered across independent SQLite connections so callback replay races produce exactly one consumed attempt.
