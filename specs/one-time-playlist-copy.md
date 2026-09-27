@@ -199,6 +199,7 @@ Status shall never rely only on color. Keyboard navigation, visible focus, seman
 | Rate limit | Enter `waiting_rate_limit` with next eligible time | Automatic bounded resume; cancellation remains available |
 | Some items fail permanently | Checkpoint each failure as a terminal item issue; never resend that occurrence when a later step waits or resumes; finish as `partial` with per-item reasons | Create a new remediation plan for failed entries |
 | Process or host restarts | Resume from durable checkpoint and lease rules | No manual action unless state becomes uncertain |
+| Stored copy progress contradicts the accepted plan | Stop before another provider mutation and retain the checkpoint in `waiting_user` | Investigate or restore compatible evidence; do not infer success or retry from malformed progress |
 | User cancels | Stop scheduling further writes; preserve confirmed results | Review partial result; cancellation is not rollback |
 
 ## 11. Security and privacy

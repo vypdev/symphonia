@@ -86,6 +86,23 @@ class CopyExecutionTests(unittest.TestCase):
         )
         return self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
 
+    def resume_with_checkpoint(self, digest: str, checkpoint: dict[str, object]) -> None:
+        operation = self.operations.create(
+            operation_type="copy_playlist",
+            idempotency_key=f"copy-plan:{digest}",
+            payload={"plan_digest": digest},
+            now=NOW,
+        )
+        self.operations.claim(operation.operation_id, worker_id="seeding-worker", now=NOW)
+        self.operations.checkpoint(
+            operation.operation_id,
+            worker_id="seeding-worker",
+            checkpoint=checkpoint,
+            now=NOW,
+            state="waiting_user",
+        )
+        self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
+
     def test_success_checkpoints_entries_in_source_order(self) -> None:
         digest = self.accepted_digest()
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
@@ -208,6 +225,59 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(reconciled.checkpoint["confirmed_occurrences"], ["occ-2"])
         self.assertEqual([issue["step"] for issue in reconciled.checkpoint["issues"]], ["occ-1"])
         self.assertEqual(self.writer.added, [(first_key, "target-1"), (second_key, "target-2")])
+
+    def test_duplicate_confirmed_checkpoint_waits_without_provider_writes(self) -> None:
+        digest = self.accepted_digest()
+        self.resume_with_checkpoint(
+            digest,
+            {"target_playlist_id": "target-playlist-1", "confirmed_occurrences": ["occ-1", "occ-1"]},
+        )
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["failure_code"], "invalid_copy_checkpoint")
+        self.assertEqual(self.writer.added, [])
+
+    def test_conflicting_failure_checkpoint_waits_without_provider_writes(self) -> None:
+        digest = self.accepted_digest()
+        self.resume_with_checkpoint(
+            digest,
+            {
+                "target_playlist_id": "target-playlist-1",
+                "confirmed_occurrences": ["occ-1"],
+                "issues": [{"step": "occ-1", "detail": "unavailable"}],
+            },
+        )
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["failure_code"], "invalid_copy_checkpoint")
+        self.assertEqual(self.writer.added, [])
+
+    def test_out_of_order_confirmations_wait_without_provider_writes(self) -> None:
+        digest = self.accepted_digest(include_second_ready=True)
+        self.resume_with_checkpoint(
+            digest,
+            {"target_playlist_id": "target-playlist-1", "confirmed_occurrences": ["occ-2", "occ-1"]},
+        )
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["failure_code"], "invalid_copy_checkpoint")
+        self.assertEqual(self.writer.added, [])
+
+    def test_malformed_target_identifier_waits_without_provider_writes(self) -> None:
+        digest = self.accepted_digest()
+        self.resume_with_checkpoint(digest, {"target_playlist_id": ["not", "an", "id"]})
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["failure_code"], "invalid_copy_checkpoint")
+        self.assertEqual(self.writer.added, [])
 
     def test_retryable_write_releases_operation_until_scheduled(self) -> None:
         digest = self.accepted_digest()

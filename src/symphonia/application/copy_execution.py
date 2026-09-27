@@ -106,17 +106,49 @@ class CopyExecutionService:
         checkpoint = dict(operation.checkpoint)
         if operation.cancel_requested:
             return self._finish(operation, worker_id, checkpoint, now, "cancelled")
-        confirmed = list(checkpoint.get("confirmed_occurrences", []))
-        issues = list(checkpoint.get("issues", []))
-        target_id = checkpoint.get("target_playlist_id")
-        unknown_step = checkpoint.get("unknown_step")
         writable_entries = stored.plan.writable_entries
         writable_ids = {entry.occurrence_id for entry in writable_entries}
-        failed_steps = {
-            issue.get("step")
-            for issue in issues
-            if isinstance(issue, dict) and isinstance(issue.get("step"), str)
-        }
+        raw_confirmed = checkpoint.get("confirmed_occurrences", [])
+        raw_issues = checkpoint.get("issues", [])
+        target_id = checkpoint.get("target_playlist_id")
+        unknown_step = checkpoint.get("unknown_step")
+        if (
+            not isinstance(raw_confirmed, list)
+            or not all(isinstance(item, str) for item in raw_confirmed)
+            or not isinstance(raw_issues, list)
+            or (target_id is not None and (not isinstance(target_id, str) or not target_id.strip()))
+        ):
+            return self._wait_for_user(
+                operation,
+                worker_id,
+                checkpoint | {"failure_code": "invalid_copy_checkpoint"},
+                now,
+            )
+        confirmed = list(raw_confirmed)
+        issues = list(raw_issues)
+        confirmed_ids = set(confirmed)
+        issue_steps = [issue.get("step") if isinstance(issue, dict) else None for issue in issues]
+        if any(not isinstance(step, str) or step not in writable_ids for step in issue_steps):
+            return self._wait_for_user(
+                operation,
+                worker_id,
+                checkpoint | {"failure_code": "invalid_copy_checkpoint"},
+                now,
+            )
+        failed_steps = set(issue_steps)
+        if (
+            len(confirmed_ids) != len(confirmed)
+            or not confirmed_ids <= writable_ids
+            or confirmed != [entry.occurrence_id for entry in writable_entries if entry.occurrence_id in confirmed_ids]
+            or len(failed_steps) != len(issue_steps)
+            or confirmed_ids & failed_steps
+        ):
+            return self._wait_for_user(
+                operation,
+                worker_id,
+                checkpoint | {"failure_code": "invalid_copy_checkpoint"},
+                now,
+            )
 
         if target_id is None and confirmed:
             return self._wait_for_user(
