@@ -117,7 +117,7 @@ After a crash, another worker waits for lease expiry, claims the operation, and 
 - `running` requires an unexpired lease token and owner.
 - `waiting_rate_limit` and `retry_scheduled` store an absolute next-eligible time plus the source of that timing.
 - `waiting_user` stores a redacted reason and a bounded set of permitted actions.
-- Cancellation is checked before claim, before every side effect, and between provider batches.
+- Cancellation is checked before claim, before every side effect, and between provider batches. The lease-renewal gate used before a new step refuses a cancellation-requested operation; while its lease remains valid, the handler checkpoints the cancellation without starting that step.
 
 ### Idempotency
 
@@ -197,7 +197,7 @@ Progress shall not move backward without an explicit explanation. Status shall n
 | Worker crashes before side effect | Lease expires; checkpoint remains authoritative | Another worker safely resumes |
 | Worker crashes after external acceptance but before checkpoint | Step remains uncertain | Reconcile externally before deciding success or retry |
 | Store unavailable | Stop new external side effects; do not rely on memory-only progress | Resume after durable store health returns |
-| Lease renewal fails | Stop starting side effects and relinquish/expire ownership | Another claim after store recovery and lease expiry |
+| Lease renewal fails or cancellation is requested | Stop before another side effect; checkpoint cancellation only while the lease is still valid | A still-valid worker records the safe stop; otherwise lease expiry recovery takes over |
 | Duplicate dispatch | Atomic claim permits one active lease | Extra dispatch becomes a no-op |
 | Rate limit | Persist provider advice and release active execution | Become eligible at safe time |
 | Authorization expires | Persist `waiting_user`; retain checkpoint | Resume after scoped reauthorization |

@@ -21,6 +21,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Aggregate operation queue summaries expose state counts, eligible age, and expired leases without payload data.
 - Explicit provider rate-limit waits with absolute retry times and durable eligibility.
 - Bounded transient retry budgets for copy and import handlers with durable exhaustion outcomes.
+- Lease renewal refuses cancellation-requested work; copy and import executors checkpoint a cooperative stop before beginning their next provider step when they still hold a valid lease.
 - Lease-expiry recovery is audited distinctly from first claims, with prior worker identity retained only as metadata.
 - An expired lease with cancellation requested is quarantined in `waiting_user` with durable reconciliation evidence, never sent through the ordinary handler, and can be finalized only through an explicit no-effect/effect-confirmed repository resolution; checkpoint, retry, and rate-limit release paths preserve this quarantine; authenticated caller wiring remains out of scope.
 - Redacted operation diagnostics expose a bounded unknown-step indicator and only allowlisted reconciliation/recovery outcome metadata, never unknown step IDs or checkpoint values.

@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from symphonia.infrastructure.sqlite_operations import OperationRecord, OperationRepository
+from symphonia.infrastructure.sqlite_operations import (
+    LeaseConflict,
+    OperationRecord,
+    OperationRepository,
+)
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
 from symphonia.providers.errors import ProviderApiError, ProviderErrorCategory
 
@@ -100,6 +104,16 @@ class LibraryImportExecutionService:
                 snapshot_id=snapshot_id,
                 observed_at=observed_at,
             )
+        except LeaseConflict:
+            latest = self.operations.get(operation.operation_id)
+            if (
+                latest.cancel_requested
+                and latest.worker_id == worker_id
+                and latest.lease_expires_at is not None
+                and latest.lease_expires_at > now
+            ):
+                return self._checkpoint(latest, worker_id, checkpoint, now, "cancelled")
+            raise
         except ProviderApiError as error:
             checkpoint["failure_code"] = error.category.value
             if error.category in {

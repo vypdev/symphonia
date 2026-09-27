@@ -756,7 +756,7 @@ class OperationRepository:
         now: datetime,
         lease_seconds: int = 30,
     ) -> OperationRecord:
-        """Extend a healthy lease; an expired owner cannot resurrect it."""
+        """Extend a healthy, non-cancelled lease; stale owners cannot revive it."""
 
         _require_text(operation_id, label="operation_id")
         _require_text(worker_id, label="worker_id")
@@ -772,6 +772,8 @@ class OperationRepository:
                 raise OperationNotFound(operation_id)
             if row["state"] != "running" or row["worker_id"] != worker_id:
                 raise LeaseConflict("worker does not own a running operation")
+            if row["cancel_requested"]:
+                raise LeaseConflict("operation cancellation has been requested")
             if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
                 raise LeaseConflict("operation lease has expired")
             self._connection.execute(

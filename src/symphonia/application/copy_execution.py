@@ -7,7 +7,11 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from symphonia.domain.models import PlanAcceptanceError
-from symphonia.infrastructure.sqlite_operations import OperationRecord, OperationRepository
+from symphonia.infrastructure.sqlite_operations import (
+    LeaseConflict,
+    OperationRecord,
+    OperationRepository,
+)
 from symphonia.infrastructure.sqlite_plans import CopyPlanRepository, StoredCopyPlan
 from symphonia.providers.writing import PlaylistWriter, ProviderWriteError, WriteOutcome
 
@@ -149,9 +153,14 @@ class CopyExecutionService:
                     now=now,
                     lease_seconds=lease_seconds,
                 )
-            except Exception:
+            except LeaseConflict:
                 latest = self.operations.get(operation.operation_id)
-                if latest.cancel_requested:
+                if (
+                    latest.cancel_requested
+                    and latest.worker_id == worker_id
+                    and latest.lease_expires_at is not None
+                    and latest.lease_expires_at > now
+                ):
                     return self._finish(latest, worker_id, checkpoint, now, "running")
                 raise
             step_key = f"{digest}:entry:{entry.occurrence_id}"
