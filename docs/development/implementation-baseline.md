@@ -1,7 +1,7 @@
 # Implementation baseline
 
 **Status:** owner-approved foundation slice
-**Last reviewed:** 2026-09-26
+**Last reviewed:** 2026-09-27
 
 The first implementation increment is intentionally narrower than any provider or Home Assistant capability. It proves the provider-independent core and the durable-operation persistence contract without selecting an external web framework, provider SDK, OAuth strategy, or frontend stack.
 
@@ -32,6 +32,7 @@ The first implementation increment is intentionally narrower than any provider o
 - The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a potentially stale handler object.
 - Cooperative single-process operation worker with interruptible polling and injected clock support.
 - Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
+- Copy execution durably marks a target-create or entry-add step in-flight before the provider call; a resumed step is reconciled before any repeated mutation, and inconclusive evidence or reconciliation errors stay in `waiting_user`. This is a foundation safety behavior only; provider reconciliation strategy and the full copy contract remain blocked in the Draft SDD.
 - Playlist import executor persists intent before reads and reports succeeded, partial, waiting-user, retry, and rate-limit outcomes durably.
 - Provider-neutral authorization attempts with hashed state, exact redirect binding, expiry, and single-use consumption.
 - Direct-callback authorization can resolve a durable attempt by the returned state digest after restart without persisting raw state; ambiguous digests fail closed.

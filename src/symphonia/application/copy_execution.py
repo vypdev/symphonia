@@ -109,11 +109,113 @@ class CopyExecutionService:
         confirmed = list(checkpoint.get("confirmed_occurrences", []))
         issues = list(checkpoint.get("issues", []))
         target_id = checkpoint.get("target_playlist_id")
+        unknown_step = checkpoint.get("unknown_step")
+        writable_entries = stored.plan.writable_entries
+        writable_ids = {entry.occurrence_id for entry in writable_entries}
+        failed_steps = {
+            issue.get("step")
+            for issue in issues
+            if isinstance(issue, dict) and isinstance(issue.get("step"), str)
+        }
+
+        if target_id is None and confirmed:
+            return self._wait_for_user(
+                operation,
+                worker_id,
+                checkpoint | {"failure_code": "invalid_target_checkpoint"},
+                now,
+            )
+
+        if unknown_step is not None:
+            first_unconfirmed = next(
+                (
+                    entry.occurrence_id
+                    for entry in writable_entries
+                    if entry.occurrence_id not in confirmed and entry.occurrence_id not in failed_steps
+                ),
+                None,
+            )
+            if unknown_step != "target" and (
+                not isinstance(unknown_step, str)
+                or unknown_step not in writable_ids
+                or unknown_step in confirmed
+                or unknown_step != first_unconfirmed
+                or target_id is None
+            ):
+                return self._wait_for_user(
+                    operation,
+                    worker_id,
+                    checkpoint | {"failure_code": "invalid_unknown_step_checkpoint"},
+                    now,
+                )
+            if unknown_step == "target" and target_id is None and confirmed:
+                return self._wait_for_user(
+                    operation,
+                    worker_id,
+                    checkpoint | {"failure_code": "invalid_unknown_step_checkpoint"},
+                    now,
+                )
+
+        target_key = f"{digest}:target"
+        if unknown_step == "target":
+            stopped = self._renew_or_stop(
+                operation,
+                worker_id,
+                checkpoint,
+                now,
+                lease_seconds,
+            )
+            if stopped is not None:
+                return stopped
+            try:
+                target = writer.reconcile_target_playlist(idempotency_key=target_key)
+            except Exception:
+                return self._wait_for_user(operation, worker_id, checkpoint, now)
+            if target is None or (target_id is not None and target.provider_playlist_id != target_id):
+                return self._wait_for_user(operation, worker_id, checkpoint, now)
+            target_id = target.provider_playlist_id
+            checkpoint["target_playlist_id"] = target_id
+            checkpoint.pop("unknown_step", None)
+            operation = self.operations.checkpoint(
+                operation.operation_id,
+                worker_id=worker_id,
+                checkpoint=checkpoint,
+                now=now,
+                state="running",
+            )
+            if operation.state != "running":
+                return operation
+            unknown_step = None
 
         if target_id is None:
-            if self.operations.get(operation.operation_id).cancel_requested:
-                return self._finish(operation, worker_id, checkpoint, now, "cancelled")
-            target_key = f"{digest}:target"
+            stopped = self._renew_or_stop(
+                operation,
+                worker_id,
+                checkpoint,
+                now,
+                lease_seconds,
+            )
+            if stopped is not None:
+                return stopped
+            checkpoint["unknown_step"] = "target"
+            operation = self.operations.checkpoint(
+                operation.operation_id,
+                worker_id=worker_id,
+                checkpoint=checkpoint,
+                now=now,
+                state="running",
+            )
+            if operation.state != "running":
+                return operation
+            stopped = self._renew_or_stop(
+                operation,
+                worker_id,
+                checkpoint,
+                now,
+                lease_seconds,
+            )
+            if stopped is not None:
+                return stopped
             try:
                 target = writer.ensure_target_playlist(
                     provider=stored.plan.target_provider,
@@ -123,18 +225,36 @@ class CopyExecutionService:
                 )
             except ProviderWriteError as error:
                 if error.outcome is WriteOutcome.RETRYABLE:
+                    checkpoint.pop("unknown_step", None)
                     return self._schedule_retry(operation, worker_id, checkpoint, now)
                 if error.outcome is WriteOutcome.RATE_LIMITED:
+                    checkpoint.pop("unknown_step", None)
                     return self._schedule_rate_limit(operation, worker_id, checkpoint, now, error.retry_at)
                 if error.outcome is WriteOutcome.UNKNOWN_OUTCOME:
-                    target = writer.reconcile_target_playlist(idempotency_key=target_key)
+                    stopped = self._renew_or_stop(
+                        operation,
+                        worker_id,
+                        checkpoint,
+                        now,
+                        lease_seconds,
+                    )
+                    if stopped is not None:
+                        return stopped
+                    try:
+                        target = writer.reconcile_target_playlist(idempotency_key=target_key)
+                    except Exception:
+                        return self._wait_for_user(operation, worker_id, checkpoint, now)
                     if target is None:
-                        return self._wait_for_user(operation, worker_id, checkpoint | {"unknown_step": "target"}, now)
+                        return self._wait_for_user(operation, worker_id, checkpoint, now)
                 else:
+                    checkpoint.pop("unknown_step", None)
                     issues.append({"step": "target", "detail": error.detail, "provider_code": error.provider_code})
                     return self._finish(operation, worker_id, checkpoint | {"issues": issues}, now, "failed")
+            except Exception:
+                return self._wait_for_user(operation, worker_id, checkpoint, now)
             target_id = target.provider_playlist_id
             checkpoint["target_playlist_id"] = target_id
+            checkpoint.pop("unknown_step", None)
             operation = self.operations.checkpoint(
                 operation.operation_id,
                 worker_id=worker_id,
@@ -142,52 +262,127 @@ class CopyExecutionService:
                 now=now,
                 state="running",
             )
+            if operation.state != "running":
+                return operation
 
-        for entry in stored.plan.writable_entries:
+        for entry in writable_entries:
             if entry.occurrence_id in confirmed:
                 continue
-            try:
-                self.operations.renew_lease(
+            step_key = f"{digest}:entry:{entry.occurrence_id}"
+            if unknown_step == entry.occurrence_id:
+                stopped = self._renew_or_stop(
+                    operation,
+                    worker_id,
+                    checkpoint,
+                    now,
+                    lease_seconds,
+                )
+                if stopped is not None:
+                    return stopped
+                try:
+                    reconciled = writer.reconcile_entry(
+                        target_playlist_id=target_id,
+                        provider_track_id=entry.target_track_id or "",
+                        idempotency_key=step_key,
+                    )
+                except Exception:
+                    return self._wait_for_user(operation, worker_id, checkpoint, now)
+                if not reconciled:
+                    return self._wait_for_user(operation, worker_id, checkpoint, now)
+                confirmed.append(entry.occurrence_id)
+                checkpoint["confirmed_occurrences"] = confirmed
+                checkpoint.pop("unknown_step", None)
+                operation = self.operations.checkpoint(
                     operation.operation_id,
                     worker_id=worker_id,
+                    checkpoint=checkpoint,
                     now=now,
-                    lease_seconds=lease_seconds,
+                    state="running",
                 )
-            except LeaseConflict:
-                latest = self.operations.get(operation.operation_id)
-                if (
-                    latest.cancel_requested
-                    and latest.worker_id == worker_id
-                    and latest.lease_expires_at is not None
-                    and latest.lease_expires_at > now
-                ):
-                    return self._finish(latest, worker_id, checkpoint, now, "running")
-                raise
-            step_key = f"{digest}:entry:{entry.occurrence_id}"
-            result = writer.add_entry(
-                target_playlist_id=target_id,
-                provider_track_id=entry.target_track_id or "",
-                idempotency_key=step_key,
+                if operation.state != "running":
+                    return operation
+                unknown_step = None
+                continue
+
+            stopped = self._renew_or_stop(
+                operation,
+                worker_id,
+                checkpoint,
+                now,
+                lease_seconds,
             )
-            if result.outcome is WriteOutcome.UNKNOWN_OUTCOME:
-                if writer.reconcile_entry(
+            if stopped is not None:
+                return stopped
+            checkpoint["unknown_step"] = entry.occurrence_id
+            operation = self.operations.checkpoint(
+                operation.operation_id,
+                worker_id=worker_id,
+                checkpoint=checkpoint,
+                now=now,
+                state="running",
+            )
+            if operation.state != "running":
+                return operation
+            stopped = self._renew_or_stop(
+                operation,
+                worker_id,
+                checkpoint,
+                now,
+                lease_seconds,
+            )
+            if stopped is not None:
+                return stopped
+            try:
+                result = writer.add_entry(
                     target_playlist_id=target_id,
                     provider_track_id=entry.target_track_id or "",
                     idempotency_key=step_key,
-                ):
-                    result = type(result)(WriteOutcome.CONFIRMED_SUCCESS, result.provider_code, result.detail)
-                else:
-                    return self._wait_for_user(
-                        operation,
-                        worker_id,
-                        checkpoint | {"unknown_step": entry.occurrence_id},
-                        now,
+                )
+            except Exception:
+                return self._wait_for_user(operation, worker_id, checkpoint, now)
+            if result.outcome is WriteOutcome.UNKNOWN_OUTCOME:
+                stopped = self._renew_or_stop(
+                    operation,
+                    worker_id,
+                    checkpoint,
+                    now,
+                    lease_seconds,
+                )
+                if stopped is not None:
+                    return stopped
+                try:
+                    reconciled = writer.reconcile_entry(
+                        target_playlist_id=target_id,
+                        provider_track_id=entry.target_track_id or "",
+                        idempotency_key=step_key,
                     )
+                except Exception:
+                    return self._wait_for_user(operation, worker_id, checkpoint, now)
+                if reconciled:
+                    confirmed.append(entry.occurrence_id)
+                    checkpoint["confirmed_occurrences"] = confirmed
+                    checkpoint.pop("unknown_step", None)
+                    operation = self.operations.checkpoint(
+                        operation.operation_id,
+                        worker_id=worker_id,
+                        checkpoint=checkpoint,
+                        now=now,
+                        state="running",
+                    )
+                    if operation.state != "running":
+                        return operation
+                    unknown_step = None
+                    continue
+                else:
+                    return self._wait_for_user(operation, worker_id, checkpoint, now)
             if result.outcome is WriteOutcome.RETRYABLE:
+                checkpoint.pop("unknown_step", None)
                 return self._schedule_retry(operation, worker_id, checkpoint, now)
             if result.outcome is WriteOutcome.RATE_LIMITED:
+                checkpoint.pop("unknown_step", None)
                 return self._schedule_rate_limit(operation, worker_id, checkpoint, now, result.retry_at)
             if result.outcome is WriteOutcome.PERMANENT_FAILURE:
+                checkpoint.pop("unknown_step", None)
                 issues.append(
                     {
                         "step": entry.occurrence_id,
@@ -203,9 +398,12 @@ class CopyExecutionService:
                     now=now,
                     state="running",
                 )
+                if operation.state != "running":
+                    return operation
                 continue
             confirmed.append(entry.occurrence_id)
             checkpoint["confirmed_occurrences"] = confirmed
+            checkpoint.pop("unknown_step", None)
             operation = self.operations.checkpoint(
                 operation.operation_id,
                 worker_id=worker_id,
@@ -213,12 +411,47 @@ class CopyExecutionService:
                 now=now,
                 state="running",
             )
+            if operation.state != "running":
+                return operation
 
         checkpoint["confirmed_occurrences"] = confirmed
         checkpoint["omitted_occurrences"] = [entry.occurrence_id for entry in stored.plan.omitted_entries]
         checkpoint["issues"] = issues
         terminal = "partial" if stored.plan.omitted_entries or issues else "succeeded"
         return self._finish(operation, worker_id, checkpoint, now, terminal)
+
+    def _renew_or_stop(
+        self,
+        operation: OperationRecord,
+        worker_id: str,
+        checkpoint: dict[str, Any],
+        now: datetime,
+        lease_seconds: int,
+    ) -> OperationRecord | None:
+        try:
+            self.operations.renew_lease(
+                operation.operation_id,
+                worker_id=worker_id,
+                now=now,
+                lease_seconds=lease_seconds,
+            )
+        except LeaseConflict:
+            latest = self.operations.get(operation.operation_id)
+            if (
+                latest.cancel_requested
+                and latest.worker_id == worker_id
+                and latest.lease_expires_at is not None
+                and latest.lease_expires_at > now
+            ):
+                return self.operations.checkpoint(
+                    operation.operation_id,
+                    worker_id=worker_id,
+                    checkpoint=checkpoint,
+                    now=now,
+                    state="running",
+                )
+            raise
+        return None
 
     def _finish(
         self,

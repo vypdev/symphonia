@@ -1,7 +1,7 @@
 # One-time playlist copy
 
 - Status: Draft
-- Date: 2026-09-20
+- Date: 2026-09-27
 - Catalog capability ID: `one-time-playlist-copy`
 - Owners: Symphonia maintainers
 - Scope: preview and execute a finite playlist copy using an immutable plan, explicit non-ready policy, ordered writes, reconciliation, and item-level outcomes.
@@ -29,6 +29,7 @@ Evidence sources:
 - [Provider specification](../docs/providers/provider-specification.md)
 - [System architecture](../docs/architecture/system-architecture.md)
 - [Open questions](../docs/open-questions.md)
+- [Owner-approved implementation baseline](../docs/development/implementation-baseline.md) (foundation evidence only; it does not close this SDD's blockers or authorize the full capability)
 
 ## 3. Actors and authorization
 
@@ -192,8 +193,8 @@ Status shall never rely only on color. Keyboard navigation, visible focus, seman
 | Source changes before acceptance | Mark plan stale; issue no writes | Recalculate and review a new revision |
 | Connection expires before execution | Pause without losing progress | Reauthorize, then resume |
 | Target capability changes | Stop before incompatible writes; record evidence | Re-plan or choose another target |
-| Target creation response is unknown | Search/reconcile using stored intent and marker; do not blindly create again | Wait for reconciliation or inspect candidates |
-| Entry batch response is unknown | Reconcile target contents/checkpoint before retry | Resume only when safe |
+| Target creation may have an unknown outcome, including process loss during the call | Persist the target step as in-flight before the create call; on every resume reconcile the stored idempotency key before any create call; an inconclusive result stays `waiting_user` | Wait for provider-aware reconciliation or inspect candidates; never blindly create again |
+| Entry write may have an unknown outcome, including process loss during the call | Persist the occurrence as in-flight before the add call; on every resume reconcile that occurrence before any add call; only positive reconciliation confirms it, while inconclusive evidence stays `waiting_user` | Resume only after positive reconciliation; otherwise wait for provider-aware evidence or operator review |
 | Rate limit | Enter `waiting_rate_limit` with next eligible time | Automatic bounded resume; cancellation remains available |
 | Some items fail permanently | Finish as `partial` with per-item reasons | Create a new remediation plan for failed entries |
 | Process or host restarts | Resume from durable checkpoint and lease rules | No manual action unless state becomes uncertain |
@@ -257,7 +258,7 @@ Implementation shall update:
 5. Acceptance binds to a specific plan digest, source projection version, capabilities snapshot, and target intent.
 6. A stale or modified plan cannot execute.
 7. Execution survives restart without duplicating the target playlist or confirmed entries.
-8. Unknown provider outcomes trigger reconciliation before retry.
+8. Target and entry steps are durably marked in-flight before each provider mutation; after restart/resume, reconciliation runs before any repeated create/add call, and inconclusive evidence or reconciliation errors remain `waiting_user` without another mutation.
 9. Cancellation stops future work and accurately reports already confirmed writes.
 10. Partial success has per-item explanations and a safe remediation path.
 11. Logs and diagnostics contain no provider secrets.

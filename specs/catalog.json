@@ -315,12 +315,18 @@
         "docs/decisions/0002-copy-and-sync-are-distinct.md",
         "docs/domain/domain-model.md",
         "docs/product/product-specification.md",
-        "docs/providers/provider-research.md"
+        "docs/providers/provider-research.md",
+        "docs/development/implementation-baseline.md"
       ],
       "implementationEvidence": {
-        "code": [],
+        "code": [
+          "src/symphonia/application/copy_execution.py"
+        ],
         "tests": [],
-        "documentation": []
+        "documentation": [
+          "docs/development/implementation-baseline.md",
+          "specs/one-time-playlist-copy.md"
+        ]
       },
       "blockers": [
         "OQ-003 default treatment of non-ready entries",
