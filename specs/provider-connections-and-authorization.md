@@ -1,14 +1,14 @@
 # Provider connections and authorization
 
 - Status: Draft
-- Date: 2026-09-20
+- Date: 2026-09-27
 - Catalog capability ID: `provider-connections-and-authorization`
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
 - Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`
 - Related decisions/research: [provider specification](../docs/providers/provider-specification.md), [official API research](../docs/providers/provider-research.md), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `OQ-001`, `OQ-004`, `RG-001`, `RG-002`
 - Required review gates: product UX, architecture, provider feasibility, testing, documentation, security/privacy
-- Open decisions blocking readiness: direct App callback reachability and provider-specific registration/scopes/token lifecycle; unofficial YouTube Music MVP decision; secret key source and backup contract
+- Open decisions blocking readiness: direct App callback reachability and provider-specific registration/scopes/token lifecycle; authenticated actor/session binding; provider token exchange/refresh/revocation and encrypted secret-store integration; unofficial YouTube Music MVP decision; secret key source and backup contract
 
 ## 1. Executive summary
 
@@ -35,20 +35,31 @@ Provider authentication differs in client registration, redirect rules, scopes, 
 
 ### 2.2 Current behavior
 
-The foundation now persists provider-neutral authorization attempts with hashed
-and bounded state, exact redirect binding, expiry, single-use consumption,
-bounded durable outcome codes, and callback state lookup that survives restart.
-Invalid attempt metadata is rejected before SQLite writes. Provider token
-exchange, secret storage, account verification, and the provider-specific
-callback adapters do not yet exist. Spotify is the strongest official MVP
-candidate; full YouTube Music access is not established through an official
-API; Apple Music is future research.
+The owner-approved foundation persists provider-neutral authorization attempts
+with hashed and bounded state, exact redirect binding, expiry, single-use
+consumption, bounded durable outcome codes, and callback state lookup that
+survives restart. Connection persistence stores an opaque secret reference and
+capability evidence, and its application service can register an already
+verified account and classify a capability-probe failure. The separate
+standard-library callback spike is loopback-only and demonstrates route/state
+handling; it is not wired into the runtime and does not prove remotely
+reachable Home Assistant App callback behavior.
+
+Provider token exchange, refresh/revocation adapters, encrypted secret
+storage, end-to-end account verification, authenticated actor/session binding,
+and provider-specific callback integration do not yet exist. Invalid attempt
+metadata is rejected before SQLite writes. Spotify is the strongest official
+MVP candidate; full YouTube Music access is not established through an
+official API; Apple Music is future research. This is foundation evidence,
+not a claim that the connection capability is implemented.
 
 ### 2.3 Evidence and unknowns
 
 - Official provider/API facts: [provider research](../docs/providers/provider-research.md).
 - Home Assistant OAuth/Application Credentials and existing music projects: [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md).
 - Provider-independent contract: [provider specification](../docs/providers/provider-specification.md).
+- As-built foundation evidence: [authorization application](../src/symphonia/application/authorization.py), [attempt repository](../src/symphonia/infrastructure/sqlite_authorization.py), [connection service](../src/symphonia/application/provider_connections.py), [connection repository](../src/symphonia/infrastructure/sqlite_connections.py), [direct-callback spike](../docs/development/oauth-callback-spike.md), and [implementation baseline](../docs/development/implementation-baseline.md).
+- Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
 - Unknowns: callback reachability, secret encryption key, Google/YouTube product scope, exact scopes, token expiry/revocation behavior under test accounts, and provider-specific client-registration policy.
 
 ## 3. Actors, surfaces, and terminology

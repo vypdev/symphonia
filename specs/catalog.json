@@ -175,17 +175,38 @@
         "docs/providers/provider-specification.md",
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md",
-        "docs/architecture/system-architecture.md"
+        "docs/architecture/system-architecture.md",
+        "docs/development/oauth-callback-spike.md",
+        "docs/development/implementation-baseline.md"
       ],
       "implementationEvidence": {
-        "code": [],
-        "tests": [],
-        "documentation": []
+        "code": [
+          "src/symphonia/providers/authorization.py",
+          "src/symphonia/providers/connections.py",
+          "src/symphonia/application/authorization.py",
+          "src/symphonia/application/provider_connections.py",
+          "src/symphonia/infrastructure/sqlite_authorization.py",
+          "src/symphonia/infrastructure/sqlite_connections.py",
+          "tools/oauth_callback_spike.py"
+        ],
+        "tests": [
+          "tests/test_authorization_service.py",
+          "tests/test_sqlite_authorization.py",
+          "tests/test_provider_connections.py",
+          "tests/test_sqlite_connections.py",
+          "tests/test_oauth_callback_spike.py"
+        ],
+        "documentation": [
+          "docs/development/oauth-callback-spike.md",
+          "docs/development/implementation-baseline.md",
+          "specs/provider-connections-and-authorization.md"
+        ]
       },
       "blockers": [
         "RG-002 direct App callback reachability and OAuth boundary validation",
         "RG-002 Home Assistant OAuth callback spike",
         "RG-001 provider-specific scopes and account constraints",
+        "Authenticated actor/session binding and provider token/secret lifecycle integration",
         "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
       ]
     },
