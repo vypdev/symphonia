@@ -35,3 +35,11 @@ Use a fresh temporary output directory for each graph extraction. `--code-only` 
 2. Define application repository ports and a composition rule in the relevant SDD/architecture documents before removing the current direct SQLite dependencies.
 3. Measure line and branch coverage with an explicitly selected development tool, then target missing high-risk branches instead of a global percentage alone.
 4. Keep architecture import tests and `make verify` as the dependency-free baseline; review graph/health deltas as advisory evidence rather than automatically deleting or rewriting code.
+
+## Follow-up (2026-09-28)
+
+Re-ran the documented offline commands against the local `develop` working tree while defining the listening broker. RepoWise still identifies `copy_execution.py` (1.6/10) and `sqlite_operations.py` (1.6/10) as XL hotspots; its safe-only dead-code pass found **zero** candidates. Its apparent highest refactoring ratio on `application/__init__.py` is an `untested_hotspot` heuristic, not proof of a defect or permission to remove a public export. No production refactor follows from a score alone.
+
+Graphify's `--code-only --no-cluster` extraction produced **1,181 nodes and 3,060 edges**. `OperationRepository` remains the most connected symbol (57 edges); its one-hop dependents include runtime HTTP/resources, copy and import execution, the operation runner, and their tests. This reinforces the existing plan to define repository ports and preserve restart/reconciliation characterization before changing operation persistence. The broker design is kept out of domain/application imports and is not wired into this graph while its SDD is Draft.
+
+The local `make verify` run passed **227 `unittest` cases (2 skipped)** plus specification/whitespace checks. The isolated Lit spike also passed `npm ci --ignore-scripts`, TypeScript, presentation-boundary checks, three pure fallback tests, build, and relative-asset verification. Neither result proves Home Assistant integration, live playback, visual parity, or CI on GitHub. RepoWise still has no measured branch-coverage input; that remains a separate tooling decision rather than a fabricated coverage percentage.

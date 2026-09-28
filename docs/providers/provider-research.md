@@ -1,7 +1,7 @@
 # Provider and platform research
 
 **Status:** research snapshot, not an architectural decision
-**Reviewed:** 2026-09-27
+**Reviewed:** 2026-09-28
 **Source policy:** official documentation only; revalidate before implementation and every release
 
 ## How to read this document
@@ -9,6 +9,20 @@
 This snapshot separates what Symphonia needs from what an official API documents. It does not prove behavior for a particular account, market, application mode, or Home Assistant network setup. A live feasibility spike is required before either provider adapter is committed to the MVP.
 
 Existing Home Assistant and community implementations are reviewed separately in [Home Assistant music ecosystem review](home-assistant-ecosystem-review.md). They provide valuable implementation evidence but do not replace an official provider contract.
+
+## 2026-09-28 playback and Home Assistant API update
+
+This is a dated official-documentation check, not a live account/device feasibility result. Listening is a separate capability from library import and provider playlist writes.
+
+| Official source | Documented playback fact | Limit for Symphonia |
+| --- | --- | --- |
+| [Home Assistant Spotify integration](https://www.home-assistant.io/integrations/spotify/) | Exposes account playback and library browsing; documents `media_player.select_source` and `media_player.play_media` with a Spotify playlist URI/link. Requires Premium and a Spotify-compatible known output device. State is polled at least every 30 seconds. | A Symphonia Spotify grant does not install/authorize this HA integration. An entity may be delayed, inactive, or lack a usable output; starting content is not a universal device-discovery contract. |
+| [Home Assistant media-player entity](https://developers.home-assistant.io/docs/core/entity/media-player/) and [actions](https://www.home-assistant.io/integrations/media_player/) | Standard states, optional title/artist/artwork/position/playlist attributes, and per-entity supported features include play/pause/stop/next/previous/play-media/browse/select-source. | Metadata and controls are optional and integration-specific; a feature flag alone does not validate an arbitrary provider playlist reference. |
+| [Home Assistant Music Assistant integration](https://www.home-assistant.io/integrations/music_assistant/) | Exposes MA players as HA `media_player` entities with current media and controls; provides richer browse/play/queue actions when the MA server and integration are configured. | It is a separate server/integration lifecycle; MA source credentials, account identity, and queue are not Symphonia's imported library or durable playlist. |
+| [App communication](https://developers.home-assistant.io/docs/apps/communication/) and [configuration](https://developers.home-assistant.io/docs/apps/configuration/) | An App can request `homeassistant_api: true` and use `SUPERVISOR_TOKEN` with the Supervisor Core REST/WebSocket proxy. [HA WebSocket](https://developers.home-assistant.io/docs/api/websocket/) can stream state changes and call services; [REST](https://developers.home-assistant.io/docs/api/rest/) distinguishes state representation from service actions. | This is broader Core authority than a music-specific permission. It requires a threat review, server-only token, exact entity/action allowlist, and an accepted decision versus a narrower companion broker. |
+| [Spotify currently playing](https://developer.spotify.com/documentation/web-api/reference/get-the-users-currently-playing-track) and [start/resume](https://developer.spotify.com/documentation/web-api/reference/start-a-users-playback) | Direct Web API offers current item/context and playlist context start, with separate read/control scopes and Premium playback requirements. | A direct fallback would require new consent, policy, account/device handling, and tests; it is not silently inherited from the library adapter or selected for the first listening SDD. |
+
+The reviewed [official YouTube Data API reference](https://developers.google.com/youtube/v3/docs) is about video/channel/playlist resources, not a documented YouTube Music now-playing or remote-control API. Absence from reviewed documentation is an inference, not a claim that no private integration exists. Community playback examples and their risks are kept in the [ecosystem review](home-assistant-ecosystem-review.md#playback-source-evidence-2026-09-28).
 
 ## 2026-09-27 write-outcome and reconciliation update
 

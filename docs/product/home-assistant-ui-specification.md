@@ -1,7 +1,7 @@
 # Home Assistant-native UI specification
 
 **Status:** accepted product direction; implementation contract ready for specialist review
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-28
 
 ## Purpose and scope
 
@@ -70,6 +70,9 @@ The Ingress panel must feel like one focused Home Assistant application, not a m
 | Progress/loading/empty | HA-like progress and empty surfaces that explain what is happening | determinate, indeterminate with textual state, skeleton only when meaningful, empty with action, retryable error |
 | Data list/table/result row | Dense operational data with semantic headings and bounded internal scrolling | populated, empty, loading, partial, row action, selected, responsive list alternative |
 | Tags and evidence groups | Compact metadata, not primary actions | wrapping, overflow-safe, removable only when semantically an input |
+| Now-playing and transport controls | HA media-player card conventions within the App's independent component layer | selected player/source, artwork/metadata/position, play/pause/stop/skip, pending/disabled/stale/unavailable, multiple active players, narrow layout |
+
+The listening route uses a clear source → content → output sequence and a persistent-in-route now-playing region. It does not pretend that an imported playlist is a playable queue or that all `media_player` entities support the same controls. Missing source, output, account binding, or exact media reference receives a specific explanation and recovery action. A command that Home Assistant accepted but whose effect is not yet observed remains pending/uncertain rather than showing a false success state.
 
 Pills are reserved for compact status/metadata. Cards are not nested repeatedly for decoration. Destructive styling is reserved for destructive or irreversible effects. Provider artwork and branding may identify provider content, but must not replace Home Assistant interaction conventions.
 
@@ -168,6 +171,7 @@ Visual snapshots are reviewed evidence, not self-approving output. A generated b
 - **SYM-UI-013:** Standalone and Ingress profiles MUST share component and feature semantics; host context MAY change tokens, navigation integration, and authentication framing but MUST NOT create a second product behavior.
 - **SYM-UI-014:** Decorative effects MUST NOT compete with operational status, evidence, or actions; permanent ambient gradients, glassmorphism, decorative animation, and novelty backgrounds are not part of the accepted visual language.
 - **SYM-UI-015:** Supported Home Assistant/frontend compatibility MUST be versioned and revalidated when official component, token, App-iframe, or safe-area contracts change.
+- **SYM-UI-016:** The listening view MUST compose the shared now-playing/transport family with explicit source and target selection, capability-specific disabled reasons, observation freshness, and keyboard/screen-reader state changes; passive progress updates MUST NOT repeatedly steal focus or announce every tick.
 
 ## Exceptions and review
 

@@ -1,7 +1,7 @@
 # Provider connections and authorization
 
 - Status: Draft
-- Date: 2026-09-27
+- Date: 2026-09-28
 - Catalog capability ID: `provider-connections-and-authorization`
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
@@ -88,6 +88,7 @@ not a claim that the connection capability is implemented.
 2. Selecting a shared hosted OAuth application for every future deployment.
 3. Treating browser-cookie export as an ordinary OAuth equivalent.
 4. Sharing one provider grant across different Symphonia installations without an explicit provider contract.
+5. Claiming a provider library grant also configures a Home Assistant playback source, proves the same account, or grants player control; see the [listening SDD](listening-and-playback-control.md).
 
 ### 4.3 Fixed invariants
 
@@ -145,6 +146,7 @@ Text equivalent: an unconfigured adapter starts one authorization attempt; verif
 
 - Consent denial returns to `not_configured` with no connection or stored user grant.
 - Missing optional scopes create a connected but reduced capability set only when the user explicitly accepted that mode.
+- A provider connection may be healthy for library/copy while no playback source or player exists. Connection status names these capabilities separately; playback setup never borrows the stored provider grant implicitly.
 - Expired/revoked credentials become `action_required`; pending writes are not blindly retried.
 - Provider outage can be `degraded` without claiming reauthorization is required.
 - Multiple accounts of one provider retain separate connection IDs, secret references, account identity, capability probes, and rate budgets.
@@ -247,6 +249,12 @@ Impact: imports and playlist writes are paused; existing library/history remain 
 Cause: the provider rejected the expired grant.
 Action: Reconnect Spotify.
 Retained state: mappings, plans, and audit history are unchanged.
+```
+
+```text
+Spotify connected for library and playlists
+Listening: not configured. Home Assistant's Spotify integration and an output need separate setup.
+Action: Set up listening. Your imports and playlist-copy capabilities are unaffected.
 ```
 
 ```text
@@ -372,7 +380,7 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 ## 20. References and decisions
 
 - Primary sources: official provider and Home Assistant sources in [provider research](../docs/providers/provider-research.md).
-- Related SDDs: [App runtime](home-assistant-app-runtime-and-ingress.md), [imports](library-import-and-provider-projections.md), [durable operations](durable-operations-and-recovery.md).
+- Related SDDs: [App runtime](home-assistant-app-runtime-and-ingress.md), [imports](library-import-and-provider-projections.md), [durable operations](durable-operations-and-recovery.md), [listening](listening-and-playback-control.md).
 - Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: capability and risk disclosure before authorization; opaque secret references; distinct unofficial adapters.
 - MVP direction: direct App-owned callback-only OAuth; a companion broker is deferred.

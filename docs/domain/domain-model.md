@@ -1,11 +1,11 @@
 # Domain model
 
 **Status:** provider-independent core accepted; playlist ownership and matching policy proposed/open
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-28
 
 ## Model boundary
 
-Symphonia models a person's relationship with recordings and provider collections. It does not model audio files or playback. Provider payloads enter through adapters and are translated into this language before use by product workflows.
+Symphonia models a person's relationship with recordings and provider collections. It does not model audio files, decode streams, or own a playback queue. A separate, transient listening context may refer to an external playback session and player without turning observed now-playing metadata into a canonical recording or imported playlist fact. Provider payloads enter through adapters and are translated into this language before use by product workflows.
 
 This document specifies concepts and invariants, not database tables or API schemas.
 
@@ -20,6 +20,11 @@ This document specifies concepts and invariants, not database tables or API sche
 | **Artist credit** | The ordered credited performers attached to a recording or release. | A credit is not yet a canonical person/group identity. |
 | **Provider** | A type of external system, such as Spotify or YouTube. | A provider is not an account. |
 | **Provider connection** | One authorized external account plus its effective capabilities and credential reference. | More than one connection may eventually exist for one provider. |
+| **Playback source** | One configured integration/account able to browse or start music through an approved playback adapter. | A library provider connection does not configure or authorize it automatically. |
+| **Player target** | One explicit Home Assistant `media_player` entity or other accepted playback endpoint. | A player can expose several input sources; it is not a provider account or necessarily a physical speaker. |
+| **Output device** | The destination chosen through a player/source's supported output-selection contract. | A source name is not a universally stable device ID; some players have no selectable output. |
+| **Playback session observation** | Ephemeral, timestamped account/player state received from a playback adapter. | It may be delayed or unavailable and does not prove that an imported playlist is current. |
+| **Playback source binding** | Explicit association between a listening source/player and an optional library connection, with identity evidence or a visible unverified label. | Matching names or provider kinds are not proof of the same account. |
 | **Provider track** | A provider catalog item that represents or makes a recording available. | It retains the provider ID and may have incomplete or conflicting metadata. A YouTube video is a provider track only when used as a music candidate. |
 | **Provider playlist** | An ordered collection owned by a provider/account and imported into Symphonia. | It is not automatically a Symphonia-owned logical playlist. |
 | **Playlist entry** | One occurrence at one position in a playlist snapshot. | Repeated tracks are separate entries and must not be collapsed. |
@@ -49,6 +54,8 @@ Future: PlaylistProjection(s) ── governed by ── SyncRelationship
 ```
 
 The arrows do not imply persistence ownership. In particular, deleting a connection does not make a recording cease to exist.
+
+Listening is an adjacent context: `PlaybackSource -> PlayerTarget -> observed PlaybackSession`; an optional explicit binding points to `ProviderConnection`. It does not own `Recording`, `ProviderPlaylist`, `CopyPlan`, or `Operation`. Starting a provider playlist needs an exact source-compatible reference; track title similarity or an automatic identity link is insufficient. No playback observation is promoted into library history without a separately approved policy.
 
 ## Core entities and value objects
 

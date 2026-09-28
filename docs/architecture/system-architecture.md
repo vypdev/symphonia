@@ -1,7 +1,7 @@
 # System architecture
 
 **Status:** Home Assistant-first deployment and UI stack direction accepted; logical boundaries proposed; other technology choices open
-**Last reviewed:** 2026-09-27
+**Last reviewed:** 2026-09-28
 
 ## Architectural drivers
 
@@ -12,6 +12,7 @@ The architecture is derived from these needs:
 - a management UI that follows current Home Assistant component, theme, responsive, and interaction patterns without depending on private frontend internals;
 - a core that can run and be tested without Home Assistant;
 - provider-independent domain and replaceable adapters;
+- a listening surface that observes and controls explicitly selected external players without decoding or relaying audio;
 - durable imports and provider writes that survive restarts;
 - explicit uncertainty, partial success, rate limiting, and user action;
 - secure storage and rotation of OAuth credentials;
@@ -48,6 +49,17 @@ These drivers do not yet justify a backend framework or database product. The UI
 
 Provider APIs, the browser, Home Assistant/Supervisor, persistent storage, and future external API clients are separate trust boundaries. Network proximity is not authentication.
 
+The diagram's provider arrows describe library/copy adapters, not automatic playback access. [ADR 0006](../decisions/0006-narrow-home-assistant-playback-broker.md) chooses a narrow companion integration for Home Assistant listening instead of granting the App broad Core API authority. An imported provider account and an HA playback entity may be different accounts. See the [listening SDD](../../specs/listening-and-playback-control.md) for the proposed binding and state contract.
+
+```text
+Ingress browser -> Symphonia listening API -> playback port
+                                           <-> authenticated narrow companion broker
+                                                -> one allowed HA media_player -> output
+Library provider connection -- optional explicit, evidenced binding --^
+```
+
+Text equivalent: the browser requests a typed listening use case; the App's playback adapter communicates with an authenticated, music-scoped companion broker, which alone accesses the selected HA player. A library connection may be explicitly associated for compatible media references but never supplies broker/Core credentials or chooses the output by itself.
+
 ## Dependency rule
 
 Dependencies point inward:
@@ -58,9 +70,9 @@ infrastructure ────────────────→ ports defined
 composition ──→ concrete implementations
 ```
 
-- **Domain** owns recording identity, playlist semantics, capabilities, plans, policies, and operation states. It imports no provider SDK, Home Assistant package, web framework, database driver, filesystem/config reader, or job framework.
+- **Domain** owns recording identity, playlist semantics, capabilities, plans, policies, and operation states. Pure listening policy owns target identity, command eligibility, and observation freshness without modeling audio streams. It imports no provider SDK, Home Assistant package, web framework, database driver, filesystem/config reader, or job framework.
 - **Application** orchestrates use cases through ports and owns transaction/idempotency boundaries. It depends on domain types, not concrete adapters.
-- **Infrastructure** implements provider, persistence, secret, clock, queue, and Home Assistant ports.
+- **Infrastructure** implements provider, playback-source/player, persistence, secret, clock, queue, and Home Assistant ports.
 - **Presentation** maps Ingress/HTTP/UI requests and responses. It does not decide match, authorization, retry, or conflict policy.
 - **Composition** selects the deployment profile and wires concrete implementations. It is the only layer that knows the full runtime graph.
 
@@ -70,9 +82,9 @@ This follows the useful boundary pattern in `homeassistant-gateway` without carr
 
 | Component | Responsibility | Explicit exclusions |
 | --- | --- | --- |
-| Web UI | Home Assistant-native-adjacent shell and component compatibility layer; connection setup, library/playlist views, resolution queue, copy preview, history, diagnostics | Provider tokens, matching policy, direct provider calls, private HA frontend modules |
+| Web UI | Home Assistant-native-adjacent shell and component compatibility layer; listening/now-playing, connection setup, library/playlist views, resolution queue, copy preview, history, diagnostics | Provider tokens, matching policy, direct provider or Home Assistant calls, private HA frontend modules |
 | HTTP/API presentation | Authenticated input/output mapping, validation shape, request correlation | Domain decisions and raw exception exposure |
-| Application use cases | Connect/disconnect, import, resolve, plan copy, execute copy, inspect operations | Provider-specific response types |
+| Application use cases | Connect/disconnect, import, resolve, plan copy, execute copy, inspect operations, list playback targets, observe session, issue one bounded command | Provider-specific or Home Assistant response types |
 | Domain | Provider-independent entities, invariants, capability requirements, matching/copy/sync policy | IO and scheduling |
 | Provider adapter host | OAuth/token refresh, pagination, normalized reads/writes/search, error translation | Cross-provider orchestration |
 | Resolution engine | Candidate generation/evaluation and evidence production | Unversioned opaque decisions |
@@ -81,6 +93,8 @@ This follows the useful boundary pattern in `homeassistant-gateway` without carr
 | Secret store adapter | Encrypt/decrypt credential material and rotate key references | Returning plaintext to UI/logs |
 | Observability | Structured logs, metrics, health/readiness, sanitized diagnostics | Provider payload dumping |
 | Home Assistant adapter | Ingress identity and future native integration contract | Owning music domain rules |
+| Playback adapter | Normalize broker-reported observations/capabilities and dispatch typed listening requests for an explicit player | Import/write credentials, Core API credentials, arbitrary HA service calls, audio processing |
+| Companion playback broker | Within HA, discover/observe allowed entities and gate/dispatch typed commands to one exact entity | Symphonia provider grants/database, music-domain policy, generic Core proxy |
 
 ## Presentation and Home Assistant-native UI boundary
 
@@ -113,6 +127,7 @@ This is an accepted product/deployment decision, recorded in [ADR 0003](../decis
 - The App starts as an `application`, stores durable state under `/data`, exposes its UI through Ingress, and participates in Supervisor backup/update lifecycle.
 - Ingress is the administrative UI authentication boundary. The server MUST honor the Ingress base path and MUST NOT assume it is hosted at `/`.
 - App permissions, mapped folders, network exposure, and Supervisor/Core API access MUST be least-privilege. Music-provider access alone does not justify Home Assistant API or host filesystem access.
+- For HA listening, [ADR 0006](../decisions/0006-narrow-home-assistant-playback-broker.md) selects a narrow companion broker. The App must not enable `homeassistant_api: true` or use `SUPERVISOR_TOKEN` to call Core for this feature. Broker pairing/authentication, versioning, caller identity, and transport remain SDD gates; network proximity and Ingress alone do not authenticate broker traffic. Library/copy remains available without the broker.
 - A published image MUST support the explicitly documented Home Assistant architectures; the initial architecture set is open.
 - Provider secrets MUST NOT be placed in App options, image layers, logs, diagnostics, or ordinary backups in plaintext.
 
@@ -126,17 +141,17 @@ The standalone profile has no Ingress. It therefore requires an explicit authent
 
 Whether standalone packaging ships in the first public release or immediately afterward is open.
 
-### Optional companion Home Assistant integration
+### Companion Home Assistant integration
 
-A companion custom integration MAY later expose native entities, actions, events, and configuration discovery. It must call a stable, authenticated Symphonia API and MUST NOT duplicate matching, sync, credential, or retry logic.
+A companion custom integration is required for the selected HA playback path under [ADR 0006](../decisions/0006-narrow-home-assistant-playback-broker.md); it MAY later expose other native entities, actions, events, and configuration discovery. It must use a stable, authenticated, versioned Symphonia contract and MUST NOT duplicate matching, sync, provider-credential, or durable-write retry logic. The exact transport and pairing protocol remain unselected.
 
 The MVP does not require the companion integration to broker provider
 authorization. Provider authorization is owned by the App's adapters following
-the App-plus-Ingress pattern. A future proposal MAY evaluate a narrow broker
-to reuse Home Assistant's Application Credentials/config-flow machinery; if
-selected, it must exchange an opaque, one-use connection grant over the
-authenticated local API, and token ownership, refresh, revocation,
-backup/recovery, and version skew must be specified before acceptance.
+the App-plus-Ingress pattern. The playback broker decision does not make that
+integration an OAuth broker. A future proposal MAY evaluate reusing Home
+Assistant's Application Credentials/config-flow machinery; if selected, it
+must separately specify token ownership, refresh, revocation, backup/recovery,
+and version skew before acceptance.
 
 Candidate native surface (illustrative, not accepted):
 
@@ -144,7 +159,7 @@ Candidate native surface (illustrative, not accepted):
 - actions such as `symphonia.copy_playlist` and future `symphonia.sync`;
 - events for operation completed, partial, failed, or user action required.
 
-Three approaches require an RFC:
+Three approaches were compared for native surfaces; ADR 0006 selects the companion for listening, while the exact transport/native projections still need an RFC:
 
 | Approach | Benefits | Costs |
 | --- | --- | --- |
@@ -152,8 +167,7 @@ Three approaches require an RFC:
 | MQTT discovery/events | Mature decoupling and push model | Adds an MQTT dependency and weakens direct operation correlation |
 | App calls Home Assistant APIs directly | Fewer artifacts for events/actions initiated by the App | Couples the service to Home Assistant and does not cleanly provide a native integration surface |
 
-The App-plus-Ingress approach is the accepted primary direction. The
-companion-integration approach is deferred to a future native-surface RFC.
+The App-plus-Ingress approach remains the accepted primary product direction. The companion's playback responsibility is selected; native projections beyond listening remain deferred to a future native-surface RFC.
 
 ## Service/API shape
 
@@ -162,6 +176,7 @@ The backend needs an authenticated HTTP API for its own web UI and future integr
 Required conceptual endpoints/use cases include:
 
 - connection list, capability probe, authorization start/callback, refresh, and disconnect;
+- configured playback source/target list, explicit binding status, now-playing observation, browse/select supported media, and bounded command/reconciliation status;
 - import start/status and collection reads;
 - unresolved queue, candidate evidence, accept/reject/defer/revoke;
 - copy plan, plan read, accept/execute, run status, reconcile/cancel where safe;
@@ -299,6 +314,9 @@ The MVP may render metrics in its UI and logs; choosing Prometheus/OpenTelemetry
 - **SYM-HA-007:** Native entities/actions/events MUST expose bounded summaries or identifiers, not playlist contents, tokens, or raw provider errors in state attributes.
 - **SYM-HA-008:** Home Assistant automations that trigger mutations MUST create ordinary audited Symphonia operations subject to the same validation, idempotency, and policy as UI requests.
 - **SYM-HA-009:** The MVP App panel MUST be admin-only; a future multi-user model MUST define which Home Assistant identity owns provider connections and may approve writes.
+- **SYM-HA-010:** Any App-to-Core playback integration MUST be explicitly enabled and threat-reviewed; Core credentials remain server-side, and the adapter MUST allowlist player entities, read methods, and media-player actions rather than exposing a generic Home Assistant API relay to the UI.
+- **SYM-HA-011:** The Home Assistant listening path MUST use a narrow, authenticated, versioned companion integration that alone accesses Core playback entities. The App MUST NOT enable broad Supervisor-to-Core API access for listening; the broker MUST restrict each read/command to an exact allowed entity and typed operation, and its absence or incompatibility MUST disable only listening without replaying commands.
+- **SYM-ARCH-016:** Playback observation/commands MUST remain separate from imported library snapshots and durable playlist-write execution; observing or commanding an external player MUST NOT silently mutate canonical recording/playlist facts or enter copy-job retry policy.
 
 ## Technology decisions still open
 

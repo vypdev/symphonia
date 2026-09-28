@@ -1,13 +1,13 @@
 # Product specification
 
 **Status:** proposed baseline for owner review
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-28
 
 ## Vision
 
 Symphonia is a self-hosted personal music hub through which a person can see and manage their music across providers. Symphonia owns the user's provider-independent view of music; Spotify, YouTube, Apple Music, Plex, Navidrome, and future services are replaceable representations and execution targets.
 
-The product initially optimizes for trustworthy library interoperability: import, explain, match, review, and copy. It is not primarily a playback surface.
+The product combines a Home Assistant-integrated listening surface with trustworthy library interoperability. A user can choose music and an output, see what is playing, and control an existing playback session where a configured integration supports it; Symphonia also imports, explains, matches, reviews, and copies playlists. Symphonia is a playback **controller**, not a replacement audio-streaming engine. Library access and playback access are separate capabilities even when they refer to the same service.
 
 ## Product principles
 
@@ -18,6 +18,7 @@ The product initially optimizes for trustworthy library interoperability: import
 5. **Self-hosted is a product constraint.** Operation, backup, upgrades, credentials, and recovery must be understandable to a homelab operator.
 6. **Home Assistant is the primary host, not the domain boundary.** The primary package is a Home Assistant App with an Ingress UI, while the same core remains independently runnable and testable.
 7. **The App should feel native to its host.** UI hierarchy, components, terminology, density, themes, responsive behavior, and feedback follow current Home Assistant patterns through an independent compatibility layer; see the [Home Assistant-native UI specification](home-assistant-ui-specification.md).
+8. **Listening is grounded in an explicit source and output.** An imported provider playlist, an authorized playback account, a Home Assistant `media_player`, and a physical output are not interchangeable. The UI never infers one from a matching provider name.
 
 ## Users
 
@@ -28,6 +29,7 @@ Multi-user authorization, sharing between Symphonia users, and hosted SaaS opera
 ## Goals
 
 - Provide one inventory of connected provider playlists and library items with clear provenance.
+- Provide a familiar listening view for configured playback sources: browse/select available music, choose a supported output, see current playback, and use only supported controls.
 - Recognize when provider-specific items likely represent the same recording.
 - Let the user resolve ambiguity and preserve that decision.
 - Copy a playlist between supported providers with a complete preview and result.
@@ -40,16 +42,18 @@ Multi-user authorization, sharing between Symphonia users, and hosted SaaS opera
 
 The MVP MUST NOT include:
 
-- audio playback or a competing player experience;
+- decoding or delivering audio in Symphonia, or becoming a competing streaming backend;
 - recommendations, discovery feeds, or AI-generated playlists;
 - audio download, ripping, transcoding, streaming, or format management;
-- multi-room audio or device control;
+- inventing multi-room synchronization, discovering arbitrary devices outside configured playback integrations, or guaranteeing control of sessions not exposed to Home Assistant;
 - social features or public profiles;
 - multi-user tenancy or role-based administration;
 - automatic bidirectional playlist synchronization;
 - Home Assistant coupling inside the domain/application core or standalone composition;
 - a generic detached SaaS dashboard, direct dependency on private Home Assistant frontend internals, or decorative styling that competes with operational state;
 - an assumption that similar titles imply identical recordings.
+
+Provider-backed browsing/search for a selected playback source is part of listening; the non-goal above excludes Symphonia-owned recommendation or discovery algorithms.
 
 ## Core user journeys
 
@@ -66,6 +70,14 @@ The MVP MUST NOT include:
 1. The user sees connected providers and import freshness.
 2. The user browses playlists grouped or filtered by provider connection.
 3. Each item retains its original provider identity and shows its Symphonia recording link or resolution state.
+
+### Listen and control
+
+1. The user sees connected library providers separately from configured playback sources and available outputs. Missing playback setup is actionable, not presented as a broken library connection.
+2. The user chooses a source and explicit target player/output, then browses content supported by that source. Imported playlists can be started only when an exact, permitted playback reference is available for that source/account; otherwise the UI offers the source's media browser or explains the limitation.
+3. Before replacing current playback, the UI names the target and the content that will start. A successful command is confirmed by observed player state, not by an accepted request alone.
+4. The listening view shows the selected session's title, artist, artwork, progress and playlist/context only when exposed, with provenance and freshness. The user can pause/resume, skip, stop, change source/output, or start another playlist only when the current player advertises and actually accepts the action.
+5. If several players are active, the user chooses which one to control. If Home Assistant or the playback integration is unavailable, Symphonia keeps library and playlist-management features available and marks playback state stale or unavailable.
 
 ### Resolve an ambiguous track
 
@@ -94,7 +106,7 @@ The MVP MUST NOT include:
 
 ### Home Assistant-native UI
 
-The cross-cutting `SYM-UI-001`–`SYM-UI-015` requirements live in the [Home Assistant-native UI specification](home-assistant-ui-specification.md). Every feature SDD with a web surface must map its feature-specific states and actions onto that shared component, accessibility, responsive, Ingress, localization, sanitization, and visual-compatibility contract. [ADR 0004](../decisions/0004-home-assistant-native-ui.md) records the accepted decision to use an owned compatibility layer rather than private Home Assistant frontend modules.
+The cross-cutting `SYM-UI-001`–`SYM-UI-016` requirements live in the [Home Assistant-native UI specification](home-assistant-ui-specification.md). Every feature SDD with a web surface must map its feature-specific states and actions onto that shared component, accessibility, responsive, Ingress, localization, sanitization, and visual-compatibility contract. [ADR 0004](../decisions/0004-home-assistant-native-ui.md) records the accepted decision to use an owned compatibility layer rather than private Home Assistant frontend modules.
 
 ### Product and account
 
@@ -107,6 +119,18 @@ The cross-cutting `SYM-UI-001`–`SYM-UI-015` requirements live in the [Home Ass
 - **SYM-ACC-004:** The UI MUST show connection health, last successful import, required user action, and granted functional access.
 - **SYM-ACC-005:** The MVP Home Assistant Ingress management surface MUST be restricted to authenticated Home Assistant administrators.
 - **SYM-ACC-006:** Before authorization, the UI MUST show whether access uses an official or reverse-engineered contract, adapter maturity/support level, required external dependencies, credential type, and expected reauthorization behavior.
+
+### Listening and playback
+
+- **SYM-PLAY-001:** Symphonia MUST distinguish a library provider connection, a playback source/account, a Home Assistant player entity, and an output device; linking them MUST be explicit and must disclose unverified account identity.
+- **SYM-PLAY-002:** The listening view MUST show the currently selected player's reported playback state and available title, artist, artwork, position, and playlist/context with source, observation time, and stale/unavailable status; unknown fields MUST remain unknown rather than being inferred from imported data.
+- **SYM-PLAY-003:** Playback controls MUST be enabled from effective, current player/source capabilities and authorization; unsupported, unknown, or unavailable actions MUST be disabled with a reason.
+- **SYM-PLAY-004:** Starting a track, album, or playlist MUST name a selected target, require an exact source-compatible media reference or supported media-browser selection, and warn when it will replace current playback. A display-title match is insufficient.
+- **SYM-PLAY-005:** A playback command MUST have a bounded pending state and reconcile against observed state. Accepted transport requests MUST NOT be labeled as confirmed playback; lost/ambiguous responses MUST NOT be blindly replayed.
+- **SYM-PLAY-006:** The App MUST keep library/copy functions usable when Home Assistant playback access is unavailable and MUST NOT silently substitute direct provider playback credentials or an unofficial integration.
+- **SYM-PLAY-007:** The UI MUST distinguish pause, resume, stop, skip, output selection, and starting a different playlist; an action MUST target only the explicitly selected, authorized player and must never broadcast to every player by default.
+- **SYM-PLAY-008:** Playback-session data MUST be ephemeral by default, sanitized in UI/logs/diagnostics, and excluded from durable import/copy history unless a separate user-visible policy is approved.
+- **SYM-PLAY-009:** The listening view MUST offer source-backed browsing of the playable media kinds exposed by the configured source (such as tracks, albums, and playlists), and search only where that source supports it; unavailable kinds/search MUST be explained rather than replaced by Symphonia's imported catalog or guessed matches.
 
 ### Unified library
 
@@ -154,12 +178,15 @@ The first useful release is complete when one local user can:
 - authenticate with supported provider flows;
 - import supported library collections and owned/followed playlists;
 - browse provider playlists and their freshness;
+- discover at least one explicitly linked Home Assistant playback source/player, browse its playable content, start a supported track or playlist on a chosen output, observe its current session, and use the controls it supports; starting an imported playlist requires a verified compatible reference;
 - resolve track identities automatically where safe and manually where needed;
 - preview and execute a copy in each direction only where the target adapter declares all required capabilities;
 - inspect basic operation history; and
 - deploy, upgrade, back up, restore, and rotate provider credentials using documented procedures.
 
 The wording “validated Google/YouTube connection” is deliberate. Symmetric **YouTube Music** library access is not yet proven through an official API; see [provider research](../providers/provider-research.md). If official feasibility fails, the owner must revise the MVP rather than silently adopting a reverse-engineered API.
+
+This listening goal does **not** promise a YouTube Music session outside a configured Home Assistant/Music Assistant/community player, or that connecting Symphonia to Spotify automatically configures Home Assistant's Spotify integration. If the first-release playback source/output pairing or account-binding contract cannot be proven, the release boundary requires an explicit owner revision; a screenshot-only listening view does not satisfy it.
 
 ## Future scope
 
@@ -168,6 +195,7 @@ The wording “validated Google/YouTube connection” is deliberate. Symmetric *
 - Apple Music, Plex/Plexamp, Navidrome, and other adapters.
 - Multiple accounts per provider in the UI.
 - Home Assistant entities, actions, and events over a stable Symphonia API.
+- Direct provider playback adapters where a supported contract materially improves coverage beyond Home Assistant players, subject to separate scopes, permissions, and policy review.
 - More complete album, artist, release, and musical-work modeling.
 - Export/import of user-authored mappings and operation history.
 
@@ -182,6 +210,7 @@ Targets require real-provider feasibility testing before numeric thresholds are 
 - manual-resolution reuse;
 - copy plan versus execution outcomes;
 - provider request, throttle, retry, and failure counts; and
-- time since last successful import and operation completion.
+- time since last successful import and operation completion; and
+- configured/active playback targets, state freshness, supported versus unavailable controls, command confirmation/ambiguity, and source/output setup failures without recording listening history by default.
 
 No response-time, matching-accuracy, or scale target is accepted yet; the test corpus and expected homelab library sizes are open questions.

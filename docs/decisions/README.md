@@ -9,5 +9,6 @@ ADRs contain only decisions already justified and accepted by the product brief 
 | [0003](0003-home-assistant-app-primary.md) | Accepted | Home Assistant App is the primary deployment boundary |
 | [0004](0004-home-assistant-native-ui.md) | Accepted | App UI follows Home Assistant-native interaction and visual patterns through an owned compatibility layer |
 | [0005](0005-lit-typescript-vite-ui.md) | Accepted | Future App presentation layer uses Lit, TypeScript, and Vite, subject to UI readiness gates |
+| [0006](0006-narrow-home-assistant-playback-broker.md) | Accepted | Home Assistant playback uses a narrow companion broker instead of broad App-to-Core authority |
 
 An ADR is immutable after acceptance except for typo/link corrections. A changed decision gets a new ADR that supersedes the old one.

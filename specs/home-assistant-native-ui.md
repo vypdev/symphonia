@@ -1,11 +1,11 @@
 # Home Assistant-native UI foundation
 
 - Status: Ready for review
-- Date: 2026-09-27
+- Date: 2026-09-28
 - Catalog capability ID: `home-assistant-native-ui`
 - Owners: Symphonia maintainers
 - Scope: establish the shared shell, component families, semantic tokens, host-context adaptation, accessibility, responsive behavior, component catalog, and visual compatibility evidence for every Symphonia web view.
-- Related requirements: `SYM-UI-001`–`SYM-UI-015`, `SYM-JOB-007`, `SYM-SEC-004`, `SYM-SEC-008`, `SYM-TEST-005`, `SYM-TEST-009`, `SYM-TEST-014`, `SYM-TEST-015`
+- Related requirements: `SYM-UI-001`–`SYM-UI-016`, `SYM-JOB-007`, `SYM-SEC-004`, `SYM-SEC-008`, `SYM-TEST-005`, `SYM-TEST-009`, `SYM-TEST-014`, `SYM-TEST-015`
 - Related decisions/research: [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0005](../docs/decisions/0005-lit-typescript-vite-ui.md), [UI specification](../docs/product/home-assistant-ui-specification.md), [official platform research](../docs/providers/provider-research.md#home-assistant-platform), [Gateway/HA UI evidence](../docs/providers/home-assistant-ecosystem-review.md#home-assistant-native-ui-lessons-from-homeassistant-gateway), [RG-006 host-context evidence](../docs/development/ui-spike/host-context-evidence.md)
 - Required review gates: product UX, Home Assistant platform, frontend architecture, accessibility, localization, testing/visual QA, documentation, security/privacy
 - Open decisions blocking implementation readiness: supported Home Assistant/browser matrix; verified public host-context/Ingress contract and deterministic fallbacks across that matrix; Lit/Vite compatibility and bundle evidence; accepted visual-reference capture/update procedure and visual/accessibility review
@@ -49,7 +49,7 @@ No complete Symphonia UI or UI package exists. The repository has an experimenta
 
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |
-| Home Assistant administrator/user | Use Symphonia without learning an alien UI | Ingress panel | shell, navigation, connections, library, matching, copy, operations, diagnostics |
+| Home Assistant administrator/user | Use Symphonia without learning an alien UI | Ingress panel | shell, navigation, listening/now playing, connections, library, matching, copy, operations, diagnostics |
 | Standalone user, if released | Use the same product semantics outside HA | authenticated standalone URL | same feature views with fallback host framing |
 | Product/accessibility reviewer | Inspect every state before feature integration | component catalog and reference manifest | variants, themes, focus, viewports, long text, failures |
 | Contributor | Compose consistent views without duplicating presentation behavior | public UI package entry point | tokens, components, layouts, stories/fixtures |
@@ -190,6 +190,7 @@ Users cannot configure away visible focus, semantic errors, required confirmatio
 - Route tests enumerate non-root base paths, refresh, deep links, assets, HTTP, and push transports.
 - Context tests validate allowed origin/message/schema and fallback behavior; unsupported fields remain inert.
 - Component semantics are exercised by interaction/accessibility tests, not source-string assertions alone.
+- The shared now-playing/transport family is presentation-only: tests reject service dispatch, capability inference, or player-selection policy inside the component package. Feature fixtures cover stale, missing-media, multi-player, pending, unsupported, and uncertain states.
 
 ## 9. UI/UX and content contract
 
@@ -232,6 +233,12 @@ Retained state: the last confirmed status is shown as stale; no provider write i
 Copy completed with omissions
 113 entries were confirmed and 4 explicitly accepted omissions remain listed.
 Primary action: Review result
+```
+
+```text
+Now playing · Kitchen speaker
+Playing: Track A — Artist B. Last reported 12 seconds ago.
+Pause and Next are available; unsupported controls explain why they are disabled.
 ```
 
 ### 9.3 Accessibility and localization
@@ -281,16 +288,16 @@ Primary action: Review result
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **84 distinct cases**:
+Minimum **92 distinct cases**:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 | --- | ---: | --- |
 | Tokens/context/configuration/pure policy | 14 | host/fallback theme, locale, RTL, safe area, invalid context, token mapping, preferences |
-| Component interaction and accessibility | 24 | every required family; keyboard/focus/ARIA; loading/disabled/error/destructive; announcements |
+| Component interaction and accessibility | 28 | every required family including now-playing/transport; keyboard/focus/ARIA; loading/disabled/error/destructive; announcements |
 | Responsive/theme/locale geometry | 16 | light/dark/contrast/reduced motion, phone/tablet/desktop, zoom, long/RTL text, overflow |
-| Shell/feature/Ingress/security contracts | 18 | arbitrary base path, deep link/refresh/assets/push, stale/cancelled requests, hostile content, secret canaries |
+| Shell/feature/Ingress/security contracts | 22 | arbitrary base path, deep link/refresh/assets/push, stale/cancelled requests, listening-state freshness/target fencing, hostile content, secret canaries |
 | Visual/reference/compatibility/release | 12 | dated HA comparisons, intentional divergence, snapshot review, supported host/browser upgrade/rollback |
-| **Total** | **84** | No double counting |
+| **Total** | **92** | No double counting |
 
 Pure tests use fixed context messages, tokens, locales, translations, routes, and view models. Component/browser fixtures use no network and synthetic public-safe data. Browser behavior runs across the supported engine matrix; canonical pixel baselines may use one declared engine, while every engine must pass semantics and geometry contracts.
 
@@ -322,6 +329,7 @@ Required human evidence reviews official Home Assistant references versus the ca
 12. Given a visual snapshot change, release evidence identifies the dated Home Assistant reference and records intended parity, accessibility/product divergence, or regression correction before approval.
 13. Given a Home Assistant frontend/component migration, compatibility tests prove independent fallback and the supported matrix/reference manifest are updated before release.
 14. Given a browser action whose response is lost, the UI reloads authoritative server state and never infers success or blindly repeats an irreversible operation.
+15. Given a selected player with rapidly changing progress or a track change, the shared now-playing family preserves focus, avoids per-tick announcements, displays observation freshness and current capability reasons, and never dispatches Home Assistant calls itself.
 
 ## 17. Requirements traceability
 
@@ -334,6 +342,7 @@ Required human evidence reviews official Home Assistant references versus the ca
 | `SYM-UI-009` | presentation/output boundaries | hostile-content and secret-canary suite | security/content guide |
 | `SYM-UI-010`–`SYM-UI-011`, `SYM-UI-015` | catalog/reference/release tooling | catalog completeness, visual review, HA/browser compatibility matrix | reference manifest/runbook |
 | `SYM-UI-013` | composition profiles | Ingress versus standalone fixture parity | deployment guides |
+| `SYM-UI-016` | now-playing/transport family and listening feature composition | component catalog plus stale/multi-player/announcement fixtures; scenario 15 | listener/accessibility guide |
 | `SYM-TEST-005`, `SYM-TEST-009`, `SYM-TEST-014`, `SYM-TEST-015` | verification tooling | release gates | contributor testing guide |
 
 ## 18. Implementation sequence
@@ -350,7 +359,7 @@ Required human evidence reviews official Home Assistant references versus the ca
 - [ ] Status is `Ready for implementation` and explicit owner approval to implement exists.
 - [ ] Supported HA/browser matrix, Lit/Vite compatibility/build evidence, context/safe-area/fallbacks, and reference procedures are accepted.
 - [ ] Every `SYM-UI-*` requirement maps to acceptance and deterministic or explicit human evidence.
-- [ ] At least 84 distinct cases and architecture/lint/secret gates pass.
+- [ ] At least 92 distinct cases and architecture/lint/secret gates pass.
 - [ ] Every required component family is available only through the public package and complete in the catalog.
 - [ ] Representative feature states pass light/dark, contrast, reduced-motion, keyboard, screen-reader, narrow/wide, long/RTL text, and sanitization review.
 - [ ] Ingress prefix, deep links, assets, reconnect/push, safe area, and standalone fallback are proven.
@@ -362,7 +371,7 @@ Required human evidence reviews official Home Assistant references versus the ca
 
 - Primary sources: official Home Assistant links in the [UI specification](../docs/product/home-assistant-ui-specification.md) and [platform research](../docs/providers/provider-research.md#home-assistant-platform).
 - Community evidence: pinned `vypdev/homeassistant-gateway` sources listed in the UI specification and ecosystem review.
-- Related SDDs: [App runtime/Ingress](home-assistant-app-runtime-and-ingress.md), [provider connections](provider-connections-and-authorization.md), [imports](library-import-and-provider-projections.md), [identity resolution](recording-identity-resolution.md), [playlist copy](one-time-playlist-copy.md), [durable operations](durable-operations-and-recovery.md).
+- Related SDDs: [App runtime/Ingress](home-assistant-app-runtime-and-ingress.md), [provider connections](provider-connections-and-authorization.md), [listening](listening-and-playback-control.md), [imports](library-import-and-provider-projections.md), [identity resolution](recording-identity-resolution.md), [playlist copy](one-time-playlist-copy.md), [durable operations](durable-operations-and-recovery.md).
 - Accepted: Home Assistant-native-adjacent direction, owned compatibility layer, no private HA frontend runtime dependency, shared Ingress/standalone semantics, Lit + TypeScript + Vite direction (ADR 0005), dated catalog/reference evidence.
 - Open: supported matrix, verified public App context and fallbacks, Lit/Vite bundle/Ingress evidence, reference capture/update automation and visual review.
 - Rejected: generic SaaS dashboard, private HA component imports by default, frozen pixel copy, decorative ambient UI, feature-local duplicate primitives.

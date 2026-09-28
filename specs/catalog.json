@@ -30,6 +30,7 @@
         "SYM-HA-007",
         "SYM-HA-008",
         "SYM-HA-009",
+        "SYM-HA-011",
         "SYM-TEST-009",
         "SYM-TEST-012",
         "SYM-TEST-013",
@@ -46,6 +47,7 @@
       ],
       "evidence": [
         "docs/decisions/0003-home-assistant-app-primary.md",
+        "docs/decisions/0006-narrow-home-assistant-playback-broker.md",
         "docs/architecture/system-architecture.md",
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md"
@@ -109,6 +111,7 @@
         "SYM-UI-013",
         "SYM-UI-014",
         "SYM-UI-015",
+        "SYM-UI-016",
         "SYM-JOB-007",
         "SYM-SEC-004",
         "SYM-SEC-008",
@@ -139,6 +142,57 @@
         "RG-006 verified public host context and deterministic theme, locale, direction, timezone, and safe-area fallbacks",
         "Lit/Vite Ingress, bundle, accessibility, and browser compatibility evidence",
         "Accepted dated visual-reference capture/update procedure and reviewed visuals"
+      ]
+    },
+    {
+      "id": "listening-and-playback-control",
+      "title": "Listening and playback control",
+      "status": "draft",
+      "scope": "Browse configured playback sources, choose an exact player/output, observe now playing, and control supported playback without owning audio streams",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/listening-and-playback-control.md",
+      "requirements": [
+        "SYM-PLAY-001",
+        "SYM-PLAY-002",
+        "SYM-PLAY-003",
+        "SYM-PLAY-004",
+        "SYM-PLAY-005",
+        "SYM-PLAY-006",
+        "SYM-PLAY-007",
+        "SYM-PLAY-008",
+        "SYM-PLAY-009",
+        "SYM-PROV-021",
+        "SYM-PROV-022",
+        "SYM-UI-016",
+        "SYM-HA-011",
+        "SYM-ARCH-016",
+        "SYM-ACC-005",
+        "SYM-SEC-004",
+        "SYM-SEC-008"
+      ],
+      "evidence": [
+        "docs/decisions/0006-narrow-home-assistant-playback-broker.md",
+        "docs/product/product-specification.md",
+        "docs/product/home-assistant-ui-specification.md",
+        "docs/domain/domain-model.md",
+        "docs/providers/provider-specification.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md",
+        "docs/providers/playback-integration-source-review.md",
+        "docs/architecture/system-architecture.md",
+        "docs/open-questions.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "OQ-011 broker transport/pairing/identity and first playback source/output matrix; narrow-broker authority decision accepted",
+        "RG-007 Spotify idle-start/exact-output, MA caller/queue, account/source/player and exact playlist-reference feasibility",
+        "Threat review of broker pairing, versioning, replay, caller identity, and action/entity allowlist",
+        "Accepted observation freshness and command-reconciliation budgets",
+        "YouTube Music community-source support and risk decision"
       ]
     },
     {

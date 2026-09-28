@@ -1,12 +1,12 @@
 # Home Assistant App runtime and Ingress
 
 - Status: Draft
-- Date: 2026-09-20
+- Date: 2026-09-28
 - Catalog capability ID: `home-assistant-app-runtime`
 - Owners: Symphonia maintainers
 - Scope: define the install, lifecycle, authentication, persistence, recovery, upgrade, backup, and diagnostics contract for the primary Supervisor-managed App.
-- Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-011`
-- Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform), [UI foundation](home-assistant-native-ui.md)
+- Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-HA-011`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-011`
+- Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform), [UI foundation](home-assistant-native-ui.md)
 - Required review gates: product UX, architecture, Home Assistant platform, testing, documentation, security/operations
 - Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; encryption-key/backup contract; standalone release timing from `OQ-005`
 
@@ -53,7 +53,7 @@ The current foundation is intentionally limited to reversible composition, persi
 | Home Assistant administrator | Install, configure, operate, upgrade, back up, and restore Symphonia | App repository and App page | App configuration, logs, Ingress panel, backup UI |
 | Symphonia user | Manage provider connections and music operations | Ingress panel | Symphonia UI and operation history |
 | Operator/contributor | Diagnose lifecycle or packaging faults | App logs/diagnostics and repository | Health/readiness, sanitized bundle, release notes |
-| Companion integration | Expose future native HA surfaces | Versioned local API | Entities/actions/events, availability state |
+| Companion integration | Broker HA playback when separately implemented; potentially expose later native surfaces | Versioned authenticated local contract | Listening availability, later entities/actions/events |
 
 **Health** means the process can answer a liveness probe. **Readiness** means configuration, storage, migrations, and recovery are safe enough to serve requests without claiming that every provider is online. **Ingress listener** is the trusted proxied management surface. **Direct listener** is any separately exposed callback or standalone endpoint and never inherits Ingress identity.
 
@@ -71,7 +71,7 @@ The current foundation is intentionally limited to reversible composition, persi
 1. Choosing the backend, frontend, database, init system, or image-build stack.
 2. Defining provider authorization; that belongs to the provider-connections SDD.
 3. Shipping standalone mode in the first release.
-4. Exposing playback/media-player entities.
+4. Defining listening behavior or creating Symphonia-owned playback/media-player entities; the separate [listening SDD](listening-and-playback-control.md) owns read/control of explicitly selected existing Home Assistant player entities through the [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md) companion broker. Broker pairing and operation contracts are not part of this runtime foundation and remain gated there.
 
 ### 4.3 Fixed invariants
 
@@ -127,7 +127,7 @@ Text equivalent: startup validates configuration, migrates, and recovers before 
 ### 6.2 Alternative and boundary paths
 
 - A provider outage degrades only that connection/capability; it does not make local history unavailable.
-- Home Assistant Core or the optional integration may be unavailable while the App continues safe provider work.
+- Home Assistant Core or the playback companion may be unavailable while the App continues safe provider work; only listening is disabled.
 - A migration or restore incompatibility keeps the service `blocked`; no fresh empty database replaces user-authored state.
 - An unsupported downgrade is detected before workers start.
 - A callback listener, if selected by the authorization SDD, exposes only its bounded callback routes.
@@ -169,7 +169,7 @@ The current foundation profile applies this boundary before opening stores or cr
 | HTTP/Ingress presentation | Base-path routing, trusted identity adaptation, status views | Provider/domain decisions |
 | Persistence/job adapters | Schema, transactions, leases, recovery | Presentation or HA identity |
 | Composition | Concrete profile and startup/shutdown order | New business rules |
-| Companion integration | Versioned local client and native projections | Database/token-store access or duplicate orchestration |
+| Companion integration | Versioned authenticated playback broker; optional native projections | Database/token-store access, broad App-to-Core authority, or duplicate orchestration |
 
 ### 8.2 Contracts, durable state, and trust boundaries
 
@@ -289,7 +289,7 @@ The eight feature-specific UI cases above supplement rather than replace the 84-
 4. Given a migration failure, the prior database remains recoverable and no fresh rescan replaces user-authored state.
 5. Given a backup request with active work, the App produces a transactionally consistent backup or refuses it explicitly.
 6. Given any direct callback port, management routes and Ingress identity headers are unusable on that listener.
-7. Given Home Assistant integration unavailability, local App history remains readable and eligible provider jobs are not corrupted.
+7. Given Home Assistant playback-broker unavailability or version mismatch, listening is unavailable without fallback to broad Core API access; local App history remains readable and eligible provider jobs are not corrupted.
 8. Given an unsupported downgrade, the App blocks before writes and points to compatible restore/upgrade guidance.
 9. Given hostile restored/config/diagnostic values, no path escape, arbitrary URL, secret output, or code execution occurs.
 10. Given Supervisor stop, new admissions stop and shutdown leaves every lease recoverable within the bounded time.
@@ -301,6 +301,7 @@ The eight feature-specific UI cases above supplement rather than replace the 84-
 | --- | --- | --- | --- |
 | `SYM-HA-001`–`SYM-HA-003` | App composition/platform adapter | artifact + disposable HA smoke | install/upgrade/backup guides |
 | `SYM-HA-004` | dependency rule | static architecture test | contributor architecture |
+| `SYM-HA-011` | optional broker lifecycle isolation | unavailable/incompatible broker and no-Core-proxy fixture; scenario 7 | setup/operator guide |
 | `SYM-SEC-008`–`SYM-SEC-011` | listeners/image composition | route/port/privilege abuse tests | security/setup guide |
 | `SYM-ARCH-003`, `SYM-ARCH-006`, `SYM-ARCH-007` | migration/backup use cases | release-fixture migration + restore tests | recovery guide |
 | `SYM-DEP-001`–`SYM-DEP-010` | release artifact | metadata/package/smoke matrix | release support policy |
@@ -330,8 +331,8 @@ The eight feature-specific UI cases above supplement rather than replace the 84-
 ## 20. References and decisions
 
 - Primary sources: Home Assistant App/Ingress/security documentation linked from [provider research](../docs/providers/provider-research.md#home-assistant-platform).
-- Related SDDs: [provider authorization](provider-connections-and-authorization.md), [durable operations](durable-operations-and-recovery.md).
+- Related SDDs: [provider authorization](provider-connections-and-authorization.md), [durable operations](durable-operations-and-recovery.md), [listening and playback control](listening-and-playback-control.md).
 - Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: App is the primary deployment boundary; core remains HA-independent; UI follows the owned Home Assistant-native compatibility layer.
 - Rejected: all logic in a custom integration; unauthenticated management port; fresh database fallback after migration failure.
-- Follow-up: standalone release and companion integration native surface.
+- Follow-up: standalone release and native projections beyond the selected playback broker; the broker's own contract is specified by the listening SDD.

@@ -17,6 +17,7 @@ The existing `docs/` documents remain the horizontal sources of truth:
 | [`docs/providers/provider-specification.md`](../docs/providers/provider-specification.md) | Provider port and capability contract |
 | [`docs/providers/provider-research.md`](../docs/providers/provider-research.md) | Dated official API evidence |
 | [`docs/providers/home-assistant-ecosystem-review.md`](../docs/providers/home-assistant-ecosystem-review.md) | Dated implementation patterns and cautions |
+| [`docs/providers/playback-integration-source-review.md`](../docs/providers/playback-integration-source-review.md) | Dated HA/MA/YT Music source-code behavior, operation limits and live proof matrix |
 | [`docs/decisions/README.md`](../docs/decisions/README.md) | Accepted architectural decisions |
 | [`docs/open-questions.md`](../docs/open-questions.md) | Unresolved owner choices and research gates |
 
@@ -107,6 +108,7 @@ Readiness is necessary but not authorization to implement. The owner must still 
 | --- | --- | --- |
 | Home Assistant App runtime | [App runtime and Ingress](home-assistant-app-runtime-and-ingress.md) | Packaging, lifecycle, authentication boundary, persistence, backup |
 | Home Assistant-native UI | [UI foundation](home-assistant-native-ui.md) | Shared component families, host context, accessibility, responsive behavior, catalog, visual compatibility |
+| Listening and playback control | [Listening and playback control](listening-and-playback-control.md) | Explicit source/player/output selection, now playing, supported controls, and command confirmation without an audio engine |
 | Provider connections | [Provider connections and authorization](provider-connections-and-authorization.md) | OAuth/cookies, secrets, callback boundary, effective capabilities |
 | Provider imports | [Library import and provider projections](library-import-and-provider-projections.md) | Completeness, provenance, unavailable items, retention |
 | Recording identity | [Recording identity resolution](recording-identity-resolution.md) | Conservative matching, evidence, manual decisions |

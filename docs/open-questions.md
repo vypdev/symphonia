@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
 **Status:** open; nothing here is an accepted decision
-**Last reviewed:** 2026-09-26
+**Last reviewed:** 2026-09-28
 
 ## Decisions requiring owner input
 
@@ -78,6 +78,12 @@ The repository currently has no license. The license should be selected before a
 
 This foundation deliberately does not guess at provider reconciliation or expose an unauthenticated resolution endpoint. A future provider-aware reconciliation handler may resolve the outcome automatically only after its provider contract is proven. The repository primitive for explicit resolution is not itself an authorization boundary; any caller must enforce the approved operator identity and action policy. The durable-operation SDD remains blocked on that provider/UI vertical and its other readiness gates, but OQ-010 no longer represents an unresolved policy choice.
 
+### OQ-011 — Which playback sources and Home Assistant authority ship first?
+
+The owner wants a Home Assistant-integrated listening surface alongside playlist management; see the [listening SDD](../specs/listening-and-playback-control.md). **Authority boundary resolved (2026-09-28):** the owner chose a narrow companion playback broker, recorded in [ADR 0006](decisions/0006-narrow-home-assistant-playback-broker.md), instead of granting the App broad Supervisor Core API authority. The first supported source/output matrix and broker transport, pairing, versioning, user attribution, and threat model remain open. This is independent of `OQ-004`'s provider OAuth callback decision: provider import credentials do not authorize HA player control.
+
+**Proposed staged default, conditional on proof:** first evaluate the official Home Assistant Spotify entity via the broker on an already active, uniquely identifiable compatible output. The [source review](providers/playback-integration-source-review.md) shows that stock HA Spotify drops `PLAY_MEDIA` while idle, selects devices by name and may not support exact-output promises. Decide whether this deliberately limited path is useful or a separately authorized device-ID-capable profile is needed before promising start-from-idle or “play here.” Then consider Music Assistant players and its unofficial YouTube Music source with independent account/caller/queue and support-risk review. `ytube_music_player` is optional community evidence, not an automatic dependency. Multiple active players are selected explicitly. There is no fallback to a generic Core API relay.
+
 ## Research/design gates (not owner preference alone)
 
 ### RG-001 — Official provider feasibility
@@ -144,6 +150,10 @@ The owner has accepted the Home Assistant-native-adjacent direction, independent
 
 The tooling choice is accepted; the result must still establish a supported matrix and validated host/visual contracts. It does not authorize production UI work until the SDD is ready and the owner explicitly approves implementation.
 
+### RG-007 — Listening source, target, and command feasibility
+
+Use a disposable Home Assistant installation and dedicated accounts/devices after the broker protocol/security decision. Record the exact versions and account identities for HA Spotify, Music Assistant, and any proposed community player. Run the [dated source-review proof matrix](providers/playback-integration-source-review.md#rg-007-proof-matrix-before-release): verify Spotify idle/active/restricted and duplicate-name device behavior, WebSocket versus service browsing and service feature gates, exact-output/start feasibility, MA queue versus external source and per-user/default-user attribution through the **actual companion-broker route**, playlist reference mapping, private/unavailable/large playlist behavior, state-update/device-discovery lag, accepted-but-unobserved commands, external-controller races, HA restart, and credential recovery. Prove whether account identity can be machine-verified; if not, specify a visible user-confirmed but unverified binding and forbid automatic private-playlist mapping. Test hostile entity/media IDs, MA free-text/URL/path fallback rejection, broker pairing/version/replay/secret isolation, and ensure no broker credential reaches Ingress/browser state. Decide freshness/command-confirmation budgets from these observations. Keep community implementation findings separate from official platform evidence and do not infer control of native YouTube Music app sessions.
+
 ## Future synchronization questions
 
 These do not block the copy MVP but block sync implementation:
@@ -193,6 +203,8 @@ These need evidence and small RFCs; popularity is not evidence.
 | Single-node embedded storage cannot handle job concurrency/backup safely | Low-medium | Medium | `RG-004`; no multi-replica claim |
 | Home Assistant coupling leaks into domain/application | Medium | High maintenance/portability cost | ADR 0003 dependency rule and architecture tests |
 | Native-looking UI depends on unstable private Home Assistant components or drifts into an unrelated SaaS design | Medium | High compatibility and product-coherence cost | ADR 0004, owned compatibility layer, `RG-006`, dated official references, catalog/a11y/responsive/visual release gates |
+| Listening UI confuses library account, HA source, and speaker or shows accepted commands as confirmed playback | High without explicit contract | High: wrong output/account and misleading controls | `OQ-011`, `RG-007`, explicit binding, exact references, observed-effect reconciliation |
+| Broker pairing/operation scope fails or unofficial YT Music credentials cross into browser/diagnostics | Medium | Critical privacy/control risk | ADR 0006 narrow broker, pairing/replay/secret threat review, entity/action allowlist, no cookie handoff |
 | Unknown target library sizes lead to unjustified performance design | High | Medium | `OQ-007`, measurable targets before optimization |
 | Future Apple Music support is mistaken for full sync despite no documented remove/reorder operation | Medium | High if scope is promoted | Per-operation/object capability probes; Apple feasibility gates before scope change |
 
@@ -202,7 +214,7 @@ These need evidence and small RFCs; popularity is not evidence.
 2. **Close the [authorization SDD](../specs/provider-connections-and-authorization.md) blockers (`RG-002` + `OQ-004`).** Validate the direct App callback flow, then settle bring-your-own credentials, encryption, revocation, and backups.
 3. **Close the [copy SDD](../specs/one-time-playlist-copy.md) policy blocker (`OQ-003`).** Decide target creation, strict/best-effort behavior, batching, partial failure, reconciliation, cancellation, and exact acceptance examples.
 4. **Close the [identity SDD](../specs/recording-identity-resolution.md) evidence blockers (`RG-003`).** Build the corpus and settle normalization, candidate sources, evidence, versioned rules, manual decisions, and measurable safety targets.
-5. **Close the [runtime](../specs/home-assistant-app-runtime-and-ingress.md) and [durable-operation](../specs/durable-operations-and-recovery.md) SDD blockers (`RG-004`).** Choose process topology and storage only after crash, lease, migration, backup, and representative-scale evidence.
+5. **Define the [listening](../specs/listening-and-playback-control.md) vertical (`OQ-011`/`RG-007`) alongside [runtime](../specs/home-assistant-app-runtime-and-ingress.md) and [durable-operation](../specs/durable-operations-and-recovery.md) blockers (`RG-004`).** Specify and threat-review the selected companion-broker protocol and prove source/account/player/output behavior before promising Spotify or YouTube Music controls; choose process topology/storage only after crash, lease, migration, backup, and representative-scale evidence.
 
 After those tasks, revisit playlist ownership (`OQ-002`) before creating any persistent-synchronization SDD. The Home Assistant native surface (`RG-005`) can proceed in parallel once the service API shape is stable, but it is not a prerequisite for the copy MVP.
 

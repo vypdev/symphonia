@@ -1,7 +1,7 @@
 # Documentation map
 
 **Status:** baseline for review
-**Last reviewed:** 2026-09-20
+**Last reviewed:** 2026-09-28
 
 This documentation is the horizontal implementation contract for Symphonia. It deliberately separates product intent, domain rules, architecture, provider facts, accepted decisions, and unresolved choices. The vertical, capability-level contracts live in the [SDD catalog](../specs/CATALOG.md) and select from these shared rules without overriding them.
 
@@ -17,6 +17,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | [Provider specification](providers/provider-specification.md) | Provider port, capabilities, normalized errors | Claims about a specific API |
 | [Provider research](providers/provider-research.md) | Dated, sourced facts about provider APIs | Product policy or permanent architecture |
 | [Home Assistant music ecosystem review](providers/home-assistant-ecosystem-review.md) | Reusable patterns and cautions from existing HA music projects | Dependency selection or provider guarantees |
+| [Playback integration source review](providers/playback-integration-source-review.md) | Dated source-code findings, operation limits, risk and live proof matrix for HA Spotify, Music Assistant, and YT Music projects | Official API guarantees, release support, or SDD readiness |
 | [Development specification](development/development-specification.md) | Specification workflow, testing and delivery gates | Product scope |
 | [Local quality audit](development/quality-audit.md) | Reproducible offline RepoWise/Graphify review and current architecture/test debt | A release or SDD readiness claim |
 | [ADRs](decisions/README.md) | Decisions that have actually been accepted | Proposals and guesses |
@@ -34,6 +35,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | `SYM-LIB` | Unified library |
 | `SYM-MATCH` | Identity resolution |
 | `SYM-PL` | Playlist copy |
+| `SYM-PLAY` | Listening and playback control |
 | `SYM-SYNC` | Persistent synchronization |
 | `SYM-PROV` | Provider abstraction |
 | `SYM-ARCH` | Architecture and persistence |

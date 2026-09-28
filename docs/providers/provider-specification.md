@@ -1,11 +1,13 @@
 # Provider specification
 
 **Status:** proposed contract; specific support is a dated research fact
-**Last reviewed:** 2026-09-27
+**Last reviewed:** 2026-09-28
 
 ## Purpose
 
 Provider adapters translate external authentication, catalog, library, and playlist behavior into Symphonia concepts. The core asks for semantic capabilities and operations; it never branches on `spotify` or `youtube` to decide domain policy.
+
+Listening uses a distinct playback-source/player adapter contract. A library adapter may contribute an exact playback reference for one of its objects, but a library grant is not a playback grant, a provider playlist is not a player queue, and the presence of a provider adapter does not imply that Home Assistant has a corresponding `media_player` entity.
 
 This document states what Symphonia needs. [Provider research](provider-research.md) separately records what current official APIs appear to support, while the [Home Assistant music ecosystem review](home-assistant-ecosystem-review.md) records reusable implementation patterns and cautions from existing projects.
 
@@ -101,6 +103,25 @@ The initial catalog is intentionally granular:
 - `metadata.artist_credits.read`
 - `metadata.version_markers.read`
 
+### Playback source and player (separate from library/write capabilities)
+
+- `playback.source.browse`
+- `playback.source.search`
+- `playback.media.start`
+- `playback.state.observe`
+- `playback.transport.play`
+- `playback.transport.pause`
+- `playback.transport.stop`
+- `playback.transport.next`
+- `playback.transport.previous`
+- `playback.output.select`
+- `playback.position.seek`
+- `playback.shuffle.set`
+- `playback.repeat.set`
+- `playback.queue.read`
+
+These are **effective capabilities of a configured playback source and selected player at a point in time**, not promises made by a library connection. A Home Assistant adapter may derive them from `supported_features`, entity state, integration-specific media types, account/permission evidence, and live availability; a static feature bit alone does not establish that a particular playlist URI or remote device will work. The adapter must distinguish an observed capability, a tested source-specific mapping, and an unknown mapping. Music Assistant or community integrations retain their own access-basis/support labels.
+
 Adapters MAY add namespaced experimental capabilities, but product workflows use only cataloged stable capabilities until the catalog is revised.
 
 ## Capability requirements by workflow
@@ -113,8 +134,12 @@ Adapters MAY add namespaced experimental capabilities, but product workflows use
 | Copy to new playlist | target search/get, playlist create, entries add | metadata update, duplicates preserve, revision read |
 | Strict mirror sync | read/revision on both, target add/remove/reorder or replace | push changes, conditional writes |
 | Add-only sync | read/revision on source, target search/get/add | push changes |
+| Listen to selected media | configured source, explicit player/output, exact compatible media reference or supported source browser, `playback.media.start` | queue/seek/shuffle/repeat when supported |
+| Show/control now playing | `playback.state.observe` and the selected transport actions | playlist/context/position/artwork only when observed |
 
 A workflow MUST fail during planning with a typed capability explanation if a required capability is absent. It must not discover this after creating a partial target where a preflight probe was possible.
+
+Playback start is an interactive command, not a durable playlist mutation. Its response may be accepted before the target changes state, or may be lost after the target acts; the listening SDD owns pending/reconciliation behavior. It must not inherit the copy job's retry semantics.
 
 ## Normalized provider ports
 
@@ -176,6 +201,8 @@ For reconciliation, adapters and application ports MUST distinguish an effect-co
 - **SYM-PROV-018:** An external object identity MUST include its object type and MUST include a provider-instance or connection namespace whenever upstream IDs are not proven globally unique.
 - **SYM-PROV-019:** Planning MUST calculate effective capabilities from adapter, connection, object, and live-health constraints; a connection-wide capability MUST NOT override an object-level denial such as a read-only playlist.
 - **SYM-PROV-020:** Unofficial or `best_effort` status MUST be visible before authorization and again in any plan that depends on that adapter.
+- **SYM-PROV-021:** A provider adapter that offers an imported item for playback MUST return a typed, exact reference compatible with the selected playback source, or `unsupported`/`unknown` with a reason; it MUST NOT construct a playback request from title similarity or unchecked URLs.
+- **SYM-PROV-022:** Library and playback authorization/capabilities MUST be probed and disclosed independently; connecting a provider for import or playlist writes MUST NOT imply a Home Assistant integration, player, matching account, or playback permission.
 
 ## Normalized error taxonomy
 
