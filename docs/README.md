@@ -18,6 +18,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | [Provider research](providers/provider-research.md) | Dated, sourced facts about provider APIs | Product policy or permanent architecture |
 | [Home Assistant music ecosystem review](providers/home-assistant-ecosystem-review.md) | Reusable patterns and cautions from existing HA music projects | Dependency selection or provider guarantees |
 | [Playback integration source review](providers/playback-integration-source-review.md) | Dated source-code findings, operation limits, risk and live proof matrix for HA Spotify, Music Assistant, and YT Music projects | Official API guarantees, release support, or SDD readiness |
+| [Complete listening proof plan](development/playback-release-gates.md) | Desired Spotify/MA/YT Music release claims, evidence matrix, broker threat gate, and disposable-system probes | Permission to implement or a guarantee that upstream services expose every action |
 | [Development specification](development/development-specification.md) | Specification workflow, testing and delivery gates | Product scope |
 | [Local quality audit](development/quality-audit.md) | Reproducible offline RepoWise/Graphify review and current architecture/test debt | A release or SDD readiness claim |
 | [ADRs](decisions/README.md) | Decisions that have actually been accepted | Proposals and guesses |

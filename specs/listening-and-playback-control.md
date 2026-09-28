@@ -6,13 +6,15 @@
 - Owners: Symphonia maintainers
 - Scope: browse playable content, choose an explicit playback source and output, observe now-playing state, and control a configured external player from the Home Assistant-integrated Symphonia UI.
 - Related requirements: `SYM-PLAY-001`–`SYM-PLAY-009`, `SYM-PROV-021`–`SYM-PROV-022`, `SYM-UI-016`, `SYM-HA-011`, `SYM-ARCH-016`, `SYM-ACC-005`, `SYM-UI-001`–`SYM-UI-015`, `SYM-SEC-004`, `SYM-SEC-008`
-- Related decisions/research: [product specification](../docs/product/product-specification.md), [domain model](../docs/domain/domain-model.md), [provider specification](../docs/providers/provider-specification.md), [system architecture](../docs/architecture/system-architecture.md), [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md), [official playback research](../docs/providers/provider-research.md#2026-09-28-playback-and-home-assistant-api-update), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [integration source review](../docs/providers/playback-integration-source-review.md), [UI foundation](home-assistant-native-ui.md), [App runtime](home-assistant-app-runtime-and-ingress.md), `OQ-011`, `RG-007`
+- Related decisions/research: [product specification](../docs/product/product-specification.md), [domain model](../docs/domain/domain-model.md), [provider specification](../docs/providers/provider-specification.md), [system architecture](../docs/architecture/system-architecture.md), [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md), [official playback research](../docs/providers/provider-research.md#2026-09-28-playback-and-home-assistant-api-update), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [integration source review](../docs/providers/playback-integration-source-review.md), [full-scope proof plan](../docs/development/playback-release-gates.md), [UI foundation](home-assistant-native-ui.md), [App runtime](home-assistant-app-runtime-and-ingress.md), `OQ-011`, `RG-007`
 - Required review gates: product UX, Home Assistant platform/API, provider feasibility, architecture, accessibility, testing, documentation, security/privacy
-- Open decisions blocking readiness: `OQ-011` supported playback-source matrix and broker transport/pairing/identity contract (the narrow-broker authority choice is accepted); `RG-007` Spotify idle-start/exact-device feasibility, account/source/player binding, MA caller identity and playlist-reference evidence; broker threat/version/upgrade review; live-state freshness and command-reconciliation thresholds; first-release Music Assistant/community policy
+- Open decisions blocking readiness: `OQ-011` complete supported playback-profile matrix and broker transport/pairing/identity contract (the narrow-broker authority choice is accepted); `RG-007` Spotify idle-start/exact-device feasibility, account/source/player binding, MA caller identity and playlist-reference evidence; whether an explicitly consented direct Spotify Connect complement is authorized; broker threat/version/upgrade review; live-state freshness and command-reconciliation thresholds; Music Assistant/community YouTube Music support policy
 
 ## 1. Executive summary
 
 Symphonia should feel like a focused Home Assistant music surface: after setting up a library provider and a separate compatible playback source, a user can choose what to hear and where, see what that selected player reports now, and operate only controls it supports. The same App retains Symphonia's higher-assurance playlist import, identity resolution, and copy workflows. [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md) selects a narrow companion integration that alone reads/commands explicitly allowed Home Assistant `media_player` entities; the App uses a typed broker port and does not stream or decode audio.
+
+The owner rejected an active-session-only Spotify release as the complete product. The intended acceptance covers starting/switching playlists, exact output selection, now-playing and supported transport across the accepted Spotify and Music Assistant/YouTube Music profiles. Development may proceed in internal increments, but no narrower increment may be advertised as complete. The [release proof plan](../docs/development/playback-release-gates.md) separates that target from currently demonstrated provider behavior; impossible or unsafe upstream operations require an explicit exception or a separately approved route, not a fabricated control.
 
 The primary correctness rule is **no inferred authority**: an imported Spotify playlist, a Home Assistant Spotify entity, a Music Assistant source, and a speaker may refer to different accounts or devices. A title match, shared provider name, or successful action request never proves the intended media is playing on the intended output.
 
@@ -61,7 +63,7 @@ No Symphonia listening route, playback port, companion playback broker, player d
 
 1. Make selecting media and output, now-playing display, and available controls usable in a familiar Home Assistant-like view.
 2. Preserve Symphonia's playlist-management experience alongside listening, without conflating playback queue changes with durable playlist edits.
-3. Support configured Spotify HA and, subject to independent evidence/policy, Music Assistant or community sources such as YouTube Music through the same capability-driven UI.
+3. Complete an evidence-backed Spotify and Music Assistant/YouTube Music listening profile, including starting and switching playable playlists on an exact compatible output. Each profile uses the same capability-driven UI but may have genuinely different supported controls and setup requirements.
 4. Degrade playback independently of the library/import/copy system.
 
 ### 4.2 Non-goals
@@ -69,7 +71,7 @@ No Symphonia listening route, playback port, companion playback broker, player d
 1. Streaming, downloading, decoding, transcoding, or mixing audio in Symphonia.
 2. Universal observation/control of arbitrary provider apps, browsers, devices, or accounts outside the selected integration.
 3. Building a second Music Assistant server, a general Home Assistant API browser, or a generic service-call console.
-4. Queue editing, multi-room synchronization, cross-service handoff, and playback history/scrobbling in the first vertical slice. Queue read and richer controls require their own verified capability and scope decision.
+4. Queue editing, multi-room synchronization, cross-service handoff, and playback history/scrobbling in this contract. Starting a different playlist is in scope; editing the active queue or a saved playlist is not. Queue read and richer controls require their own verified capability and scope decision.
 5. Changing the playlist-copy safety/confirmation contract; starting a playlist changes playback only, not the provider playlist.
 
 ### 4.3 Fixed invariants
@@ -120,6 +122,7 @@ Text equivalent: a separately configured source and explicitly chosen target pre
 - A Symphonia provider connection exists but no HA playback source: library works; Listen shows setup guidance, not a fake player.
 - HA Spotify is configured but has no known Spotify Connect device: now-playing may be idle; start/output explains the missing device. While idle or on a restricted device, stock HA Spotify advertises only source selection, not normal `play_media` or WebSocket browse. A separately approved browse-service route is unproven; no idle-start workaround is assumed.
 - HA Spotify lists duplicate device names or an output selected by name cannot be freshly verified: keep “play here” disabled, even if `SELECT_SOURCE` is advertised. Source selection/transfer can alter an existing session and requires an explicit warning and effect observation.
+- If a pinned HA-only Spotify route cannot meet the requested idle-start/exact-output contract in live tests, do not re-label an active-session-only prototype as complete. Evaluate an explicitly consented, device-ID-capable Spotify Connect complement only if the owner authorizes its separate grant, policy review and live proof; until then, this release gate remains open.
 - MA reports an external active source with current media but no active queue: display that media without fabricating queue controls, next item or playlist context. A base HA feature flag alone does not enable queue-only actions.
 - MA is invoked via a server-side Core bridge: verify the actual HA/MA caller mapping before showing private source results or attributing a play request to the listener; absent evidence, constrain to a configured single-admin/default-account profile or keep the path unavailable.
 - Music Assistant has a YouTube Music source but no playable target or expired cookie/PO-token service: show source unavailable with its unofficial status; do not fall back to Google/YouTube Data or ask Symphonia for cookies.
@@ -168,6 +171,7 @@ Migration from an earlier install adds no automatic binding or allowed target. I
 | Domain/pure policy | target/source identity, freshness, capability intersection, command eligibility | HA constants/SDKs, provider DTOs, audio streams |
 | Application | list targets/sources, bind, browse, observe, command, reconcile | direct HA/Spotify calls, UI layout |
 | App playback adapter | broker DTO mapping, source-specific state/feature/media validation | provider library/copy policy, Core credentials, generic Core proxy |
+| Optional direct Spotify Connect adapter, **only if separately accepted** | fresh device-ID and account-bound read/control mapping behind the same semantic ports | implicit reuse of HA/library grants, exposing tokens to browser/broker, fallback without user consent |
 | Companion broker | HA entity observation and typed, exact-target Core action dispatch | Symphonia database/grants, arbitrary HA service proxy, music-domain policy |
 | Infrastructure/composition | broker pairing, versioning, allowlist synchronization, bounded transport/subscriptions | implicit user account equivalence or broad App-to-Core authority |
 | Presentation | listening view model, confirmation, pending/stale/uncertain feedback | token access, raw service dispatch, authority decisions |
@@ -277,23 +281,23 @@ Errors use impact → cause → next action → retained state. A third-party ou
 ## 13. Compatibility, migration, rollout, and rollback
 
 - Initial schema adds optional source/target binding and allowlist only after permission choice; existing provider connections, imports, plans, and jobs are unchanged. No implicit migration from provider account to HA entity.
-- Phase 1 is broker protocol/security and source-matrix research plus deterministic fake-broker fixtures. Phase 2 proves one official Spotify HA end-to-end path through the broker. Phase 3 may add Music Assistant and optional unofficial community sources after separate feasibility/support decisions.
+- Internal increments may prove the broker, Spotify HA, Music Assistant and optional community profiles in sequence, but the owner has not accepted an active-session-only Spotify increment as the complete listening release. The outward claim waits for the agreed full profile matrix, including a proven idle-start/exact-output solution or an explicitly accepted exception. A direct Spotify Connect complement, if approved, needs its own grant, account-binding, policy, recovery and test contract; it is not a silent broker fallback.
 - A supported HA version/entity feature change disables only affected playback capabilities, not library/copy. Compatibility is rechecked on HA, Music Assistant, and community integration upgrades.
 - Rollback removes listening UI/bridge while retaining library/copy state. Any external playback already started cannot be undone by rolling back Symphonia; no compensating stop is automatic.
 - Standalone mode shares the same listening contract but shows playback setup/unavailable until an explicitly authenticated supported playback adapter exists; it never assumes a hidden Home Assistant instance.
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **76 distinct cases**:
+Minimum **112 distinct cases** for the requested full-profile target:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 | --- | ---: | --- |
-| Domain/configuration/capability policy | 16 | binding verification, exact references, missing scopes/targets, feature intersections, stale/unknown |
-| State/application/concurrency | 18 | pending/confirmed/uncertain, external player races, duplicate click, out-of-order events, restart/target change |
-| HA/MA/provider adapter contracts | 18 | Spotify idle/active/restricted and duplicate-device fixtures, WS versus service browse, MA queue/external and caller identity, exact refs, errors/timeouts |
-| HTTP/UI/accessibility/sanitization | 14 | all visible states, keyboard/focus/announcements, mobile, hostile metadata/artwork, unsupported reasons |
-| Integration/security/migration | 10 | broker pairing/version/allowlist/secret canaries, Ingress isolation, reconnect/no replay, rollback/backup, opt-in live smoke |
-| **Total** | **76** | No double counting |
+| Domain/configuration/capability policy | 20 | binding verification, exact references, missing scopes/targets, feature intersections, stale/unknown, profile-specific eligibility |
+| State/application/concurrency | 24 | pending/confirmed/uncertain, external player races, duplicate click, out-of-order events, restart/target change, playlist switch |
+| HA/MA/provider adapter contracts | 28 | Spotify idle/active/restricted and duplicate-device fixtures, device-ID route if approved, WS versus service browse, MA queue/external and caller identity, YouTube Music expiry, exact refs, errors/timeouts |
+| HTTP/UI/accessibility/sanitization | 18 | all visible states, keyboard/focus/announcements, mobile, hostile metadata/artwork, unsupported reasons, source/output switching |
+| Integration/security/migration | 22 | broker pairing/version/allowlist/secret canaries, Ingress isolation, separate direct grant if approved, account identity, reconnect/no replay, rollback/backup, opt-in live smoke |
+| **Total** | **112** | No double counting |
 
 The ordinary suite uses synthetic HA entity states, feature flags, service responses, deterministic clocks, command IDs, source browsers, and no network/account. Each supported integration gets its own versioned fixture matrix; Spotify and Music Assistant are not treated as the same protocol mapping. Security tests require exact entity/action allowlisting, no MA name/URL/path fallback, caller-context checks, and secret canaries. Opt-in live smoke uses disposable/dedicated accounts and devices; it tests Spotify idle start/browse and duplicate-name outputs, MA queue/external source and actual user attribution, the supported source/output matrix, accepted-but-unobserved commands, independent external controller races, and cleanup. Human evidence covers Home Assistant-native visual parity, phone/wide, light/dark, keyboard/screen reader, long metadata, multiple players, and all blocked/uncertain states. Live tests supplement, not replace, deterministic contracts.
 
@@ -327,6 +331,7 @@ The ordinary suite uses synthetic HA entity states, feature flags, service respo
 17. Given an MA player on an external source without an active queue, now-playing may show the reported item, but shuffle/repeat/clear-queue/next-item claims are suppressed unless the effective source/player profile proves them.
 18. Given a server-side HA request whose MA user identity is missing, defaulted or mismatched, private library/search/play is not attributed to the listener; unchecked URL/path/name inputs never reach MA's permissive resolver.
 19. Given no broker, a revoked pairing, an incompatible protocol version, or a lost broker response, listening is unavailable/uncertain without fallback to a broad Core API token or replay; library/copy remains usable.
+20. Given the complete-release claim, a dedicated-account fixture demonstrates idle start, exact output, playlist switch, current media and applicable transport for every accepted Spotify and Music Assistant/YouTube Music profile. A failed or unsupported operation produces an explicit owner-reviewed exception or keeps the profile outside that claim; a working active-session-only prototype alone cannot satisfy this scenario.
 
 ## 17. Requirements traceability
 
@@ -347,7 +352,7 @@ The ordinary suite uses synthetic HA entity states, feature flags, service respo
 1. Complete `OQ-011` and `RG-007`: the broker authority choice is accepted, but its transport/pairing/threat model, supported source/output matrix, identity rules, and bounded state/command thresholds remain open.
 2. Add architecture, broker protocol/allowlist, capability, binding, and command-confirmation contract tests with fake HA/Spotify/MA observations.
 3. Implement pure listening policy and application ports/use cases with ephemeral state and minimal persistent binding only.
-4. Implement the approved, versioned companion broker and App adapter only after this SDD is ready, then prove the Spotify HA vertical; add Music Assistant/community mappings only after their separate evidence/support decision.
+4. Implement the approved, versioned companion broker and App adapter only after this SDD is ready, then prove Spotify HA, Music Assistant and each accepted community mapping separately. If the owner approves a direct Spotify Connect complement, specify and review its separate grant and adapter before implementation.
 5. Add shared now-playing/transport UI family, Listen route, accessibility, documentation, and Ingress/standalone degraded-state behavior.
 6. Run opt-in supported-matrix smoke and security/visual review; update source evidence and catalog before readiness/implementation claims.
 
@@ -355,8 +360,8 @@ The ordinary suite uses synthetic HA entity states, feature flags, service respo
 
 - [ ] SDD is `Ready for implementation`, explicit owner approval to implement exists, and broker protocol/security plus source-matrix blockers are resolved.
 - [ ] Account/source/player/output distinctions, exact-reference rules, and unavailable/unverified states pass acceptance and documentation review.
-- [ ] At least 76 distinct deterministic cases, architecture checks, permission/allowlist tests, and secret-canary gates pass.
-- [ ] Spotify HA and any advertised MA/community path have dedicated opt-in integration evidence on supported versions/accounts/targets.
+- [ ] At least 112 distinct deterministic cases, architecture checks, permission/allowlist tests, and secret-canary gates pass.
+- [ ] Every advertised Spotify and MA/YouTube Music profile has dedicated opt-in idle/start/output/playlist-switch/current-control evidence on supported versions/accounts/targets, or an explicit owner-reviewed exception; an active-session-only Spotify path is not a complete-release claim.
 - [ ] Command acceptance versus observed effect, timeout/uncertain/no-replay, external races, and restart behavior are proven.
 - [ ] Listening UI passes the shared component catalog, HA visual-reference, responsive, localization, accessibility, and Ingress/standalone gates.
 - [ ] No audio pipeline, implicit account binding, broad App-to-Core access/generic Core proxy, plaintext listening history, or playlist-write retry leakage exists.
@@ -369,4 +374,4 @@ The ordinary suite uses synthetic HA entity states, feature flags, service respo
 - Related SDDs: [App runtime](home-assistant-app-runtime-and-ingress.md), [UI foundation](home-assistant-native-ui.md), [provider connections](provider-connections-and-authorization.md), [library import](library-import-and-provider-projections.md), [playlist copy](one-time-playlist-copy.md).
 - Accepted authority decision: [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md) requires a narrow Home Assistant companion broker for listening; App-to-Core Supervisor proxy is not the initial playback path. The broker transport/pairing protocol and supported source matrix are **not accepted** yet.
 - Rejected: automatic provider-to-player linking, guessing playlist URIs from titles, command-success from HTTP acceptance, silent YT Music unofficial fallback, and treating Symphonia as an audio streamer.
-- Follow-up: queue editing, cross-player handoff/multi-room, direct provider playback, and listening history require separate scope/evidence decisions.
+- Follow-up: queue editing, cross-player handoff/multi-room, other direct-provider playback, and listening history require separate scope/evidence decisions. The proposed Spotify Connect complement remains unaccepted until its own approval and review.

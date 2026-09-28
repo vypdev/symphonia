@@ -7,7 +7,7 @@
 
 Symphonia is a self-hosted personal music hub through which a person can see and manage their music across providers. Symphonia owns the user's provider-independent view of music; Spotify, YouTube, Apple Music, Plex, Navidrome, and future services are replaceable representations and execution targets.
 
-The product combines a Home Assistant-integrated listening surface with trustworthy library interoperability. A user can choose music and an output, see what is playing, and control an existing playback session where a configured integration supports it; Symphonia also imports, explains, matches, reviews, and copies playlists. Symphonia is a playback **controller**, not a replacement audio-streaming engine. Library access and playback access are separate capabilities even when they refer to the same service.
+The product combines a Home Assistant-integrated listening surface with trustworthy library interoperability. A user can choose music and an exact compatible output, start or switch a playlist, see what is playing, and use the controls that a configured source actually supports; Symphonia also imports, explains, matches, reviews, and copies playlists. Symphonia is a playback **controller**, not a replacement audio-streaming engine. Library access and playback access are separate capabilities even when they refer to the same service. An active-session-only Spotify controller is an internal increment, not the complete listening promise.
 
 ## Product principles
 
@@ -29,7 +29,7 @@ Multi-user authorization, sharing between Symphonia users, and hosted SaaS opera
 ## Goals
 
 - Provide one inventory of connected provider playlists and library items with clear provenance.
-- Provide a familiar listening view for configured playback sources: browse/select available music, choose a supported output, see current playback, and use only supported controls.
+- Provide a familiar listening view for supported Spotify and Music Assistant/YouTube Music profiles: browse/select available music, start or switch playlists on an exact compatible output (including from idle where advertised), see current playback, and use only supported controls. The [full-scope proof plan](../development/playback-release-gates.md) defines the evidence required before making that release claim.
 - Recognize when provider-specific items likely represent the same recording.
 - Let the user resolve ambiguity and preserve that decision.
 - Copy a playlist between supported providers with a complete preview and result.
@@ -178,7 +178,7 @@ The first useful release is complete when one local user can:
 - authenticate with supported provider flows;
 - import supported library collections and owned/followed playlists;
 - browse provider playlists and their freshness;
-- discover at least one explicitly linked Home Assistant playback source/player, browse its playable content, start a supported track or playlist on a chosen output, observe its current session, and use the controls it supports; starting an imported playlist requires a verified compatible reference;
+- set up explicitly linked Spotify and Music Assistant/YouTube Music playback profiles that pass the agreed source/output matrix, browse playable content, start and switch supported tracks or playlists on the selected exact output (including idle start where claimed), observe current sessions, and use each profile's genuine controls; starting an imported playlist requires a verified compatible reference;
 - resolve track identities automatically where safe and manually where needed;
 - preview and execute a copy in each direction only where the target adapter declares all required capabilities;
 - inspect basic operation history; and
@@ -186,7 +186,7 @@ The first useful release is complete when one local user can:
 
 The wording “validated Google/YouTube connection” is deliberate. Symmetric **YouTube Music** library access is not yet proven through an official API; see [provider research](../providers/provider-research.md). If official feasibility fails, the owner must revise the MVP rather than silently adopting a reverse-engineered API.
 
-This listening goal does **not** promise a YouTube Music session outside a configured Home Assistant/Music Assistant/community player, or that connecting Symphonia to Spotify automatically configures Home Assistant's Spotify integration. If the first-release playback source/output pairing or account-binding contract cannot be proven, the release boundary requires an explicit owner revision; a screenshot-only listening view does not satisfy it.
+This listening goal does **not** promise a YouTube Music session outside a configured Home Assistant/Music Assistant/community player, or that connecting Symphonia to Spotify automatically configures Home Assistant's Spotify integration. The owner rejected treating an active-session-only Spotify path as a complete first release. Stock Home Assistant Spotify may not meet idle-start/exact-output requirements; a separately consented direct Spotify Connect complement is under consideration, not yet approved. If the source/output pairing, account binding, idle start or provider contract cannot be proven, the release boundary requires an explicit owner revision; a screenshot-only listening view does not satisfy it.
 
 ## Future scope
 
@@ -195,7 +195,7 @@ This listening goal does **not** promise a YouTube Music session outside a confi
 - Apple Music, Plex/Plexamp, Navidrome, and other adapters.
 - Multiple accounts per provider in the UI.
 - Home Assistant entities, actions, and events over a stable Symphonia API.
-- Direct provider playback adapters where a supported contract materially improves coverage beyond Home Assistant players, subject to separate scopes, permissions, and policy review.
+- Direct provider playback adapters beyond any separately accepted Spotify Connect complement, subject to separate scopes, permissions, and policy review.
 - More complete album, artist, release, and musical-work modeling.
 - Export/import of user-authored mappings and operation history.
 

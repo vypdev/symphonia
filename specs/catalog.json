@@ -179,6 +179,7 @@
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/providers/playback-integration-source-review.md",
+        "docs/development/playback-release-gates.md",
         "docs/architecture/system-architecture.md",
         "docs/open-questions.md"
       ],
@@ -188,8 +189,8 @@
         "documentation": []
       },
       "blockers": [
-        "OQ-011 broker transport/pairing/identity and first playback source/output matrix; narrow-broker authority decision accepted",
-        "RG-007 Spotify idle-start/exact-output, MA caller/queue, account/source/player and exact playlist-reference feasibility",
+        "OQ-011 broker transport/pairing/identity and complete playback profile matrix; narrow-broker authority accepted, active-session-only release rejected",
+        "RG-007 Spotify idle-start/exact-output, MA caller/queue, account/source/player and exact playlist-reference feasibility; direct Spotify Connect complement needs separate approval",
         "Threat review of broker pairing, versioning, replay, caller identity, and action/entity allowlist",
         "Accepted observation freshness and command-reconciliation budgets",
         "YouTube Music community-source support and risk decision"
