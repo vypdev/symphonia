@@ -42,7 +42,7 @@ Re-ran the documented offline commands against the local `develop` working tree 
 
 Graphify's `--code-only --no-cluster` extraction produced **1,181 nodes and 3,060 edges**. `OperationRepository` remains the most connected symbol (57 edges); its one-hop dependents include runtime HTTP/resources, copy and import execution, the operation runner, and their tests. This reinforces the existing plan to define repository ports and preserve restart/reconciliation characterization before changing operation persistence. The broker design is kept out of domain/application imports and is not wired into this graph while its SDD is Draft.
 
-The local `make verify` run passed **232 `unittest` cases (2 skipped)** plus specification/whitespace checks. The isolated Lit spike also passed `npm ci --ignore-scripts`, TypeScript, presentation-boundary checks, three pure fallback tests, build, and relative-asset verification. Neither result proves Home Assistant integration, live playback, visual parity, or CI on GitHub.
+The latest local `make verify` run passed **239 `unittest` cases (2 skipped)** plus specification/whitespace checks. Seven new validator cases exercise readiness blockers, implemented evidence, valid status transitions, malformed arrays, and missing SDD status. The isolated Lit spike also passed `npm ci --ignore-scripts`, TypeScript, presentation-boundary checks, three pure fallback tests, build, and relative-asset verification. Neither result proves Home Assistant integration, live playback, or visual parity. The new validator checks are structural guards, not substitutes for human review or live evidence.
 
 The previously absent coverage measurement is now reproducible with pinned `coverage.py` 7.16.1 (development-only, not a runtime dependency):
 

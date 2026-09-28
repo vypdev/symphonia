@@ -63,6 +63,14 @@ def _local_path(root: Path, raw: str) -> Path:
     return root / raw
 
 
+def _unique_text_array(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and all(isinstance(item, str) and bool(item.strip()) for item in value)
+        and len(value) == len(set(value))
+    )
+
+
 def _validate_catalog_shape(root: Path, catalog: Any, errors: list[str]) -> list[dict[str, Any]]:
     if not isinstance(catalog, dict):
         _add(errors, "catalog.json must contain an object")
@@ -103,7 +111,7 @@ def _validate_catalog_shape(root: Path, catalog: Any, errors: list[str]) -> list
         else:
             ids.add(capability_id)
         status = capability.get("status")
-        if status not in CATALOG_STATUSES:
+        if not isinstance(status, str) or status not in CATALOG_STATUSES:
             _add(errors, f"{prefix} has invalid status: {status!r}")
         specification = capability.get("specification")
         if not isinstance(specification, str) or not specification:
@@ -113,19 +121,25 @@ def _validate_catalog_shape(root: Path, catalog: Any, errors: list[str]) -> list
         else:
             specifications.add(specification)
         requirements = capability.get("requirements")
-        if not isinstance(requirements, list) or len(requirements) != len(set(requirements)):
-            _add(errors, f"{prefix} requirements must be a unique array")
+        if not _unique_text_array(requirements):
+            _add(errors, f"{prefix} requirements must be an array of unique non-empty strings")
 
         for field in ("evidence", "blockers"):
-            if not isinstance(capability.get(field), list):
-                _add(errors, f"{prefix} {field} must be an array")
+            if not _unique_text_array(capability.get(field)):
+                _add(errors, f"{prefix} {field} must be an array of unique non-empty strings")
+        blockers = capability.get("blockers")
+        if status in ("ready-for-implementation", "implemented") and isinstance(blockers, list) and blockers:
+            _add(errors, f"{prefix} cannot be {status} while blockers remain")
         implementation = capability.get("implementationEvidence")
         if not isinstance(implementation, dict):
             _add(errors, f"{prefix} implementationEvidence must be an object")
         else:
             for field in ("code", "tests", "documentation"):
-                if not isinstance(implementation.get(field), list):
-                    _add(errors, f"{prefix} implementationEvidence.{field} must be an array")
+                values = implementation.get(field)
+                if not _unique_text_array(values):
+                    _add(errors, f"{prefix} implementationEvidence.{field} must be an array of unique non-empty strings")
+                elif status == "implemented" and not values:
+                    _add(errors, f"{prefix} implemented status requires implementationEvidence.{field}")
     return [capability for capability in capabilities if isinstance(capability, dict)]
 
 
@@ -164,10 +178,13 @@ def _validate_sdds(root: Path, capabilities: list[dict[str, Any]], errors: list[
         matches = CAPABILITY_ID_RE.findall(text)
         if matches != [capability_id]:
             _add(errors, f"{specification} must declare exactly catalog capability ID {capability_id!r}")
-        status_match = re.search(r"^\s*-\s+Status:\s+(.+?)\s*$", text, re.MULTILINE)
-        expected_status = CATALOG_STATUSES.get(capability.get("status"))
-        if status_match and expected_status and status_match.group(1) != expected_status:
-            _add(errors, f"{specification} status {status_match.group(1)!r} disagrees with catalog {expected_status!r}")
+        status_matches = re.findall(r"^\s*-\s+Status:\s+(.+?)\s*$", text, re.MULTILINE)
+        status = capability.get("status")
+        expected_status = CATALOG_STATUSES.get(status) if isinstance(status, str) else None
+        if len(status_matches) != 1:
+            _add(errors, f"{specification} must declare exactly one status")
+        elif expected_status and status_matches[0] != expected_status:
+            _add(errors, f"{specification} status {status_matches[0]!r} disagrees with catalog {expected_status!r}")
 
     for path in sorted((root / "specs").glob("*.md")):
         if path.name in EXCLUDED_SPEC_MARKDOWN:
@@ -185,7 +202,10 @@ def _validate_requirements(root: Path, capabilities: list[dict[str, Any]], error
     for path in _repository_markdown(root / "docs"):
         known.update(REQUIREMENT_RE.findall(path.read_text(encoding="utf-8")))
     for capability in capabilities:
-        for requirement in capability.get("requirements", []):
+        requirements = capability.get("requirements")
+        for requirement in requirements if isinstance(requirements, list) else []:
+            if not isinstance(requirement, str):
+                continue  # The catalog-shape error already identifies malformed values.
             if requirement not in known:
                 _add(errors, f"{capability.get('id', '<unknown>')} references unknown requirement {requirement}")
 
@@ -203,7 +223,8 @@ def _validate_catalog_markdown(root: Path, capabilities: list[dict[str, Any]], e
         row = rows.get(capability_id)
         if row is None:
             continue
-        expected_status = CATALOG_STATUSES.get(capability.get("status"))
+        status = capability.get("status")
+        expected_status = CATALOG_STATUSES.get(status) if isinstance(status, str) else None
         expected_path = Path(capability.get("specification", "")).name
         if row != (expected_status, expected_path):
             _add(errors, f"specs/CATALOG.md row for {capability_id} disagrees with catalog.json")

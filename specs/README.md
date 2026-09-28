@@ -117,7 +117,7 @@ Readiness is necessary but not authorization to implement. The owner must still 
 
 Persistent synchronization intentionally has no implementation SDD yet. It remains future scope until playlist ownership, conflict semantics, provider revision evidence, and the copy contract are resolved.
 
-## Manual validation while the repository has no toolchain
+## Automated and manual validation
 
 Run after every SDD or catalog change:
 
@@ -129,7 +129,12 @@ PYTHONPATH=. python3 tools/validate_specs.py
 The validator checks that `catalog.json` parses, referenced files exist, each
 SDD has one known catalog capability ID, catalog statuses and paths agree with
 `CATALOG.md`, requirement IDs are present in the horizontal specifications,
-and local Markdown links resolve. Generated/vendor directories such as
+and local Markdown links resolve. It also rejects a `Ready for implementation`
+or `Implemented` catalog entry with remaining blockers, requires an implemented
+entry to list code, test, and documentation evidence, and requires exactly one
+SDD status declaration. These are structural guards, **not** a substitute for
+owner approval, threat review, live provider proof, or the readiness checklist.
+Generated/vendor directories such as
 `node_modules`, `dist`, and virtual environments are excluded from Markdown
 scanning; owned documentation is still checked even when dependencies are
 installed locally.
@@ -143,4 +148,4 @@ Also verify:
 5. Requirement IDs referenced by SDDs exist in the horizontal specifications.
 6. `CATALOG.md` agrees with `catalog.json`.
 
-A repository-native validator and generated catalog may be added after the implementation toolchain is selected; that tooling choice must not drive the application stack.
+The repository-native validator uses only the Python standard library. A generated catalog and richer semantic checks may be added later; tooling must not drive the application stack.
