@@ -11,6 +11,9 @@ license = { text = "TBD" }
 authors = [{ name = "Symphonia maintainers" }]
 dependencies = []
 
+[project.optional-dependencies]
+quality = ["coverage==7.16.1"]
+
 [project.scripts]
 symphonia = "symphonia.__main__:main"
 
@@ -19,3 +22,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["symphonia"]
+
+[tool.coverage.report]
+skip_covered = true

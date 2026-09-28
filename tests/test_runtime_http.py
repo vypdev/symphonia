@@ -9,7 +9,12 @@ import threading
 import unittest
 
 from symphonia.infrastructure import OperationRepository
-from symphonia.runtime.http import SymphoniaRequestHandler, create_server, route_get
+from symphonia.runtime.http import (
+    SymphoniaHTTPServer,
+    SymphoniaRequestHandler,
+    create_server,
+    route_get,
+)
 
 
 class RuntimeHTTPTests(unittest.TestCase):
@@ -65,6 +70,43 @@ class RuntimeHTTPTests(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertEqual(payload["status"], "not_ready")
 
+    def test_readiness_exception_fails_closed_without_exposing_detail(self) -> None:
+        def broken_readiness() -> bool:
+            raise RuntimeError("secret database detail")
+
+        status, payload = route_get(
+            "/ready", self.repository, readiness_check=broken_readiness
+        )
+
+        self.assertEqual(status, 503)
+        self.assertEqual(payload, {"service": "symphonia", "status": "not_ready"})
+        self.assertNotIn("secret", str(payload))
+
+    def test_non_origin_and_cross_ingress_paths_never_route_to_health(self) -> None:
+        for path in (
+            "health",
+            "//other-host/health",
+            "https://other-host/health",
+            "/local_symphonia/health#fragment",
+            "/local_symphonia-extra/health",
+            "/other/health",
+        ):
+            with self.subTest(path=path):
+                status, payload = route_get(
+                    path, self.repository, ingress_path="/local_symphonia"
+                )
+                self.assertEqual((status, payload), (404, {"error": "not_found"}))
+
+    def test_server_configuration_rejects_missing_or_conflicting_store(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must be supplied"):
+            SymphoniaHTTPServer(("127.0.0.1", 0))
+        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
+            SymphoniaHTTPServer(
+                ("127.0.0.1", 0),
+                repository=self.repository,
+                resources=object(),  # type: ignore[arg-type]
+            )
+
     def test_json_surface_sets_no_cache_and_content_sniffing_headers(self) -> None:
         class FakeHandler:
             def __init__(self) -> None:
@@ -109,6 +151,49 @@ class RuntimeHTTPTests(unittest.TestCase):
                 200,
                 {"value": float("nan")},
             )
+
+    def test_json_surface_closes_connection_on_disconnected_client(self) -> None:
+        class DisconnectedWriter:
+            def write(self, body: bytes) -> None:
+                raise ConnectionError("client disconnected")
+
+        class FakeHandler:
+            close_connection = False
+            wfile = DisconnectedWriter()
+
+            def send_response(self, status: int) -> None:
+                return
+
+            def send_header(self, name: str, value: str) -> None:
+                return
+
+            def end_headers(self) -> None:
+                return
+
+        handler = FakeHandler()
+        SymphoniaRequestHandler._json(handler, 200, {"status": "ok"})  # type: ignore[arg-type]
+        self.assertTrue(handler.close_connection)
+
+    def test_method_errors_have_bounded_json_categories(self) -> None:
+        class FakeHandler:
+            def __init__(self) -> None:
+                self.result: tuple[int, dict[str, str], bool] | None = None
+
+            def _json(
+                self, status: int, payload: dict[str, str], *, close_connection: bool
+            ) -> None:
+                self.result = (status, payload, close_connection)
+
+        for code, category in ((400, "bad_request"), (501, "not_implemented"), (503, "server_error")):
+            with self.subTest(code=code):
+                handler = FakeHandler()
+                SymphoniaRequestHandler.send_error(  # type: ignore[arg-type]
+                    handler,
+                    code,
+                    message="secret request detail",
+                    explain="internal stack",
+                )
+                self.assertEqual(handler.result, (code, {"error": category}, True))
 
     def test_composed_runtime_http_smoke_exposes_health_and_readiness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

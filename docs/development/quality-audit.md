@@ -42,4 +42,14 @@ Re-ran the documented offline commands against the local `develop` working tree 
 
 Graphify's `--code-only --no-cluster` extraction produced **1,181 nodes and 3,060 edges**. `OperationRepository` remains the most connected symbol (57 edges); its one-hop dependents include runtime HTTP/resources, copy and import execution, the operation runner, and their tests. This reinforces the existing plan to define repository ports and preserve restart/reconciliation characterization before changing operation persistence. The broker design is kept out of domain/application imports and is not wired into this graph while its SDD is Draft.
 
-The local `make verify` run passed **227 `unittest` cases (2 skipped)** plus specification/whitespace checks. The isolated Lit spike also passed `npm ci --ignore-scripts`, TypeScript, presentation-boundary checks, three pure fallback tests, build, and relative-asset verification. Neither result proves Home Assistant integration, live playback, visual parity, or CI on GitHub. RepoWise still has no measured branch-coverage input; that remains a separate tooling decision rather than a fabricated coverage percentage.
+The local `make verify` run passed **232 `unittest` cases (2 skipped)** plus specification/whitespace checks. The isolated Lit spike also passed `npm ci --ignore-scripts`, TypeScript, presentation-boundary checks, three pure fallback tests, build, and relative-asset verification. Neither result proves Home Assistant integration, live playback, visual parity, or CI on GitHub.
+
+The previously absent coverage measurement is now reproducible with pinned `coverage.py` 7.16.1 (development-only, not a runtime dependency):
+
+```text
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[quality]'
+make coverage COVERAGE_PYTHON=.venv/bin/python
+```
+
+The 2026-09-28 local Python 3.14 run measured **81% combined line/branch coverage** across 3,112 statements and 934 branch opportunities; it is not an 81% branch-only claim. Five new runtime HTTP contract tests brought `runtime/http.py` from 59% to 73%. Remaining examples are `apple_music.py` at 63%, `copy_execution.py` at 75%, `sqlite_operations.py` at 79%, and `__main__.py` at 0% under this unit suite. Those gaps guide targeted tests; no global minimum or release pass claim is inferred from a single number. CI now measures the same report on Python 3.13 as an additional non-threshold check. RepoWise's own coverage field may remain `null` until its ingestion is configured; do not present its heuristic scores as measured coverage.
