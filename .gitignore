@@ -12,3 +12,4 @@ node_modules/
 *.db
 .repowise/
 graphify-out/
+docs/development/playback-lab/.env

@@ -143,7 +143,7 @@ Whether standalone packaging ships in the first public release or immediately af
 
 ### Companion Home Assistant integration
 
-A companion custom integration is required for the selected HA playback path under [ADR 0006](../decisions/0006-narrow-home-assistant-playback-broker.md); it MAY later expose other native entities, actions, events, and configuration discovery. It must use a stable, authenticated, versioned Symphonia contract and MUST NOT duplicate matching, sync, provider-credential, or durable-write retry logic. The exact transport and pairing protocol remain unselected.
+A companion custom integration is required for the selected HA playback path under [ADR 0006](../decisions/0006-narrow-home-assistant-playback-broker.md); it MAY later expose other native entities, actions, events, and configuration discovery. It must use a stable, authenticated, versioned Symphonia contract and MUST NOT duplicate matching, sync, provider-credential, or durable-write retry logic. The exact transport and pairing protocol remain unselected. The [broker protocol RFC](playback-broker-protocol-rfc.md) proposes a reverse, mutually authenticated channel and enumerates the topology, secret-storage, caller-identity, replay, and version proofs needed before selection.
 
 The MVP does not require the companion integration to broker provider
 authorization. Provider authorization is owned by the App's adapters following

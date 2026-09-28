@@ -172,6 +172,7 @@
       ],
       "evidence": [
         "docs/decisions/0006-narrow-home-assistant-playback-broker.md",
+        "docs/architecture/playback-broker-protocol-rfc.md",
         "docs/product/product-specification.md",
         "docs/product/home-assistant-ui-specification.md",
         "docs/domain/domain-model.md",
@@ -180,6 +181,7 @@
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/providers/playback-integration-source-review.md",
         "docs/development/playback-release-gates.md",
+        "docs/development/playback-lab/README.md",
         "docs/architecture/system-architecture.md",
         "docs/open-questions.md"
       ],
@@ -189,7 +191,7 @@
         "documentation": []
       },
       "blockers": [
-        "OQ-011 broker transport/pairing/identity and complete playback profile matrix; narrow-broker authority accepted, active-session-only release rejected",
+        "OQ-011 broker RFC needs topology/security/secret/caller proof and complete playback profile matrix; narrow-broker authority accepted, active-session-only release rejected",
         "RG-007 Spotify idle-start/exact-output, MA caller/queue, account/source/player and exact playlist-reference feasibility; direct Spotify Connect complement needs separate approval",
         "Threat review of broker pairing, versioning, replay, caller identity, and action/entity allowlist",
         "Accepted observation freshness and command-reconciliation budgets",
