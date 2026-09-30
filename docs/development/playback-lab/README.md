@@ -2,11 +2,58 @@
 
 **Status:** prepared configuration, not a completed live feasibility test
 
-**Reviewed:** 2026-09-28
+**Reviewed:** 2026-09-30
 
 This lab prepares a dedicated [Home Assistant Container](https://www.home-assistant.io/installation/linux) and [Music Assistant server](https://www.music-assistant.io/installation/) for the [RG-007 matrix](../../open-questions.md#rg-007--listening-source-target-and-command-feasibility). It contains no provider credentials, player addresses, broker implementation or sample personal library. The owner will provide disposable accounts/devices later. Do **not** copy a production Home Assistant or Music Assistant database into these volumes.
 
 CI runs `docker compose config` against `.env.example` without pulling images, starting services, or claiming a live test pass.
+
+## Supervisor, App, and Ingress smoke lane
+
+The repository also includes the maintained Home Assistant Apps devcontainer
+profile at [`.devcontainer/devcontainer.json`](../../../.devcontainer/devcontainer.json).
+It runs the official Supervisor development environment, rather than pretending
+that Home Assistant Container provides Apps or Ingress. This is the local lane
+for eventual App install, lifecycle, and Ingress smoke tests; it is configured
+but has **not** yet been launched in this workspace.
+
+The App metadata currently lives under `addon/`, while its build context and
+`Dockerfile` live at the repository root. The staging helper bridges that
+layout without moving or duplicating the source of truth: it copies only the
+metadata, root `Dockerfile`, and `src/` into the devcontainer's local Apps
+directory, and removes the published `image` setting from the generated local
+metadata so Supervisor builds the checked-out source. It records exactly which
+files it owns, refuses an unowned non-empty target, rejects unsafe manifest
+paths, and removes only stale files from a prior managed stage.
+
+On a development machine with VS Code, the Dev Containers extension, and a
+working Docker Engine:
+
+1. Open this repository and choose **Reopen in Container**.
+2. Run **Terminal → Run Task → Start Home Assistant lab**. This stages Symphonia
+   and starts the Supervisor devcontainer; Home Assistant is exposed at
+   `http://localhost:7123`.
+3. Complete onboarding with a disposable administrator, then run
+   **Install Symphonia local App**. Verify the App starts and opens through
+   Ingress; no provider account is needed for this packaging smoke.
+4. After changing application code, run **Rebuild and start Symphonia local
+   App** to refresh the staged source, rebuild, and inspect App logs.
+
+The official Apps devcontainer needs `--privileged` and persistent Docker,
+containerd, and Supervisor volumes. Treat it as a disposable development
+environment: do not import a production HA backup or account credentials. Its
+ports are forwarded only for local development. The profile can exercise
+Supervisor/App/Ingress behavior, but it has no implemented playback broker and
+does not prove physical-player discovery, Spotify, Music Assistant, YouTube
+Music, backup/restore policy, or production support. A separate disposable
+Linux host on the same flat network as test players is still required for
+multicast/audio-path evidence; macOS container networking is not that proof.
+
+The setup follows Home Assistant's [local App testing guide](https://developers.home-assistant.io/docs/apps/testing/)
+and current [Apps example devcontainer](https://github.com/home-assistant/apps-example/blob/main/.devcontainer.json),
+reviewed 2026-09-30. The files are statically tested in CI, but a real
+Supervisor startup/install/Ingress pass remains pending because this workspace
+currently has no accessible Docker daemon.
 
 ## Safety and limits
 

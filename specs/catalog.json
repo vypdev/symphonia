@@ -63,7 +63,9 @@
           "src/symphonia/infrastructure/sqlite_plans.py",
           "src/symphonia/infrastructure/sqlite_resolutions.py",
           "Dockerfile",
-          "addon/config.yaml"
+          "addon/config.yaml",
+          ".devcontainer/devcontainer.json",
+          "tools/stage_ha_local_app.py"
         ],
         "tests": [
           "tests/test_runtime_config.py",
@@ -74,10 +76,12 @@
           "tests/test_sqlite_plans.py",
           "tests/test_identity_resolution.py",
           "tests/test_homeassistant_app_metadata.py",
+          "tests/test_ha_app_devcontainer.py",
           "tests/test_architecture_boundaries.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
+          "docs/development/playback-lab/README.md",
           "specs/home-assistant-app-runtime-and-ingress.md"
         ]
       },

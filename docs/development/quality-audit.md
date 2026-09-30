@@ -55,3 +55,39 @@ make coverage COVERAGE_PYTHON=.venv/bin/python
 ```
 
 The 2026-09-28 local Python 3.14 run measured **81% combined line/branch coverage** across 3,112 statements and 934 branch opportunities; it is not an 81% branch-only claim. Five new runtime HTTP contract tests brought `runtime/http.py` from 59% to 73%. Remaining examples are `apple_music.py` at 63%, `copy_execution.py` at 75%, `sqlite_operations.py` at 79%, and `__main__.py` at 0% under this unit suite. Those gaps guide targeted tests; no global minimum or release pass claim is inferred from a single number. CI now measures the same report on Python 3.13 as an additional non-threshold check. RepoWise's own coverage field may remain `null` until its ingestion is configured; do not present its heuristic scores as measured coverage.
+
+## Follow-up (2026-09-30)
+
+Prepared a disposable Home Assistant Supervisor/App/Ingress test lane using the
+maintained official [Apps devcontainer](https://developers.home-assistant.io/docs/apps/testing/).
+The repo's App manifest is nested under `addon/`, so a small staging tool now
+builds a local-only App source directory from that manifest, the root Dockerfile,
+and `src/`; it removes the published image reference only from staged metadata.
+Nine tests cover staging, cleanup of previously staged files, interrupted-stage
+recovery, path/symlink rejection, VS Code tasks, and the devcontainer profile.
+The runtime has not been launched here: the configured macOS Docker socket is
+not accessible to this session. Compose configuration validation does pass
+without starting containers. No playback broker or provider behavior was
+implemented; the listening and App-runtime SDDs remain `Draft`.
+
+The current offline suite passes **248 tests (2 skipped)**. `coverage.py` 7.16.1
+measures **81% combined line/branch coverage** (3,112 statements and 934 branch
+opportunities). RepoWise ingested Cobertura for the same run and reports 84.3%
+line coverage and 69.5% branch coverage; it has no per-test map because the
+suite does not emit test contexts. The percentages use different denominators
+and should not be compared as if they were one metric.
+
+RepoWise's offline index contains 147 files, 1,119 nodes, and 2,586 edges. Its
+safe dead-code check reports zero cleanup candidates. The main persistent
+hotspots remain `copy_execution.py` and `sqlite_operations.py`; the new staging
+tool's initial complexity/nesting findings were split into small helpers. Its
+remaining filesystem-in-loop signals correspond to reading/writing each staged
+file, which is intrinsic to this copy operation rather than a repeated query.
+No code was removed based on heuristic findings.
+
+A fresh local Graphify extraction reports **1,917 nodes and 4,087 edges**.
+`OperationRepository` remains the largest hub (57 edges), so its existing
+concurrency/recovery test gates remain important. Graphify traces
+`stage_application()` directly to its characterization tests; the app staging
+work stays outside domain/application modules. These graphs are navigation and
+impact evidence, not a claim that a live HA runtime has passed.

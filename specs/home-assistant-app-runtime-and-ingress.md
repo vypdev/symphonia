@@ -41,7 +41,7 @@ The current foundation is intentionally limited to reversible composition, persi
 ### 2.4 Evidence and unknowns
 
 - Accepted evidence: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md).
-- Platform evidence: current App, Ingress, persistent `/data`, backup, and security documentation linked from [provider research](../docs/providers/provider-research.md#home-assistant-platform).
+- Platform evidence: current App, Ingress, persistent `/data`, backup, and security documentation linked from [provider research](../docs/providers/provider-research.md#home-assistant-platform); Home Assistant's [local App testing guide](https://developers.home-assistant.io/docs/apps/testing/) (reviewed 2026-09-30) describes its maintained Supervisor devcontainer.
 - Comparative evidence: Music Assistant uses a server/App plus separate HA integration; see the [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md).
 - Security evidence: a direct unauthenticated service port can bypass Ingress, as recorded in the ecosystem review.
 - Unknowns: exact image/toolchain, supported architectures, encryption key source, online backup primitive, and first standalone release.
@@ -268,7 +268,7 @@ Minimum **58 distinct cases**:
 | Integration/security/migration | 14 | install/restart/backup/restore/upgrade/downgrade, direct-port isolation |
 | **Total** | **58** | No double counting |
 
-All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. A disposable HA OS/Supervised-compatible smoke environment covers install, Ingress, restart, backup/restore, and upgrade. Manual evidence covers desktop/mobile and light/dark startup/error views.
+All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. A maintained Home Assistant Apps devcontainer profile is prepared at [the playback lab setup](../docs/development/playback-lab/README.md#supervisor-app-and-ingress-smoke-lane) for disposable Supervisor/App/Ingress smoke. Its first install/start/Ingress pass is still pending; it does not replace the required backup/restore/upgrade evidence on the supported deployment matrix. Manual evidence covers desktop/mobile and light/dark startup/error views.
 
 The eight feature-specific UI cases above supplement rather than replace the 84-case UI-foundation budget. The runtime release also inherits component-catalog, arbitrary-base-path, host-context fallback, safe-area, accessibility, responsive-geometry, hostile-content, and dated visual-reference gates from that SDD.
 
