@@ -69,6 +69,7 @@
         ],
         "tests": [
           "tests/test_runtime_config.py",
+          "tests/test_runtime_cli.py",
           "tests/test_runtime_http.py",
           "tests/test_runtime_resources.py",
           "tests/test_sqlite_authorization.py",

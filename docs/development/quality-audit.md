@@ -91,3 +91,25 @@ concurrency/recovery test gates remain important. Graphify traces
 `stage_application()` directly to its characterization tests; the app staging
 work stays outside domain/application modules. These graphs are navigation and
 impact evidence, not a claim that a live HA runtime has passed.
+
+## Follow-up (2026-10-01)
+
+The first inward-port increment moved authorization-attempt and provider-connection
+repository contracts into `symphonia.application.ports`. Both use cases now
+import those protocols; an AST test guards the boundary. Other application
+services still import concrete repositories and remain design debt. RepoWise
+reported no safe dead-code candidates. A fresh code-only Graphify extraction
+contained 1,229 nodes and 3,180 edges before the port change, with
+`OperationRepository` still the largest hub at 57 edges. After both increments,
+the graph has 1,253 nodes and 3,234 edges. `AuthorizationService` now refers
+to `AuthorizationAttemptPort`; `OperationRepository` remains the largest hub.
+RepoWise's remaining coverage-gradient signal for the CLI uses its existing
+coverage index and is not a measurement of the new tests. No provider
+capability was promoted out of Draft.
+
+CLI lifecycle characterization covers graceful stop, failed server creation,
+listener-close failure, and invalid configuration. The ordinary offline suite
+passes 253 tests (2 skipped) on Python 3.14 and 3.13. Specification validation,
+the isolated Lit spike checks/build, and disposable playback-lab Compose
+configuration also pass locally. GitHub checks still require an authorized
+push and remote observation.

@@ -72,6 +72,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Partial runtime startup unwinds every repository already opened, including on interruption, retaining the startup exception as primary if cleanup also fails.
 - HTTP server construction closes composed resources on any startup failure without replacing the original cause with a cleanup error.
 - The CLI treats `SIGTERM` as a graceful stop and closes the HTTP listener and composed resources before restoring the prior signal handler.
+- Offline CLI lifecycle tests cover graceful stop, startup failure, listener-close failure, and invalid configuration before resources open.
 - Every SQLite store closes its newly opened connection when schema initialization fails, preserving the migration error as primary.
 - Readiness can validate every composed durable store instead of only the operation queue.
 - Runtime resources request a consistent online backup through the operation repository adapter while the service remains open, without reaching into its private connection.
