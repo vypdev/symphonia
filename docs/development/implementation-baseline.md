@@ -27,6 +27,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Redacted operation diagnostics expose a bounded unknown-step indicator and only allowlisted reconciliation/recovery outcome metadata, never unknown step IDs or checkpoint values.
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
+- Application-owned attempt and connection repository protocols keep those use cases independent of SQLite imports; an AST test enforces this boundary while other foundation use cases still await port extraction.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Durable operation runner that atomically claims eligible work and fails unwired operation types before side effects.
 - The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a potentially stale handler object.

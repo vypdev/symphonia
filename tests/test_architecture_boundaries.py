@@ -111,6 +111,15 @@ class ArchitectureBoundaryTests(unittest.TestCase):
                     violations.append(f"{path.relative_to(ROOT)} imports {module}")
         self.assertEqual(violations, [])
 
+    def test_authorization_and_connection_use_cases_depend_on_ports(self) -> None:
+        violations = []
+        for name in ("authorization", "provider_connections", "ports"):
+            path = SOURCE_ROOT / "application" / f"{name}.py"
+            for module in _absolute_imports(path):
+                if module.startswith("symphonia.infrastructure"):
+                    violations.append(f"{path.relative_to(ROOT)} imports {module}")
+        self.assertEqual(violations, [])
+
     def test_provider_adapters_do_not_import_sibling_adapters(self) -> None:
         adapter_names = {"spotify", "youtube", "apple_music"}
         violations = []

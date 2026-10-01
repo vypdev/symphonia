@@ -251,12 +251,14 @@
           "src/symphonia/providers/connections.py",
           "src/symphonia/application/authorization.py",
           "src/symphonia/application/provider_connections.py",
+          "src/symphonia/application/ports.py",
           "src/symphonia/infrastructure/sqlite_authorization.py",
           "src/symphonia/infrastructure/sqlite_connections.py",
           "tools/oauth_callback_spike.py"
         ],
         "tests": [
           "tests/test_authorization_service.py",
+          "tests/test_architecture_boundaries.py",
           "tests/test_sqlite_authorization.py",
           "tests/test_provider_connections.py",
           "tests/test_sqlite_connections.py",

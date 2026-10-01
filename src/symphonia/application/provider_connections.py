@@ -5,15 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from symphonia.infrastructure.sqlite_connections import ProviderConnectionRepository
 from symphonia.providers.connections import ConnectionState, ProviderConnection
 from symphonia.providers.errors import ProviderApiError, ProviderErrorCategory
 from symphonia.providers.registry import ProviderRegistry
 
+from .ports import ProviderConnectionPort
+
 
 @dataclass(frozen=True, slots=True)
 class ProviderConnectionService:
-    connections: ProviderConnectionRepository
+    connections: ProviderConnectionPort
     providers: ProviderRegistry
 
     def register_verified(

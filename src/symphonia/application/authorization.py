@@ -8,8 +8,9 @@ import secrets
 import uuid
 from typing import Callable
 
-from symphonia.infrastructure.sqlite_authorization import AuthorizationAttemptRepository
 from symphonia.providers.authorization import AuthorizationAttempt, validate_redirect_uri
+
+from .ports import AuthorizationAttemptPort
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,7 +23,7 @@ class AuthorizationStart:
 
 @dataclass(frozen=True, slots=True)
 class AuthorizationService:
-    attempts: AuthorizationAttemptRepository
+    attempts: AuthorizationAttemptPort
     state_factory: Callable[[], str] = secrets.token_urlsafe
     id_factory: Callable[[], str] = lambda: str(uuid.uuid4())
 

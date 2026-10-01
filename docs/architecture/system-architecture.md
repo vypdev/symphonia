@@ -76,6 +76,12 @@ composition ──→ concrete implementations
 - **Presentation** maps Ingress/HTTP/UI requests and responses. It does not decide match, authorization, retry, or conflict policy.
 - **Composition** selects the deployment profile and wires concrete implementations. It is the only layer that knows the full runtime graph.
 
+The approved foundation defines attempt and connection repository protocols in
+`symphonia.application.ports`; SQLite repositories satisfy them at composition
+time. An AST test prevents those use cases from importing persistence. Other
+foundation application services still reference concrete SQLite repositories;
+their port extraction remains design debt while the relevant SDDs are Draft.
+
 This follows the useful boundary pattern in `homeassistant-gateway` without carrying that project's language, frameworks, or non-music policies into Symphonia automatically.
 
 ## Logical components

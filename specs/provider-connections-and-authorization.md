@@ -45,6 +45,11 @@ standard-library callback spike is loopback-only and demonstrates route/state
 handling; it is not wired into the runtime and does not prove remotely
 reachable Home Assistant App callback behavior.
 
+The foundation's authorization and connection use cases depend on
+application-owned repository protocols instead of SQLite classes. This
+boundary change does not supply token handling or clear the callback and
+secret-storage blockers.
+
 Provider token exchange, refresh/revocation adapters, encrypted secret
 storage, end-to-end account verification, authenticated actor/session binding,
 and provider-specific callback integration do not yet exist. Invalid attempt
@@ -58,8 +63,8 @@ not a claim that the connection capability is implemented.
 - Official provider/API facts: [provider research](../docs/providers/provider-research.md).
 - Home Assistant OAuth/Application Credentials and existing music projects: [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md).
 - Provider-independent contract: [provider specification](../docs/providers/provider-specification.md).
-- As-built foundation evidence: [authorization application](../src/symphonia/application/authorization.py), [attempt repository](../src/symphonia/infrastructure/sqlite_authorization.py), [connection service](../src/symphonia/application/provider_connections.py), [connection repository](../src/symphonia/infrastructure/sqlite_connections.py), [direct-callback spike](../docs/development/oauth-callback-spike.md), and [implementation baseline](../docs/development/implementation-baseline.md).
-- Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
+- As-built foundation evidence: [authorization application](../src/symphonia/application/authorization.py), [application repository ports](../src/symphonia/application/ports.py), [attempt repository](../src/symphonia/infrastructure/sqlite_authorization.py), [connection service](../src/symphonia/application/provider_connections.py), [connection repository](../src/symphonia/infrastructure/sqlite_connections.py), [direct-callback spike](../docs/development/oauth-callback-spike.md), and [implementation baseline](../docs/development/implementation-baseline.md).
+- Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), [architecture boundary tests](../tests/test_architecture_boundaries.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
 - Unknowns: callback reachability, secret encryption key, Google/YouTube product scope, exact scopes, token expiry/revocation behavior under test accounts, and provider-specific client-registration policy.
 
 ## 3. Actors, surfaces, and terminology
