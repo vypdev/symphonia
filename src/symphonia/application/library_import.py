@@ -5,22 +5,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from symphonia.infrastructure.sqlite_library import PlaylistProjectionRepository, StoredPlaylistSnapshot
+from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
 from symphonia.providers.importing import CollectionImportResult, ImportIssue, collect_playlist_pages
+
+from .ports import PlaylistProjectionPort
 
 
 @dataclass(frozen=True, slots=True)
 class ImportPublication:
     state: str
-    snapshot: StoredPlaylistSnapshot | None
-    retained_current: StoredPlaylistSnapshot | None
+    snapshot: PublishedPlaylistSnapshot | None
+    retained_current: PublishedPlaylistSnapshot | None
     issues: tuple[ImportIssue, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class LibraryImportService:
-    projections: PlaylistProjectionRepository
+    projections: PlaylistProjectionPort
 
     def import_playlist(
         self,

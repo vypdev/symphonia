@@ -113,3 +113,18 @@ passes 253 tests (2 skipped) on Python 3.14 and 3.13. Specification validation,
 the isolated Lit spike checks/build, and disposable playback-lab Compose
 configuration also pass locally. GitHub checks still require an authorized
 push and remote observation.
+
+## Follow-up (2026-10-02)
+
+The playlist-import foundation now takes a projection repository port and
+returns a domain-owned published snapshot value. The SQLite adapter keeps its
+previous exported name as an alias. A fake-port test confirms that partial
+observations do not call publication, while the SQLite test checks the
+compatibility alias and the architecture test rejects an infrastructure import
+from the use case. The Draft import SDD still blocks production import work.
+
+RepoWise found no safe dead-code candidates. A fresh code-only Graphify graph
+contains 1,260 nodes and 3,260 edges; `LibraryImportService` uses
+`PlaylistProjectionPort`, and `OperationRepository` remains the largest hub at
+57 edges. The offline suite passes 254 tests (2 skipped) on Python 3.13 and
+3.14, including specification validation.

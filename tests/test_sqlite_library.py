@@ -5,11 +5,12 @@ import sqlite3
 import tempfile
 import unittest
 
-from symphonia.domain import EntryClassification
+from symphonia.domain import EntryClassification, PublishedPlaylistSnapshot
 from symphonia.infrastructure import (
     IncompleteCollectionError,
     PlaylistProjectionRepository,
     SnapshotConflictError,
+    StoredPlaylistSnapshot,
 )
 from symphonia.providers import (
     MediaKind,
@@ -41,6 +42,8 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
         result = collect_playlist_pages([page(available=False)])
         stored = self.repository.publish(result, snapshot_id="snapshot-1", published_at=NOW)
         current = self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
+        self.assertIsInstance(stored, PublishedPlaylistSnapshot)
+        self.assertIs(StoredPlaylistSnapshot, PublishedPlaylistSnapshot)
         self.assertEqual(stored.snapshot_id, "snapshot-1")
         self.assertEqual(current.snapshot.source_namespace, "connection-1")
         self.assertEqual(current.snapshot.entries[0].classification, EntryClassification.UNAVAILABLE)

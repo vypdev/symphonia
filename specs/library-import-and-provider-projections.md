@@ -39,14 +39,20 @@ The foundation executor checks stored playlist identifier types and the operatio
 
 The official Spotify and YouTube Data foundation adapters use a shared JSON transport instead of importing one adapter through the other. Offline tests confirm provider-specific, secret-safe timeout and network error classification; this does not establish the full provider import capability.
 
+The one-playlist use case now depends on an application-owned projection port
+and returns a domain-owned published snapshot value. SQLite still implements
+the current atomic repository contract; the previous infrastructure import
+name remains an alias for foundation callers. This changes dependency direction,
+not import completeness, staging, retention, or release readiness.
+
 ### 2.3 Evidence and unknowns
 
 - Shared model: [provider track, playlist, snapshot, and import invariants](../docs/domain/domain-model.md).
 - Adapter contract: [pagination, unknown media, completeness, freshness](../docs/providers/provider-specification.md).
 - Official API evidence and policy constraints: [provider research](../docs/providers/provider-research.md).
 - Comparative warning: existing YT Music implementations may cap dynamic playlists or skip unavailable entries; [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md#youtube-music).
-- As-built foundation evidence: [page collector](../src/symphonia/providers/importing.py), [playlist import use case](../src/symphonia/application/library_import.py), [durable import executor](../src/symphonia/application/library_import_execution.py), [atomic snapshot repository](../src/symphonia/infrastructure/sqlite_library.py), and the [implementation baseline](../docs/development/implementation-baseline.md).
-- Existing deterministic evidence for this foundation slice: [provider import contracts](../tests/test_provider_import.py), [import use case](../tests/test_library_import.py), [durable import outcomes](../tests/test_library_import_execution.py), and [snapshot persistence](../tests/test_sqlite_library.py). Listing these files is not a statement that the complete SDD test budget has passed.
+- As-built foundation evidence: [page collector](../src/symphonia/providers/importing.py), [published snapshot value](../src/symphonia/domain/projections.py), [projection port](../src/symphonia/application/ports.py), [playlist import use case](../src/symphonia/application/library_import.py), [durable import executor](../src/symphonia/application/library_import_execution.py), [atomic snapshot repository](../src/symphonia/infrastructure/sqlite_library.py), and the [implementation baseline](../docs/development/implementation-baseline.md).
+- Existing deterministic evidence for this foundation slice: [provider import contracts](../tests/test_provider_import.py), [import use case](../tests/test_library_import.py), [durable import outcomes](../tests/test_library_import_execution.py), [snapshot persistence](../tests/test_sqlite_library.py), and [architecture boundaries](../tests/test_architecture_boundaries.py). Listing these files is not a statement that the complete SDD test budget has passed.
 - Unknowns: provider collection parity, target sizes, refresh cadence, raw payload retention, incremental cursor reliability.
 
 ## 3. Actors, surfaces, and terminology

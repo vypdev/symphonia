@@ -48,6 +48,26 @@ class LibraryImportServiceTests(unittest.TestCase):
         self.assertIsNone(publication.snapshot)
         self.assertEqual(publication.retained_current.snapshot_id, "snapshot-1")
 
+    def test_partial_result_does_not_call_publication_port(self) -> None:
+        class RecordingPort:
+            current_key: tuple[str, str, str] | None = None
+
+            def current(self, *, provider: str, namespace: str, playlist_id: str):
+                self.current_key = (provider, namespace, playlist_id)
+                return None
+
+            def publish(self, *args, **kwargs):
+                raise AssertionError("partial results must never be published")
+
+        port = RecordingPort()
+        publication = LibraryImportService(port).publish_playlist(
+            result(False), snapshot_id="snapshot-partial", observed_at=NOW
+        )
+
+        self.assertEqual(publication.state, "partial")
+        self.assertIsNone(publication.snapshot)
+        self.assertEqual(port.current_key, ("spotify", "connection-1", "playlist-1"))
+
     def test_import_playlist_uses_normalized_adapter_pages(self) -> None:
         playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
 

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 import sqlite3
 from typing import Any
 
 from symphonia.domain.models import EntryClassification, PlaylistSnapshot, SourcePlaylistEntry
+from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.contracts import ProviderPlaylistEntry
 from symphonia.providers.importing import CollectionImportResult
 
@@ -32,15 +32,8 @@ class SnapshotConflictError(ValueError):
     """Raised when a snapshot ID is reused for different imported content."""
 
 
-@dataclass(frozen=True, slots=True)
-class StoredPlaylistSnapshot:
-    snapshot_id: str
-    provider: str
-    namespace: str
-    playlist_id: str
-    revision: str | None
-    published_at: datetime
-    snapshot: PlaylistSnapshot
+# Preserve the existing infrastructure import path for foundation callers.
+StoredPlaylistSnapshot = PublishedPlaylistSnapshot
 
 
 class PlaylistProjectionRepository:

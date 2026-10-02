@@ -9,9 +9,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Protocol
 
+from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.authorization import AuthorizationAttempt
 from symphonia.providers.connections import ConnectionState, ProviderConnection
 from symphonia.providers.contracts import ProviderCapabilities
+from symphonia.providers.importing import CollectionImportResult
 
 
 class AuthorizationAttemptPort(Protocol):
@@ -57,3 +59,21 @@ class ProviderConnectionPort(Protocol):
     ) -> ProviderConnection: ...
 
     def disconnect(self, connection_id: str, *, now: datetime) -> ProviderConnection: ...
+
+
+class PlaylistProjectionPort(Protocol):
+    def publish(
+        self,
+        result: CollectionImportResult,
+        *,
+        snapshot_id: str,
+        published_at: datetime,
+    ) -> PublishedPlaylistSnapshot: ...
+
+    def current(
+        self,
+        *,
+        provider: str,
+        namespace: str,
+        playlist_id: str,
+    ) -> PublishedPlaylistSnapshot | None: ...

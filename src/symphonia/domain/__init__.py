@@ -9,6 +9,7 @@ from .models import (
     PlaylistSnapshot,
     SourcePlaylistEntry,
 )
+from .projections import PublishedPlaylistSnapshot
 
 __all__ = [
     "CopyPlan",
@@ -17,5 +18,6 @@ __all__ = [
     "EntryClassification",
     "PlanAcceptanceError",
     "PlaylistSnapshot",
+    "PublishedPlaylistSnapshot",
     "SourcePlaylistEntry",
 ]
