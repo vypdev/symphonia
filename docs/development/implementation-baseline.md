@@ -103,6 +103,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Normalized provider identity, manifest, capability, entry, and page values reject non-textual or malformed boundary data before it reaches planning.
 - Normalized provider pages reject wrong enum/runtime types and duplicate positions before collection; dated manifest evidence must use an ISO date.
 - SQLite storage for immutable copy plans, including durable digest-bound acceptance.
+- Copy planning and execution take an application plan repository port and a domain-owned accepted-plan record; SQLite keeps its previous `StoredCopyPlan` export as an alias for foundation callers.
 - Copy-plan reads and acceptance recompute the digest over execution-relevant content, rejecting tampering even when the stored digest field is unchanged.
 - The operation store applies its schema DDL, legacy column migration, and `user_version` marker in one transaction.
 - Operation-store transactions include transaction start in their protected scope, roll back on process-level interruptions when possible, and preserve the primary error if rollback also fails.

@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import unittest
 
-from symphonia.domain import CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
+from symphonia.domain import CopyPlanRecord, CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.domain.models import build_copy_plan
-from symphonia.infrastructure import CopyPlanRepository
+from symphonia.infrastructure import CopyPlanRepository, StoredCopyPlan
 
 
 class CopyPlanRepositoryTests(unittest.TestCase):
@@ -35,6 +35,8 @@ class CopyPlanRepositoryTests(unittest.TestCase):
         plan = self.ready_plan()
         self.repository.save(plan, now=self.now)
         stored = self.repository.get(plan.digest)
+        self.assertIsInstance(stored, CopyPlanRecord)
+        self.assertIs(StoredCopyPlan, CopyPlanRecord)
         self.assertEqual(stored.plan, plan)
         self.assertIsNone(stored.accepted_at)
 

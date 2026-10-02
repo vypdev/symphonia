@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 import sqlite3
 from typing import Any
@@ -14,6 +13,7 @@ from symphonia.domain.models import (
     EntryClassification,
     PlanAcceptanceError,
 )
+from symphonia.domain.plans import CopyPlanRecord
 
 from .sqlite_common import connect, dump_json, initialize_with_cleanup, load_json
 
@@ -32,10 +32,8 @@ class CopyPlanNotFound(LookupError):
     pass
 
 
-@dataclass(frozen=True, slots=True)
-class StoredCopyPlan:
-    plan: CopyPlan
-    accepted_at: datetime | None
+# Preserve the previous infrastructure import for foundation callers.
+StoredCopyPlan = CopyPlanRecord
 
 
 class CopyPlanRepository:

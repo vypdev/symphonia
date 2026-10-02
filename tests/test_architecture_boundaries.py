@@ -120,6 +120,15 @@ class ArchitectureBoundaryTests(unittest.TestCase):
                     violations.append(f"{path.relative_to(ROOT)} imports {module}")
         self.assertEqual(violations, [])
 
+    def test_copy_use_cases_do_not_import_the_plan_adapter(self) -> None:
+        violations = []
+        for name in ("copy_workflow", "copy_execution"):
+            path = SOURCE_ROOT / "application" / f"{name}.py"
+            for module in _absolute_imports(path):
+                if module.startswith("symphonia.infrastructure.sqlite_plans"):
+                    violations.append(f"{path.relative_to(ROOT)} imports {module}")
+        self.assertEqual(violations, [])
+
     def test_provider_adapters_do_not_import_sibling_adapters(self) -> None:
         adapter_names = {"spotify", "youtube", "apple_music"}
         violations = []

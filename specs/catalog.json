@@ -431,9 +431,16 @@
       ],
       "implementationEvidence": {
         "code": [
+          "src/symphonia/domain/plans.py",
+          "src/symphonia/application/ports.py",
+          "src/symphonia/application/copy_workflow.py",
+          "src/symphonia/infrastructure/sqlite_plans.py",
           "src/symphonia/application/copy_execution.py"
         ],
         "tests": [
+          "tests/test_architecture_boundaries.py",
+          "tests/test_copy_workflow.py",
+          "tests/test_sqlite_plans.py",
           "tests/test_copy_execution.py"
         ],
         "documentation": [

@@ -10,10 +10,12 @@ from .models import (
     SourcePlaylistEntry,
 )
 from .projections import PublishedPlaylistSnapshot
+from .plans import CopyPlanRecord
 
 __all__ = [
     "CopyPlan",
     "CopyPlanEntry",
+    "CopyPlanRecord",
     "CopyPolicy",
     "EntryClassification",
     "PlanAcceptanceError",

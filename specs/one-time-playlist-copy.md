@@ -32,6 +32,14 @@ Evidence sources:
 - [Dated official write/reconciliation research](../docs/providers/provider-research.md#2026-09-27-write-outcome-and-reconciliation-update)
 - [Owner-approved implementation baseline](../docs/development/implementation-baseline.md) (foundation evidence only; it does not close this SDD's blockers or authorize the full capability)
 
+The foundation's copy workflow and executor now depend on an
+[application-owned plan repository port](../src/symphonia/application/ports.py)
+and a [domain-owned accepted-plan record](../src/symphonia/domain/plans.py).
+The [SQLite adapter](../src/symphonia/infrastructure/sqlite_plans.py) retains
+its previous exported record name as a compatibility alias. The operation
+repository and provider writer contract remain unchanged. This dependency
+refactor does not resolve the product or provider-write blockers above.
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

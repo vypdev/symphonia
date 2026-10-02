@@ -6,11 +6,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from symphonia.domain.models import CopyPlan, CopyPolicy, PlanAcceptanceError, PlaylistSnapshot
+from symphonia.domain.plans import CopyPlanRecord
 from symphonia.infrastructure.sqlite_operations import OperationRecord, OperationRepository
-from symphonia.infrastructure.sqlite_plans import CopyPlanRepository, StoredCopyPlan
 from symphonia.providers.contracts import ProviderCapabilities
 
 from .copy_planning import CopyPlanningService
+from .ports import CopyPlanPort
 
 
 class CapabilityUnavailableError(ValueError):
@@ -22,7 +23,7 @@ class CopyWorkflowService:
     """Keep plan persistence/acceptance separate from provider execution."""
 
     planning: CopyPlanningService
-    plans: CopyPlanRepository
+    plans: CopyPlanPort
     operations: OperationRepository
 
     def create_plan(
@@ -36,7 +37,7 @@ class CopyWorkflowService:
         now: datetime,
         target_connection_id: str = "default",
         target_capabilities: ProviderCapabilities | None = None,
-    ) -> StoredCopyPlan:
+    ) -> CopyPlanRecord:
         capability_names: tuple[str, ...] = ()
         capability_evidence_version = None
         if target_capabilities is not None:
@@ -60,7 +61,7 @@ class CopyWorkflowService:
         )
         return self.plans.save(plan, now=now)
 
-    def accept_plan(self, digest: str, *, now: datetime) -> StoredCopyPlan:
+    def accept_plan(self, digest: str, *, now: datetime) -> CopyPlanRecord:
         return self.plans.accept(digest, expected_digest=digest, now=now)
 
     def enqueue_accepted_plan(self, digest: str, *, now: datetime) -> OperationRecord:

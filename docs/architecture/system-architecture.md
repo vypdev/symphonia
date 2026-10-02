@@ -76,10 +76,11 @@ composition ──→ concrete implementations
 - **Presentation** maps Ingress/HTTP/UI requests and responses. It does not decide match, authorization, retry, or conflict policy.
 - **Composition** selects the deployment profile and wires concrete implementations. It is the only layer that knows the full runtime graph.
 
-The approved foundation defines attempt, connection, and playlist-projection
-repository protocols in `symphonia.application.ports`; SQLite repositories
-satisfy them at composition time. The published playlist value belongs to the
-domain. An AST test prevents those use cases from importing persistence. Other
+The approved foundation defines attempt, connection, playlist-projection, and
+copy-plan repository protocols in `symphonia.application.ports`; SQLite
+repositories satisfy them at composition time. Published playlist and accepted
+plan values belong to the domain. AST tests prevent these use cases from
+importing their concrete repositories. Operation persistence and other
 foundation application services still reference concrete SQLite repositories;
 their port extraction remains design debt while the relevant SDDs are Draft.
 

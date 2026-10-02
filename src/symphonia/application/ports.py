@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Protocol
 
+from symphonia.domain.models import CopyPlan
+from symphonia.domain.plans import CopyPlanRecord
 from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.authorization import AuthorizationAttempt
 from symphonia.providers.connections import ConnectionState, ProviderConnection
@@ -77,3 +79,11 @@ class PlaylistProjectionPort(Protocol):
         namespace: str,
         playlist_id: str,
     ) -> PublishedPlaylistSnapshot | None: ...
+
+
+class CopyPlanPort(Protocol):
+    def save(self, plan: CopyPlan, *, now: datetime) -> CopyPlanRecord: ...
+
+    def get(self, digest: str) -> CopyPlanRecord: ...
+
+    def accept(self, digest: str, *, expected_digest: str, now: datetime) -> CopyPlanRecord: ...

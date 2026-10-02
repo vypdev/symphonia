@@ -7,18 +7,20 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from symphonia.domain.models import PlanAcceptanceError
+from symphonia.domain.plans import CopyPlanRecord
 from symphonia.infrastructure.sqlite_operations import (
     LeaseConflict,
     OperationRecord,
     OperationRepository,
 )
-from symphonia.infrastructure.sqlite_plans import CopyPlanRepository, StoredCopyPlan
 from symphonia.providers.writing import PlaylistWriter, ProviderWriteError, WriteOutcome
+
+from .ports import CopyPlanPort
 
 
 @dataclass(frozen=True, slots=True)
 class CopyExecutionService:
-    plans: CopyPlanRepository
+    plans: CopyPlanPort
     operations: OperationRepository
     retry_delay_seconds: int = 60
     max_retry_attempts: int = 5
@@ -94,7 +96,7 @@ class CopyExecutionService:
 
     def _execute_claimed(
         self,
-        stored: StoredCopyPlan,
+        stored: CopyPlanRecord,
         operation: OperationRecord,
         *,
         writer: PlaylistWriter,

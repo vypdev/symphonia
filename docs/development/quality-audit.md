@@ -128,3 +128,14 @@ contains 1,260 nodes and 3,260 edges; `LibraryImportService` uses
 `PlaylistProjectionPort`, and `OperationRepository` remains the largest hub at
 57 edges. The offline suite passes 254 tests (2 skipped) on Python 3.13 and
 3.14, including specification validation.
+
+The copy-plan foundation now takes an application-owned plan repository port
+and uses a domain-owned accepted-plan record. Existing SQLite imports remain
+available through an alias. The architecture test protects the copy use cases
+against a direct plan-adapter import; it does not yet prohibit their operation
+repository dependency. RepoWise again reports zero safe dead-code candidates.
+Graphify shows both copy use cases depending on `CopyPlanPort`; its current
+code-only graph has 1,268 nodes and 3,289 edges, with `OperationRepository`
+still first at 57 edges. The offline suite passes 255 tests (2 skipped) on
+Python 3.13 and 3.14. The Draft copy SDD's acceptance and provider-write gates
+remain open.
