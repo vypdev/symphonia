@@ -1,0 +1,23 @@
+name: Symphonia
+version: "0.1.0"
+slug: symphonia
+description: Provider-independent music library hub and playlist migration service
+url: https://github.com/vypdev/symphonia
+image: ghcr.io/vypdev/symphonia
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+stage: experimental
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:music-box-multiple
+panel_title: Symphonia
+map:
+  - data:rw
+options:
+  log_level: info
+schema:
+  log_level: list(debug|info|warning|error)

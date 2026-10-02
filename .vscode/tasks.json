@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Home Assistant lab",
+      "type": "shell",
+      "command": "python tools/stage_ha_local_app.py && supervisor_run",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Stage Symphonia local App",
+      "type": "shell",
+      "command": "python tools/stage_ha_local_app.py",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Symphonia local App",
+      "type": "shell",
+      "command": "python tools/stage_ha_local_app.py && ha apps install local_symphonia",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Rebuild and start Symphonia local App",
+      "type": "shell",
+      "command": "python tools/stage_ha_local_app.py && ha apps rebuild --force local_symphonia && ha apps start local_symphonia && ha apps logs -f local_symphonia",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

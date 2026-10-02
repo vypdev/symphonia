@@ -1,0 +1,13 @@
+# Isolated Lit/TypeScript/Vite build spike
+
+This is **non-production RG-006 evidence**, not an App route, production component package, or SDD completion claim. It tests the owner-approved [ADR 0005](../../decisions/0005-lit-typescript-vite-ui.md) stack with synthetic UI data and no provider, Home Assistant, or Symphonia API access. The earlier [HTML/CSS review fixture](../ui-spike/README.md) remains available; this Lit fixture makes its seven product journeys navigable for review.
+
+The [Gateway-informed review map](gateway-reference.md) records the pinned style reference and the seven Symphonia journeys represented here without claiming provider or playback operations. Open `index.html` through `npm run dev -- --host 127.0.0.1`, then use the tabs for **Overview, Listening, Connections, Library, Matches, Copy, and Activity**. The source-data-state selector shows current, partial, action-required, and unavailable sample messages; it does not change the fixed copy/playback blockers. The theme button switches light and dark locally. Hash navigation supports browser back/forward and falls back to Overview for an unknown route. All records are invented. Disabled actions state why they are unavailable.
+
+The dated [browser review](browser-review.md) records the observed desktop/mobile render and the Lit reactivity defect it exposed and resolved.
+
+From this directory, run `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run check-boundary`, `npm run build`, and `npm run verify-output`. CI repeats these checks. The lockfile pins the evaluated dependencies; npm is used **for this spike**, not chosen as the final package-manager policy. `vite.config.ts` emits relative asset URLs (`base: './'`) and `verify-output` checks them. This does not prove server routing, Ingress authentication, browser behavior, or Home Assistant visual parity.
+
+The UI has one independently owned custom element, presentation helpers, semantic tokens, native controls, keyboard focus transfer on navigation, and explicit light/dark fixture control. `appearance.ts` and `fixture-state.ts` are pure decisions with deterministic tests. The shell owns only local fixture state; `fixture-views.ts` composes static review data through `primitives.ts`. There are no API clients, host-private imports, external writes, or credential inputs. Component-catalog breadth, WCAG/browser results, real base-path tests, HA context validation, and the **92-case** SDD budget remain open.
+
+Build size and dependency versions are recorded in [RG-006 host-context evidence](../ui-spike/host-context-evidence.md) after running the pinned build. Do not copy the package into the App before the UI SDD is `Ready for implementation` and the owner approves that stage.
