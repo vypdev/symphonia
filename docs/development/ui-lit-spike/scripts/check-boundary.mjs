@@ -10,4 +10,15 @@ for (const file of readdirSync("src").filter((name) => name.endsWith(".ts") && !
     assert.ok(!specifier.includes(".."), `${file} escapes its presentation package`);
   }
   assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|localStorage|sessionStorage)\b|window\.parent/, `${file} crosses the fixture boundary`);
+
+  // Lit installs reactive accessors on the prototype. Emitted class fields
+  // shadow those accessors and can leave the entire fixture blank at runtime.
+  const properties = source.match(/static properties\s*=\s*\{([\s\S]*?)\n\s*\};/);
+  if (properties) {
+    const reactive = [...properties[1].matchAll(/^\s*(\w+)\s*:/gm)].map((match) => match[1]);
+    for (const name of reactive) {
+      assert.match(source, new RegExp(`\\bdeclare\\s+(?:private\\s+)?${name}\\s*:`),
+        `${file} reactive field ${name} must use declare and constructor initialization`);
+    }
+  }
 }

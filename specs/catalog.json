@@ -135,7 +135,9 @@
         "docs/development/ui-spike/README.md",
         "docs/development/ui-spike/host-context-evidence.md",
         "docs/development/ui-spike/visual-reference-plan.md",
-        "docs/development/ui-lit-spike/README.md"
+        "docs/development/ui-lit-spike/README.md",
+        "docs/development/ui-lit-spike/gateway-reference.md",
+        "docs/development/ui-lit-spike/browser-review.md"
       ],
       "implementationEvidence": {
         "code": [],

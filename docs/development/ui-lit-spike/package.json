@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/appearance.test.ts",
+    "test": "node --experimental-strip-types --test src/*.test.ts",
     "build": "vite build",
     "verify-output": "node scripts/verify-output.mjs",
     "check-boundary": "node scripts/check-boundary.mjs"

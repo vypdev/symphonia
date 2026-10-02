@@ -139,3 +139,16 @@ code-only graph has 1,268 nodes and 3,289 edges, with `OperationRepository`
 still first at 57 edges. The offline suite passes 255 tests (2 skipped) on
 Python 3.13 and 3.14. The Draft copy SDD's acceptance and provider-write gates
 remain open.
+
+The 2026-10-02 isolated UI review added seven synthetic Lit views and pure
+fixture-state tests, with no App integration. RepoWise's offline health report
+still places `copy_execution.py` and `sqlite_operations.py` among the main
+maintenance hotspots; its safe dead-code pass found **0 candidates**. A fresh
+Graphify code-only graph contains **1,300 nodes and 3,409 edges**, with
+`OperationRepository` still first at 57 edges. `graphify affected SymUiSpike`
+reported no affected nodes, so this extraction is not evidence that all UI
+dependencies are represented; the fixture's own import/boundary check remains
+the direct guard. The local Python suite passes 255 tests (2 skipped), the Lit
+suite passes 7 tests, and the build plus relative-asset check pass. The dated
+[browser review](ui-lit-spike/browser-review.md) records the manual render and
+reactivity fix; it does not satisfy the UI SDD's 92-case budget or HA matrix.
