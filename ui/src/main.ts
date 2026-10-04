@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { DashboardStore, sectionFromHash, sections, type Section } from "./model.ts";
 import { styles } from "./styles.ts";
-import { dateText, renderSection } from "./views.ts";
+import { dateText, renderLoadState, renderSection, snapshotStatus } from "./views.ts";
 
 class SymDashboard extends LitElement {
   static styles = styles;
@@ -43,6 +43,7 @@ class SymDashboard extends LitElement {
   render() {
     const snapshot = this.store.snapshot;
     const state = this.store.state;
+    const status = snapshotStatus(state);
     return html`<div class=${this.dark ? "dark" : "light"}>
       <button class="skip" type="button" @click=${this.skip}>Skip to content</button>
       <header class="topbar"><div class="topbar-inner">
@@ -55,13 +56,9 @@ class SymDashboard extends LitElement {
       </div></nav>
       <main id="content" tabindex="-1">
         <div class="heading"><div><p class="eyebrow">Home Assistant App</p><h1 tabindex="-1">${this.section.charAt(0).toUpperCase() + this.section.slice(1)}</h1><p class="muted">Live operational state from Symphonia</p></div>
-          ${snapshot ? html`<span class="status" data-tone="positive">Storage ready</span>` : html``}</div>
+          ${status ? html`<span class="status" data-tone=${status.tone}>${status.label}</span>` : html``}</div>
         <div role="status" aria-live="polite">
-          ${state === "loading" ? html`<div class="alert">Loading stored status…</div>` : html``}
-          ${state === "refreshing" ? html`<div class="alert">Refreshing stored status…</div>` : html``}
-          ${state === "blocked" ? html`<div class="alert" data-tone="negative"><strong>Status unavailable.</strong><p>Check that the App is running, then retry.</p></div>` : html``}
-          ${state === "stale" ? html`<div class="alert" data-tone="caution"><strong>Could not refresh.</strong><p>Showing the last successful snapshot. Try again or check App logs.</p></div>` : html``}
-          ${state === "empty" ? html`<div class="alert" data-tone="caution"><strong>No stored data yet.</strong><p>The App is ready, but no connections, playlists, or operations are recorded.</p></div>` : html``}
+          ${renderLoadState(state)}
         </div>
         ${snapshot ? renderSection(this.section, snapshot) : html``}
         ${snapshot ? html`<p class="muted">Last successful read: ${dateText(snapshot.generated_at)}</p>` : html``}

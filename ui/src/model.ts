@@ -32,24 +32,41 @@ function counts(value: unknown): value is Record<string, number> {
   return record(value) && Object.values(value).every(count);
 }
 
+function queue(value: unknown): value is Dashboard["queue"] {
+  return record(value) && count(value.total) && count(value.eligible_count) && counts(value.states);
+}
+
+function connections(value: unknown): value is Dashboard["connections"] {
+  return record(value) && count(value.total) && count(value.expired_count) &&
+    record(value.by_provider) && Object.values(value.by_provider).every(counts);
+}
+
+function library(value: unknown): value is Dashboard["library"] {
+  return record(value) && count(value.current_playlists) && count(value.entries) &&
+    count(value.unavailable_entries) &&
+    (value.latest_published_at === null || typeof value.latest_published_at === "string");
+}
+
+function resolutions(value: unknown): value is Dashboard["resolutions"] {
+  return record(value) && count(value.total) && counts(value.by_action);
+}
+
+function operation(value: unknown): value is Dashboard["operations"][number] {
+  return record(value) && typeof value.id === "string" && typeof value.type === "string" &&
+    typeof value.state === "string" &&
+    (value.updated_at === null || typeof value.updated_at === "string");
+}
+
+function operations(value: unknown): value is Dashboard["operations"] {
+  return Array.isArray(value) && value.length <= 10 && value.every(operation);
+}
+
 export function isDashboard(value: unknown): value is Dashboard {
   if (!record(value)) return false;
-  const item = value;
-  const queue = item.queue;
-  const connections = item.connections;
-  const library = item.library;
-  const resolutions = item.resolutions;
-  return item.service === "symphonia" && item.ready === true &&
-    typeof item.generated_at === "string" && typeof item.version === "string" &&
-    record(queue) && count(queue.total) && count(queue.eligible_count) && counts(queue.states) &&
-    record(connections) && count(connections.total) && count(connections.expired_count) &&
-    record(connections.by_provider) && Object.values(connections.by_provider).every(counts) &&
-    record(library) && count(library.current_playlists) && count(library.entries) &&
-    count(library.unavailable_entries) && (library.latest_published_at === null || typeof library.latest_published_at === "string") &&
-    record(resolutions) && count(resolutions.total) && counts(resolutions.by_action) &&
-    Array.isArray(item.operations) && item.operations.length <= 10 && item.operations.every(operation =>
-      record(operation) && typeof operation.id === "string" && typeof operation.type === "string" &&
-      typeof operation.state === "string" && (operation.updated_at === null || typeof operation.updated_at === "string"));
+  return value.service === "symphonia" && value.ready === true &&
+    typeof value.generated_at === "string" && typeof value.version === "string" &&
+    queue(value.queue) && connections(value.connections) && library(value.library) &&
+    resolutions(value.resolutions) && operations(value.operations);
 }
 
 export function hasStoredData(snapshot: Dashboard): boolean {

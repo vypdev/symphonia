@@ -85,7 +85,7 @@ The UI requests `./api/dashboard` with same-origin credentials. The API checks t
 - Without a Supervisor session, its proxy rejects the request before the App.
 - Direct container-network requests to UI/API are denied even with forged Ingress headers.
 - If stores are not ready, the API returns 503 with a safe status; the UI shows blocked recovery text.
-- If refresh fails after a successful read, the last snapshot remains visible and explicitly stale.
+- If refresh fails after a successful read, the last snapshot remains visible and both its message and heading status explicitly mark it stale.
 - Unknown tabs select overview. Overlapping requests are fenced by a generation counter.
 
 ### 6.3 States
@@ -148,7 +148,7 @@ This first operational composition follows the [UI foundation](home-assistant-na
 - Loading: “Loading stored status…”
 - Empty/action required: “No connections recorded. Provider setup is not available in this build.”
 - Ready: “Storage ready. Updated at [time].”
-- Partial/stale: “Could not refresh. Showing the last successful snapshot.”
+- Partial/stale: caution status “Snapshot stale” and “Could not refresh. Showing the last successful snapshot.”
 - Blocked: “Status unavailable. Check that the App is running, then retry.”
 - Completed operation: state text “Completed”; failed/waiting operations retain their actual state labels.
 

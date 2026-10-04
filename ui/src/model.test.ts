@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { DashboardStore, hasStoredData, isDashboard, sectionFromHash, type Dashboard } from "./model.ts";
+import { snapshotStatus } from "./views.ts";
 
 const empty: Dashboard = {
   service: "symphonia", version: "0.1.0", ready: true,
@@ -54,4 +55,18 @@ test("malformed or nonready API data never becomes a ready screen", async () => 
   assert.equal(store.state, "blocked");
   await store.refresh(async () => ({ ...empty, queue: { ...empty.queue, states: { queued: "1" } } }));
   assert.equal(store.state, "blocked");
+});
+
+test("nested malformed data and oversized operation lists are rejected", () => {
+  assert.equal(isDashboard({ ...empty, connections: { ...empty.connections, by_provider: { spotify: { active: -1 } } } }), false);
+  assert.equal(isDashboard({ ...empty, library: { ...empty.library, unavailable_entries: 1.5 } }), false);
+  assert.equal(isDashboard({ ...empty, operations: Array(11).fill({ id: "x", type: "copy", state: "queued", updated_at: null }) }), false);
+  assert.equal(isDashboard({ ...empty, operations: [{ id: "x", type: "copy", state: "queued", updated_at: 42 }] }), false);
+});
+
+test("status pill reflects freshness and never marks a stale snapshot healthy", () => {
+  assert.deepEqual(snapshotStatus("ready"), { label: "Storage ready", tone: "positive" });
+  assert.deepEqual(snapshotStatus("refreshing"), { label: "Refreshing", tone: "caution" });
+  assert.deepEqual(snapshotStatus("stale"), { label: "Snapshot stale", tone: "caution" });
+  assert.equal(snapshotStatus("blocked"), null);
 });

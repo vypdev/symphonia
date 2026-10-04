@@ -1,7 +1,28 @@
 // Presentation-only sections composed from an already safe dashboard DTO.
 
 import { html } from "lit";
-import type { Dashboard, Section } from "./model.ts";
+import type { Dashboard, Section, ViewState } from "./model.ts";
+
+export function snapshotStatus(state: ViewState): { label: string; tone: string } | null {
+  switch (state) {
+    case "ready":
+    case "empty": return { label: "Storage ready", tone: "positive" };
+    case "refreshing": return { label: "Refreshing", tone: "caution" };
+    case "stale": return { label: "Snapshot stale", tone: "caution" };
+    default: return null;
+  }
+}
+
+export function renderLoadState(state: ViewState) {
+  switch (state) {
+    case "loading": return html`<div class="alert">Loading stored status…</div>`;
+    case "refreshing": return html`<div class="alert">Refreshing stored status…</div>`;
+    case "blocked": return html`<div class="alert" data-tone="negative"><strong>Status unavailable.</strong><p>Check that the App is running, then retry.</p></div>`;
+    case "stale": return html`<div class="alert" data-tone="caution"><strong>Could not refresh.</strong><p>Showing the last successful snapshot. Try again or check App logs.</p></div>`;
+    case "empty": return html`<div class="alert" data-tone="caution"><strong>No stored data yet.</strong><p>The App is ready, but no connections, playlists, or operations are recorded.</p></div>`;
+    default: return html``;
+  }
+}
 
 export function dateText(value: string | null): string {
   if (!value) return "Not available";
