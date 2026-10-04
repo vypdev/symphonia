@@ -28,6 +28,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Provider connection persistence with account uniqueness, opaque secret references, health states, and effective capability evidence.
 - Application connection service for verified-account registration, capability probes, degraded health, and reauthorization-required classification.
 - Application-owned attempt, connection, and operation repository protocols keep current use cases independent of SQLite imports; a package-wide AST test enforces the boundary.
+- The SQLite operation adapter keeps one lock-protected public facade; separate claim, transition, and scheduling modules each finish a transaction before returning. Shared context, schema, validation, and rollback modules keep persistence concerns within infrastructure without exposing SQLite to application code.
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Durable operation runner that atomically claims eligible work and fails unwired operation types before side effects.
 - The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a potentially stale handler object.

@@ -83,8 +83,11 @@ time. Published playlist, accepted plan, and durable-operation facts belong to
 the domain. A package-wide AST test rejects infrastructure imports from every
 application module. The operation repository delegates bounded diagnostic reads
 to `sqlite_operation_diagnostics.py` and shared timestamp/audit encoding to
-`sqlite_operation_codec.py`. Its transaction and state transitions remain in
-`sqlite_operations.py`; further decomposition needs recovery characterization.
+`sqlite_operation_codec.py`. Its public facade in `sqlite_operations.py` holds
+the shared connection lock; focused modules own complete claim, checkpoint,
+cancellation, and retry transactions through one explicit operation context.
+Schema migration, recovery rules, and rollback behavior are separate adapter
+modules. A state transition never spans two public repository calls.
 Copy execution validates persisted progress in the pure
 `application/copy_checkpoint.py` module before any provider write. A small
 application service starts the run; separate target and entry stages share an
