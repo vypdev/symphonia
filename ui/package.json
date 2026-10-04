@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
+    "check-boundary": "node scripts/check-boundary.mjs",
     "test": "node --experimental-strip-types --test src/*.test.ts",
     "build": "vite build"
   },

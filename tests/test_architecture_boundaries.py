@@ -119,6 +119,15 @@ class ArchitectureBoundaryTests(unittest.TestCase):
                     violations.append(f"{path.relative_to(ROOT)} imports {module}")
         self.assertEqual(violations, [])
 
+    def test_http_entrypoint_delegates_without_importing_inner_concrete_adapters(self) -> None:
+        violations = []
+        for name in ("http", "routes", "dashboard_surface"):
+            path = SOURCE_ROOT / "runtime" / f"{name}.py"
+            for module in _absolute_imports(path):
+                if module.startswith("symphonia.infrastructure"):
+                    violations.append(f"{path.relative_to(ROOT)} imports {module}")
+        self.assertEqual(violations, [])
+
     def test_copy_use_cases_do_not_import_the_plan_adapter(self) -> None:
         violations = []
         for name in ("copy_workflow", "copy_execution"):

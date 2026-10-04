@@ -1,18 +1,7 @@
 import { LitElement, html } from "lit";
-import { DashboardStore, sectionFromHash, sections, type Dashboard, type Section } from "./model.ts";
+import { DashboardStore, sectionFromHash, sections, type Section } from "./model.ts";
 import { styles } from "./styles.ts";
-
-function dateText(value: string | null): string {
-  if (!value) return "Not available";
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? "Not available" : date.toLocaleString();
-}
-
-function stateTone(value: string): string {
-  if (["completed", "succeeded", "ready", "active"].includes(value)) return "positive";
-  if (["failed", "cancelled", "blocked"].includes(value)) return "negative";
-  return "caution";
-}
+import { dateText, renderSection } from "./views.ts";
 
 class SymDashboard extends LitElement {
   static styles = styles;
@@ -51,63 +40,6 @@ class SymDashboard extends LitElement {
   private skip(): void { this.renderRoot.querySelector<HTMLElement>("main")?.focus(); }
   private toggleTheme(): void { this.dark = !this.dark; this.requestUpdate(); }
 
-  private renderOverview(snapshot: Dashboard) {
-    return html`
-      <div class="grid">
-        <section class="panel"><h2>Operations</h2><p class="metric">${snapshot.queue.total}</p><p class="muted">${snapshot.queue.eligible_count} eligible to run</p></section>
-        <section class="panel"><h2>Connections</h2><p class="metric">${snapshot.connections.total}</p><p class="muted">${snapshot.connections.expired_count} expired</p></section>
-        <section class="panel"><h2>Library</h2><p class="metric">${snapshot.library.current_playlists}</p><p class="muted">current playlists · ${snapshot.library.entries} entries</p></section>
-      </div>
-      <section class="panel"><h2>Next steps</h2><p>Provider setup, library import, playback, and playlist copy are not available in this build. This dashboard reflects stored App data only.</p></section>
-    `;
-  }
-
-  private renderConnections(snapshot: Dashboard) {
-    const providers = Object.entries(snapshot.connections.by_provider);
-    return html`<section class="panel"><h2>Stored connections</h2>
-      ${providers.length ? providers.map(([provider, states]) => html`<div class="row"><div class="row-copy"><strong>${provider}</strong><small>${Object.entries(states).map(([state, count]) => `${state}: ${count}`).join(" · ")}</small></div></div>`) : html`<p>No connections recorded. Provider setup is not available in this build.</p>`}
-      <p class="muted">${snapshot.connections.expired_count} connection records have expired credentials.</p>
-    </section>`;
-  }
-
-  private renderLibrary(snapshot: Dashboard) {
-    return html`<section class="panel"><h2>Stored library projection</h2><dl>
-      <div class="fact"><dt>Current playlists</dt><dd>${snapshot.library.current_playlists}</dd></div>
-      <div class="fact"><dt>Entries</dt><dd>${snapshot.library.entries}</dd></div>
-      <div class="fact"><dt>Unavailable entries</dt><dd>${snapshot.library.unavailable_entries}</dd></div>
-      <div class="fact"><dt>Last published</dt><dd>${dateText(snapshot.library.latest_published_at)}</dd></div>
-    </dl><p class="muted">Import controls are not available in this build.</p></section>`;
-  }
-
-  private renderActivity(snapshot: Dashboard) {
-    return html`<section class="panel"><h2>Recent operations</h2>
-      ${snapshot.operations.length ? snapshot.operations.map(operation => html`<div class="row">
-        <div class="row-copy"><strong>${operation.type || "Operation"}</strong><small>${operation.id} · Updated ${dateText(operation.updated_at)}</small></div>
-        <span class="status" data-tone=${stateTone(operation.state)}>${operation.state || "unknown"}</span>
-      </div>`) : html`<p>No operations recorded.</p>`}
-    </section>`;
-  }
-
-  private renderDiagnostics(snapshot: Dashboard) {
-    return html`<section class="panel"><h2>App diagnostics</h2><dl>
-      <div class="fact"><dt>Service</dt><dd>Ready</dd></div>
-      <div class="fact"><dt>Version</dt><dd>${snapshot.version}</dd></div>
-      <div class="fact"><dt>Queue states</dt><dd>${Object.entries(snapshot.queue.states).map(([state, count]) => `${state}: ${count}`).join(" · ") || "None"}</dd></div>
-      <div class="fact"><dt>Identity decisions</dt><dd>${snapshot.resolutions.total}</dd></div>
-      <div class="fact"><dt>Last successful read</dt><dd>${dateText(snapshot.generated_at)}</dd></div>
-    </dl><p class="muted">Detailed payloads, account identifiers, and credentials are never shown here.</p></section>`;
-  }
-
-  private renderSection(snapshot: Dashboard) {
-    switch (this.section) {
-      case "connections": return this.renderConnections(snapshot);
-      case "library": return this.renderLibrary(snapshot);
-      case "activity": return this.renderActivity(snapshot);
-      case "diagnostics": return this.renderDiagnostics(snapshot);
-      default: return this.renderOverview(snapshot);
-    }
-  }
-
   render() {
     const snapshot = this.store.snapshot;
     const state = this.store.state;
@@ -131,7 +63,7 @@ class SymDashboard extends LitElement {
           ${state === "stale" ? html`<div class="alert" data-tone="caution"><strong>Could not refresh.</strong><p>Showing the last successful snapshot. Try again or check App logs.</p></div>` : html``}
           ${state === "empty" ? html`<div class="alert" data-tone="caution"><strong>No stored data yet.</strong><p>The App is ready, but no connections, playlists, or operations are recorded.</p></div>` : html``}
         </div>
-        ${snapshot ? this.renderSection(snapshot) : html``}
+        ${snapshot ? renderSection(this.section, snapshot) : html``}
         ${snapshot ? html`<p class="muted">Last successful read: ${dateText(snapshot.generated_at)}</p>` : html``}
       </main>
       <footer>Symphonia · App status and stored data</footer>

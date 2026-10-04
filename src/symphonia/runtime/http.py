@@ -6,17 +6,14 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from collections.abc import Callable
 from datetime import datetime, timezone
-from pathlib import Path
-import re
 from socket import socket
 from typing import Any
-from urllib.parse import urlsplit
 
 from symphonia import __version__
-from symphonia.application.operational_dashboard import project_dashboard
-from symphonia.infrastructure.sqlite_operations import OperationRepository
 from .config import RuntimeConfig, normalize_ingress_path
+from .dashboard_surface import dashboard_response, trusted_ingress_peer, ui_asset
 from .resources import RuntimeResources
+from .routes import HealthcheckPort, relative_path, route_get
 
 
 class SymphoniaHTTPServer(HTTPServer):
@@ -26,7 +23,7 @@ class SymphoniaHTTPServer(HTTPServer):
     def __init__(
         self,
         address: tuple[str, int],
-        repository: OperationRepository | None = None,
+        repository: HealthcheckPort | None = None,
         ingress_path: str = "/",
         *,
         resources: RuntimeResources | None = None,
@@ -63,7 +60,7 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
     server: SymphoniaHTTPServer
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
-        relative = _relative_path(self.path, self.server.ingress_path)
+        relative = relative_path(self.path, self.server.ingress_path)
         if relative in {"/", "/api/dashboard"} or (
             relative is not None and relative.startswith("/assets/")
         ):
@@ -85,14 +82,11 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
         self._json(status, payload)
 
     def _dashboard(self) -> None:
-        resources = self.server.resources
-        if resources is None:
-            self._json(503, {"service": "symphonia", "ready": False})
-            return
         now = datetime.now(timezone.utc)
-        diagnostics = resources.diagnostics(now=now, operation_limit=10, event_limit=1)
-        payload = project_dashboard(diagnostics, now=now, version=self.server.service_version)
-        self._json(200 if payload["ready"] else 503, payload)
+        status, payload = dashboard_response(
+            self.server.resources, now=now, version=self.server.service_version
+        )
+        self._json(status, payload)
 
     def _asset(self, relative: str) -> None:
         asset = ui_asset(relative)
@@ -170,40 +164,6 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
         return
 
 
-INGRESS_PEER = "172.30.32.2"
-ASSET_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.(?:js|css|svg)\Z")
-
-
-def trusted_ingress_peer(address: str) -> bool:
-    """A forwarded header can never grant access to the UI/API."""
-    return address == INGRESS_PEER
-
-
-def ui_asset(relative: str) -> tuple[str, bytes] | None:
-    """Resolve only Vite's single-level, allowlisted output assets."""
-    root = Path(__file__).with_name("ui_assets")
-    if relative == "/":
-        path = root / "index.html"
-        content_type = "text/html; charset=utf-8"
-    elif relative.startswith("/assets/"):
-        name = relative[len("/assets/"):]
-        if not ASSET_NAME.fullmatch(name):
-            return None
-        path = root / "assets" / name
-        content_type = {
-            ".js": "text/javascript; charset=utf-8",
-            ".css": "text/css; charset=utf-8",
-            ".svg": "image/svg+xml",
-        }[path.suffix]
-    else:
-        return None
-    try:
-        if not path.is_file() or path.stat().st_size > 2_000_000:
-            return None
-        return content_type, path.read_bytes()
-    except OSError:
-        return None
-
 def create_server(
     host: str = "127.0.0.1",
     port: int = 8099,
@@ -234,60 +194,3 @@ def create_server(
                 f"({type(cleanup_error).__name__})"
             )
         raise
-
-
-def route_get(
-    path: str,
-    repository: OperationRepository,
-    service_version: str = __version__,
-    ingress_path: str = "/",
-    readiness_check: Callable[[], bool] | None = None,
-) -> tuple[int, dict[str, Any]]:
-    """Resolve a GET request without opening a socket.
-
-    Keeping this decision pure-ish makes health/readiness contract tests work
-    in restricted CI environments and prevents a network permission from being
-    mistaken for application readiness.
-    """
-
-    relative_path = _relative_path(path, normalize_ingress_path(ingress_path))
-    if relative_path is None:
-        return 404, {"error": "not_found"}
-    if relative_path == "/health":
-        return 200, {"service": "symphonia", "status": "ok", "version": service_version}
-    if relative_path == "/ready":
-        try:
-            healthy = (readiness_check or repository.healthcheck)()
-        except Exception:  # readiness must fail closed without exposing internals
-            healthy = False
-        return (200, {"service": "symphonia", "status": "ready"}) if healthy else (
-            503,
-            {"service": "symphonia", "status": "not_ready"},
-        )
-    if relative_path == "/version":
-        return 200, {"service": "symphonia", "version": service_version}
-    return 404, {"error": "not_found"}
-
-
-def _relative_path(request_path: str, base_path: str) -> str | None:
-    if (
-        not isinstance(request_path, str)
-        or not request_path.startswith("/")
-        or request_path.startswith("//")
-    ):
-        return None
-    try:
-        parsed = urlsplit(request_path)
-    except ValueError:
-        return None
-    if parsed.scheme or parsed.netloc or parsed.fragment:
-        return None
-    path = parsed.path or "/"
-    if base_path == "/":
-        return path
-    if path == base_path:
-        return "/"
-    prefix = f"{base_path}/"
-    if path.startswith(prefix):
-        return path[len(base_path):] or "/"
-    return None

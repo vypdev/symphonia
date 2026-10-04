@@ -121,8 +121,8 @@ No data migration is needed. Authorization and redaction are not configurable. E
 | Domain | existing operation and connection state | UI or HTTP |
 | Application projection | allowlisted summary/view-model shaping | browser or database |
 | Persistence adapters | current redacted diagnostics | HTML and styling |
-| HTTP adapter | peer gate, paths, headers, JSON/static bytes | business decisions |
-| Lit presentation | layout, fetch state, tabs, accessible content | SQLite and provider logic |
+| HTTP adapter | peer gate, headers and response transport; delegates public route selection, dashboard projection and static asset resolution to focused modules | business decisions |
+| Lit presentation | `model.ts` owns validated snapshot state, `views.ts` owns pure section rendering, `main.ts` owns fetch/navigation events | SQLite and provider logic |
 
 ### 8.2 Contracts and trust
 
@@ -130,7 +130,7 @@ The DTO has version, generated time, ready, aggregate queue/connections/library/
 
 ### 8.3 Executable constraints
 
-Tests assert exact DTO keys and secret canary absence, direct-peer denial, relative asset paths, route fencing, and no infrastructure imports in the UI package. The existing application dependency rules remain in force.
+Tests assert exact DTO keys and secret canary absence, direct-peer denial, relative asset paths, route fencing, and no infrastructure imports in application or the HTTP entrypoint. The production UI boundary check prevents outer-layer imports and browser I/O in model/views. The existing application dependency rules remain in force.
 
 ## 9. UI/UX and content contract
 
@@ -226,7 +226,7 @@ Minimum **18 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 3 c
 - [x] At least 18 distinct cases across projection, routing, client state, build, browser, and lab checks; the repository verification suite passes.
 - [x] User/operator/contributor documentation and catalog evidence are current.
 - [x] Browser visual and keyboard review is recorded in the lab guide.
-- [x] GitHub Verify passed for the functional commit `557ceab` ([run](https://github.com/vypdev/symphonia/actions/runs/37224401052)); the final evidence commit requires its own green run.
+- [x] GitHub Verify passed for the functional commit `557ceab` ([run](https://github.com/vypdev/symphonia/actions/runs/37224401052)); later refactors require their own green run.
 
 ## 20. References and decisions
 

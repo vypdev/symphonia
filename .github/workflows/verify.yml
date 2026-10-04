@@ -95,6 +95,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Check types
         run: npm run check
+      - name: Check production UI boundaries
+        run: npm run check-boundary
       - name: Test UI state transitions
         run: npm test
       - name: Build App UI

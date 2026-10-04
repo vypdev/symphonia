@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import unittest
 
 from symphonia.application.operational_dashboard import project_dashboard
+from symphonia.runtime.dashboard_surface import dashboard_response
 from symphonia.runtime.http import trusted_ingress_peer, ui_asset
 
 
@@ -11,6 +12,29 @@ NOW = datetime(2026, 10, 4, 12, tzinfo=timezone.utc)
 
 
 class OperationalDashboardTests(unittest.TestCase):
+    def test_dashboard_adapter_returns_bounded_projection_and_fails_closed(self) -> None:
+        expected_request = (NOW, 10, 1)
+
+        class Diagnostics:
+            def __init__(self, result: dict[str, object] | Exception) -> None:
+                self.result = result
+
+            def diagnostics(self, *, now: datetime, operation_limit: int, event_limit: int) -> dict[str, object]:
+                if (now, operation_limit, event_limit) != expected_request:
+                    raise AssertionError("unbounded diagnostics read")
+                if isinstance(self.result, Exception):
+                    raise self.result
+                return self.result
+
+        healthy = Diagnostics({"ready": True})
+        status, payload = dashboard_response(healthy, now=NOW, version="0.1.0")
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["ready"])
+        for resources in (None, Diagnostics({"ready": False}), Diagnostics(RuntimeError("secret"))):
+            status, payload = dashboard_response(resources, now=NOW, version="0.1.0")
+            self.assertEqual(status, 503)
+            self.assertEqual(payload, {"service": "symphonia", "ready": False})
+
     def test_projection_uses_exact_allowlist_and_omits_secret_bearing_diagnostics(self) -> None:
         secret = "credential-canary-very-private"
         diagnostics = {

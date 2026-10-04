@@ -58,6 +58,9 @@
           "src/symphonia/runtime/config.py",
           "src/symphonia/runtime/container_entrypoint.py",
           "src/symphonia/runtime/http.py",
+          "src/symphonia/runtime/routes.py",
+          "src/symphonia/runtime/dashboard_surface.py",
+          "src/symphonia/runtime/backup.py",
           "src/symphonia/runtime/resources.py",
           "src/symphonia/infrastructure/sqlite_authorization.py",
           "src/symphonia/infrastructure/sqlite_connections.py",
@@ -190,9 +193,12 @@
         "code": [
           "src/symphonia/application/operational_dashboard.py",
           "src/symphonia/runtime/http.py",
+          "src/symphonia/runtime/routes.py",
+          "src/symphonia/runtime/dashboard_surface.py",
           "src/symphonia/runtime/ui_assets/index.html",
           "ui/src/main.ts",
           "ui/src/model.ts",
+          "ui/src/views.ts",
           "ui/src/styles.ts",
           "addon/config.yaml"
         ],
@@ -201,6 +207,8 @@
           "tests/test_runtime_http.py",
           "tests/test_ha_ingress_probe.py",
           "ui/src/model.test.ts",
+          "ui/scripts/check-boundary.mjs",
+          "tests/test_architecture_boundaries.py",
           "docs/development/ha-app-lab.md"
         ],
         "documentation": [
