@@ -116,6 +116,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Lossless Unicode-safe identity normalization with explicit version-token and ISRC derived fields; no automatic matching thresholds are assumed.
 - An application workflow that persists plans, requires digest acceptance, and enqueues only accepted plans as durable operations.
 - A copy executor whose target and entry stages share an explicit run context, create target playlists through a semantic writer port, checkpoint each occurrence, and reconcile unknown writes before retry. Target recovery and immediate unknown-outcome errors use the same reconciliation path.
+- Target-stage tests verify retry and rate-limit release, permanent failure, ambiguous response quarantine, and conflicting target reconciliation without starting entry writes.
 - SQLite persistence for complete playlist projections that keeps incomplete imports from replacing the last complete snapshot and isolates external IDs by namespace.
 - The playlist import use case depends on an application projection port and returns a domain-owned published snapshot value; SQLite remains the adapter, and its prior `StoredPlaylistSnapshot` import is retained as an alias for foundation callers.
 - Playlist projections preserve provider object types as part of external identity, including a forward-compatible migration for older rows.

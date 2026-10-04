@@ -37,6 +37,17 @@ class FakeWriter:
         return self.reconcile_results.get(idempotency_key, False)
 
 
+class FailingTargetWriter(FakeWriter):
+    def __init__(self, error: Exception) -> None:
+        super().__init__()
+        self.error = error
+
+    def ensure_target_playlist(
+        self, *, provider: str, name: str, visibility: str, idempotency_key: str,
+    ) -> TargetPlaylist:
+        raise self.error
+
+
 class CopyExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.plans = CopyPlanRepository()
@@ -202,6 +213,66 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(reconciled.checkpoint["target_playlist_id"], writer.target.provider_playlist_id)
         self.assertEqual(writer.create_attempts, 1)
         self.assertEqual(writer.added, [(f"{digest}:entry:occ-1", "target-1")])
+
+    def test_retryable_target_failure_waits_without_creating_entries(self) -> None:
+        digest = self.accepted_digest()
+        writer = FailingTargetWriter(ProviderWriteError(WriteOutcome.RETRYABLE, "temporary"))
+
+        operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(operation.state, "retry_scheduled")
+        self.assertEqual(operation.next_run_at, NOW + timedelta(seconds=30))
+        self.assertNotIn("unknown_step", operation.checkpoint)
+        self.assertEqual(writer.added, [])
+
+    def test_rate_limited_target_failure_keeps_provider_deadline(self) -> None:
+        digest = self.accepted_digest()
+        deadline = NOW + timedelta(minutes=2)
+        writer = FailingTargetWriter(
+            ProviderWriteError(WriteOutcome.RATE_LIMITED, "quota", retry_at=deadline)
+        )
+
+        operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(operation.state, "waiting_rate_limit")
+        self.assertEqual(operation.next_run_at, deadline)
+        self.assertNotIn("unknown_step", operation.checkpoint)
+        self.assertEqual(writer.added, [])
+
+    def test_permanent_target_failure_records_an_issue_without_entries(self) -> None:
+        digest = self.accepted_digest()
+        writer = FailingTargetWriter(
+            ProviderWriteError(WriteOutcome.PERMANENT_FAILURE, "target denied", provider_code="403")
+        )
+
+        operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(operation.state, "failed")
+        self.assertEqual(operation.checkpoint["issues"][0]["provider_code"], "403")
+        self.assertNotIn("unknown_step", operation.checkpoint)
+        self.assertEqual(writer.added, [])
+
+    def test_ambiguous_target_exception_waits_for_reconciliation(self) -> None:
+        digest = self.accepted_digest()
+        writer = FailingTargetWriter(RuntimeError("response lost"))
+
+        operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["unknown_step"], "target")
+        self.assertEqual(writer.added, [])
+
+    def test_conflicting_reconciled_target_keeps_operation_waiting(self) -> None:
+        digest = self.accepted_digest()
+        self.resume_with_checkpoint(
+            digest, {"unknown_step": "target", "target_playlist_id": "different-target"},
+        )
+
+        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW + timedelta(seconds=1))
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["target_playlist_id"], "different-target")
+        self.assertEqual(self.writer.added, [])
 
     def test_unknown_write_without_reconciliation_requires_user(self) -> None:
         digest = self.accepted_digest()
