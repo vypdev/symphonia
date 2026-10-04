@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import datetime, timezone
 
 from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
-from symphonia.providers.errors import ProviderApiError, ProviderErrorCategory
+from symphonia.providers.errors import ProviderApiError
 
-from .library_import import ImportPublication, LibraryImportService
+from .library_import import LibraryImportService
+from .library_import_execution_state import ImportRun
+from .library_import_payload import parse_import_payload
 from .ports import OperationPort
 
 
@@ -81,11 +81,20 @@ class LibraryImportExecutionService:
 
         if operation.state != "running" or operation.worker_id != worker_id:
             raise ValueError("import operation must be running under the supplied worker")
-        checkpoint = dict(operation.checkpoint)
+        run = ImportRun(
+            self.operations, operation, worker_id, now, dict(operation.checkpoint),
+            self.retry_delay_seconds, self.max_retry_attempts,
+        )
         if operation.cancel_requested:
-            return self._checkpoint(operation, worker_id, checkpoint, now, "cancelled")
+            return run.checkpoint_state("cancelled")
+        retry_attempts = run.checkpoint.get("retry_attempts", 0)
+        if type(retry_attempts) is not int or retry_attempts < 0:
+            run.checkpoint["failure_code"] = "invalid_retry_checkpoint"
+            return run.checkpoint_state("failed")
         try:
-            connection_id, playlist, snapshot_id, observed_at = self._payload(operation.payload)
+            connection_id, playlist, snapshot_id, observed_at = parse_import_payload(
+                operation.payload
+            )
             if adapter.manifest.provider != playlist.provider:
                 raise ValueError("adapter provider does not match operation playlist")
             self.operations.renew_lease(
@@ -102,117 +111,15 @@ class LibraryImportExecutionService:
                 observed_at=observed_at,
             )
         except LeaseConflict:
-            latest = self.operations.get(operation.operation_id)
-            if (
-                latest.cancel_requested
-                and latest.worker_id == worker_id
-                and latest.lease_expires_at is not None
-                and latest.lease_expires_at > now
-            ):
-                return self._checkpoint(latest, worker_id, checkpoint, now, "cancelled")
+            cancelled = run.cancel_if_requested()
+            if cancelled is not None:
+                return cancelled
             raise
         except ProviderApiError as error:
-            checkpoint["failure_code"] = error.category.value
-            if error.category in {
-                ProviderErrorCategory.AUTHENTICATION_REQUIRED,
-                ProviderErrorCategory.AUTHORIZATION_REVOKED,
-                ProviderErrorCategory.PERMISSION_DENIED,
-            }:
-                return self._checkpoint(operation, worker_id, checkpoint, now, "waiting_user")
-            if error.category is ProviderErrorCategory.RATE_LIMITED:
-                retry_at = error.retry_at if error.retry_at and error.retry_at > now else now + timedelta(seconds=self.retry_delay_seconds)
-                return self.operations.schedule_rate_limit(
-                    operation.operation_id,
-                    worker_id=worker_id,
-                    next_run_at=retry_at,
-                    checkpoint=checkpoint,
-                    now=now,
-                )
-            if error.category in {
-                ProviderErrorCategory.PROVIDER_UNAVAILABLE,
-                ProviderErrorCategory.TIMEOUT,
-                ProviderErrorCategory.NETWORK_ERROR,
-            }:
-                retry_attempts = int(checkpoint.get("retry_attempts", 0)) + 1
-                checkpoint["retry_attempts"] = retry_attempts
-                if retry_attempts > self.max_retry_attempts:
-                    checkpoint["failure_code"] = "retry_exhausted"
-                    return self._checkpoint(operation, worker_id, checkpoint, now, "failed")
-                return self.operations.schedule_retry(
-                    operation.operation_id,
-                    worker_id=worker_id,
-                    next_run_at=now + timedelta(seconds=self.retry_delay_seconds),
-                    checkpoint=checkpoint,
-                    now=now,
-                )
-            return self._checkpoint(operation, worker_id, checkpoint, now, "failed")
+            return run.handle_provider_error(error)
         except Exception as error:
-            checkpoint["failure_code"] = f"import_exception:{type(error).__name__}"
-            return self._checkpoint(operation, worker_id, checkpoint, now, "failed")
+            return run.fail_unexpected(error)
 
-        return self._complete_publication(operation, worker_id, publication, checkpoint, now)
-
-    def _complete_publication(
-        self,
-        operation: OperationRecord,
-        worker_id: str,
-        publication: ImportPublication,
-        checkpoint: dict[str, Any],
-        now: datetime,
-    ) -> OperationRecord:
-        checkpoint.update(
-            {
-                "publication_state": publication.state,
-                "issues": [issue.value for issue in publication.issues],
-                "published_snapshot_id": None if publication.snapshot is None else publication.snapshot.snapshot_id,
-                "retained_snapshot_id": None
-                if publication.retained_current is None
-                else publication.retained_current.snapshot_id,
-            }
-        )
-        return self._checkpoint(operation, worker_id, checkpoint, now, publication.state)
-
-    def _checkpoint(
-        self,
-        operation: OperationRecord,
-        worker_id: str,
-        checkpoint: dict[str, Any],
-        now: datetime,
-        state: str,
-    ) -> OperationRecord:
-        return self.operations.checkpoint(
-            operation.operation_id,
-            worker_id=worker_id,
-            checkpoint=checkpoint,
-            now=now,
-            state=state,
-        )
-
-    @staticmethod
-    def _payload(payload: Mapping[str, Any]) -> tuple[str, ProviderObjectRef, str, datetime]:
-        connection_id = payload.get("connection_id")
-        snapshot_id = payload.get("snapshot_id")
-        observed_at = payload.get("observed_at")
-        raw_playlist = payload.get("playlist")
-        if not all(isinstance(value, str) and value.strip() for value in (connection_id, snapshot_id, observed_at)):
-            raise ValueError("import operation payload is missing required fields")
-        if not isinstance(raw_playlist, Mapping):
-            raise ValueError("import operation payload has no playlist reference")
-        try:
-            playlist = ProviderObjectRef(
-                raw_playlist["provider"],
-                raw_playlist["object_type"],
-                raw_playlist["object_id"],
-                raw_playlist["namespace"],
-            )
-            parsed_observed_at = datetime.fromisoformat(observed_at)
-        except (KeyError, TypeError, ValueError) as error:
-            raise ValueError("import operation payload has an invalid playlist or timestamp") from error
-        if payload.get("provider") != playlist.provider:
-            raise ValueError("import operation provider does not match playlist")
-        if parsed_observed_at.tzinfo is None:
-            raise ValueError("import operation observed_at must be timezone-aware")
-        return connection_id, playlist, snapshot_id, parsed_observed_at.astimezone(timezone.utc)
-
+        return run.complete(publication)
 
 __all__ = ["LibraryImportExecutionService"]

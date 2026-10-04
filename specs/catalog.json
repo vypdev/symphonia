@@ -396,6 +396,8 @@
           "src/symphonia/application/ports.py",
           "src/symphonia/application/library_import.py",
           "src/symphonia/application/library_import_execution.py",
+          "src/symphonia/application/library_import_execution_state.py",
+          "src/symphonia/application/library_import_payload.py",
           "src/symphonia/infrastructure/sqlite_library.py"
         ],
         "tests": [
@@ -602,7 +604,9 @@
           "src/symphonia/application/copy_execution_state.py",
           "src/symphonia/application/copy_execution_target.py",
           "src/symphonia/application/copy_execution_entries.py",
-          "src/symphonia/application/library_import_execution.py"
+          "src/symphonia/application/library_import_execution.py",
+          "src/symphonia/application/library_import_execution_state.py",
+          "src/symphonia/application/library_import_payload.py"
         ],
         "tests": [
           "tests/test_sqlite_operations.py",

@@ -31,6 +31,7 @@ Evidence sources:
 - [Provider specification](../docs/providers/provider-specification.md)
 - [Development specification](../docs/development/development-specification.md)
 - [SQLite recovery and backup spike](../docs/development/storage-recovery-spike.md)
+- [Durable one-playlist import outcomes](../tests/test_library_import_execution.py): intent validation, cancellation before reads, retry budget, rate-limit deadline, and permanent failure.
 
 ## 3. Actors and authorization
 

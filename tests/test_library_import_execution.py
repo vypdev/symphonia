@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import unittest
 
 from symphonia.application import LibraryImportExecutionService, LibraryImportService, OperationRunner
@@ -119,6 +119,63 @@ class LibraryImportExecutionTests(unittest.TestCase):
 
         self.assertEqual(failed.state, "failed")
         self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
+
+    def test_transient_provider_failure_schedules_a_durable_retry(self) -> None:
+        result = self.enqueue(
+            FakeAdapter(error=ProviderApiError(ProviderErrorCategory.NETWORK_ERROR, "offline"))
+        )
+        self.assertEqual(result.state, "retry_scheduled")
+        self.assertEqual(result.next_run_at, NOW + timedelta(seconds=60))
+        self.assertEqual(result.checkpoint["retry_attempts"], 1)
+
+    def test_rate_limit_wait_uses_the_provider_deadline(self) -> None:
+        deadline = NOW + timedelta(minutes=3)
+        result = self.enqueue(
+            FakeAdapter(error=ProviderApiError(
+                ProviderErrorCategory.RATE_LIMITED, "quota", retry_at=deadline,
+            ))
+        )
+        self.assertEqual(result.state, "waiting_rate_limit")
+        self.assertEqual(result.next_run_at, deadline)
+
+    def test_permanent_provider_failure_is_terminal(self) -> None:
+        result = self.enqueue(
+            FakeAdapter(error=ProviderApiError(ProviderErrorCategory.INVALID_REQUEST, "invalid"))
+        )
+        self.assertEqual(result.state, "failed")
+        self.assertEqual(result.checkpoint["failure_code"], "invalid_request")
+
+    def test_invalid_retry_checkpoint_fails_before_provider_read(self) -> None:
+        adapter = FakeAdapter()
+        created = self.service.enqueue_playlist(
+            adapter, connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="invalid-retry-count", observed_at=NOW, now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+        corrupted = self.operations.checkpoint(
+            claimed.operation_id, worker_id="worker-a", checkpoint={"retry_attempts": "many"},
+            now=NOW,
+        )
+        result = self.service.execute_claimed(
+            corrupted, adapter=adapter, worker_id="worker-a", now=NOW,
+        )
+        self.assertEqual(result.state, "failed")
+        self.assertEqual(result.checkpoint["failure_code"], "invalid_retry_checkpoint")
+        self.assertEqual(adapter.read_calls, 0)
+
+    def test_cancellation_race_stops_before_provider_read(self) -> None:
+        adapter = FakeAdapter()
+        created = self.service.enqueue_playlist(
+            adapter, connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="cancelled-before-read", observed_at=NOW, now=NOW,
+        )
+        stale_claim = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+        self.operations.cancel(created.operation_id, now=NOW)
+        result = self.service.execute_claimed(
+            stale_claim, adapter=adapter, worker_id="worker-a", now=NOW,
+        )
+        self.assertEqual(result.state, "cancelled")
+        self.assertEqual(adapter.read_calls, 0)
 
     def test_malformed_persisted_playlist_id_never_reaches_adapter(self) -> None:
         adapter = FakeAdapter()
