@@ -1,0 +1,25 @@
+{
+  "name": "Symphonia Home Assistant App lab",
+  "image": "ghcr.io/home-assistant/devcontainer@sha256:81ea6e6892125d08e88b5a873c12da00131dfc3a184d335179576ec60bc0ecb0",
+  "overrideCommand": false,
+  "remoteUser": "vscode",
+  "appPort": ["7123:80", "7357:4357"],
+  "runArgs": ["-e", "GIT_EDITOR=code --wait", "--privileged"],
+  "workspaceFolder": "/workspaces/symphonia",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/symphonia,type=bind,consistency=cached",
+  "containerEnv": {
+    "WORKSPACE_DIRECTORY": "/workspaces/symphonia",
+    "SUPERVISOR_CHANNEL": "beta"
+  },
+  "mounts": [
+    "type=volume,target=/var/lib/docker",
+    "type=volume,target=/var/lib/containerd",
+    "type=volume,target=/mnt/supervisor",
+    "type=tmpfs,target=/tmp"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["timonwong.shellcheck", "esbenp.prettier-vscode"]
+    }
+  }
+}

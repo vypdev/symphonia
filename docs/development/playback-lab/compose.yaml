@@ -1,0 +1,28 @@
+name: symphonia-playback-lab
+
+# Disposable Core/MA evidence lab. Run only on a dedicated Linux VM/host.
+# Home Assistant Container has no Supervisor, Apps or Ingress.
+services:
+  home-assistant:
+    image: ${HA_IMAGE:?Set HA_IMAGE in the lab env file}
+    network_mode: host
+    privileged: true
+    restart: "no"
+    stop_grace_period: 60s
+    environment:
+      TZ: ${LAB_TZ:-Europe/Madrid}
+    volumes:
+      - ha_config:/config
+
+  music-assistant:
+    image: ${MA_IMAGE:?Set MA_IMAGE in the lab env file}
+    network_mode: host
+    restart: "no"
+    environment:
+      LOG_LEVEL: info
+    volumes:
+      - ma_data:/data
+
+volumes:
+  ha_config:
+  ma_data:

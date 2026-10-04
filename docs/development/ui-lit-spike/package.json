@@ -1,0 +1,22 @@
+{
+  "name": "symphonia-ui-lit-spike",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/*.test.ts",
+    "build": "vite build",
+    "verify-output": "node scripts/verify-output.mjs",
+    "check-boundary": "node scripts/check-boundary.mjs"
+  },
+  "dependencies": {
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.1"
+  }
+}
