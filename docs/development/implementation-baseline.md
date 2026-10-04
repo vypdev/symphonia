@@ -122,14 +122,14 @@ The first implementation increment is intentionally narrower than any provider o
 
 ## Local container profile
 
-`Dockerfile` packages the dependency-free runtime as a non-root service with the durable volume mounted at `/data`. It is a standalone development/container profile, not yet the published Home Assistant App artifact.
+`Dockerfile` packages the dependency-free runtime with persistent `/data`. Supervisor mounts that directory as root: the container entrypoint briefly adjusts only the directory and known SQLite files, then drops supplementary groups, GID, and UID before executing the service as `symphonia`. The first real [local Supervisor/App smoke](ha-app-lab.md) found and fixed this mount-ownership failure. The profile is not yet a published Home Assistant App artifact.
 
 ```text
 docker build -t symphonia:dev .
 docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 ```
 
-The container exposes only the current health/readiness/version surface. A future App manifest must add Ingress, Supervisor metadata, supported architectures, backup declarations, and any direct callback policy only after the runtime SDD blockers are resolved.
+The container exposes only the current health/readiness/version surface. Experimental App metadata already enables an Ingress panel and two build architectures; an authenticated Home Assistant browser can open the App entry, but the frame remains blank/loading. The runtime has no functional UI route. A supported platform matrix, backup/restore declarations, and any direct callback policy remain behind the runtime and UI SDD gates.
 - Deterministic `unittest` coverage under `tests/`.
 - Static AST boundary tests keep the domain free of adapters/host frameworks and keep the foundation limited to Python's standard library plus local `symphonia` modules.
 

@@ -119,9 +119,12 @@ class HomeAssistantAppDevcontainerTests(unittest.TestCase):
             (root / ".devcontainer" / "devcontainer.json").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(config["image"], "ghcr.io/home-assistant/devcontainer:5-apps")
+        self.assertEqual(
+            config["image"],
+            "ghcr.io/home-assistant/devcontainer@sha256:81ea6e6892125d08e88b5a873c12da00131dfc3a184d335179576ec60bc0ecb0",
+        )
         self.assertIn("--privileged", config["runArgs"])
-        self.assertIn("7123:8123", config["appPort"])
+        self.assertIn("7123:80", config["appPort"])
         self.assertEqual(config["containerEnv"]["SUPERVISOR_CHANNEL"], "beta")
 
     def test_tasks_stage_sources_before_install_or_rebuild(self) -> None:
@@ -129,12 +132,13 @@ class HomeAssistantAppDevcontainerTests(unittest.TestCase):
         tasks = json.loads((root / ".vscode" / "tasks.json").read_text(encoding="utf-8"))
         by_label = {task["label"]: task["command"] for task in tasks["tasks"]}
 
+        self.assertIn("sh tools/stage_ha_local_app_in_devcontainer.sh", by_label["Start Home Assistant lab"])
         self.assertIn(
-            "python tools/stage_ha_local_app.py && ha apps install local_symphonia",
+            "sh tools/stage_ha_local_app_in_devcontainer.sh && ha apps install local_symphonia",
             by_label["Install Symphonia local App"],
         )
         self.assertIn(
-            "python tools/stage_ha_local_app.py && ha apps rebuild --force local_symphonia",
+            "sh tools/stage_ha_local_app_in_devcontainer.sh && ha apps rebuild --force local_symphonia",
             by_label["Rebuild and start Symphonia local App"],
         )
 

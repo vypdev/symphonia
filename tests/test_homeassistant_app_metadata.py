@@ -27,7 +27,7 @@ class HomeAssistantAppMetadataTests(unittest.TestCase):
     def test_container_contract_is_persistent_non_root_and_probeable(self) -> None:
         dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
         self.assertIn("SYMPHONIA_DATABASE=/data/symphonia.sqlite3", dockerfile)
-        self.assertIn("USER symphonia", dockerfile)
+        self.assertIn('ENTRYPOINT ["python", "-m", "symphonia.runtime.container_entrypoint"]', dockerfile)
         self.assertIn('VOLUME ["/data"]', dockerfile)
         self.assertIn("HEALTHCHECK", dockerfile)
         self.assertIn("/ready", dockerfile)

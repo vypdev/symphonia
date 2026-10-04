@@ -13,9 +13,9 @@ CI runs `docker compose config` against `.env.example` without pulling images, s
 The repository also includes the maintained Home Assistant Apps devcontainer
 profile at [`.devcontainer/devcontainer.json`](../../../.devcontainer/devcontainer.json).
 It runs the official Supervisor development environment, rather than pretending
-that Home Assistant Container provides Apps or Ingress. This is the local lane
-for eventual App install, lifecycle, and Ingress smoke tests; it is configured
-but has **not** yet been launched in this workspace.
+that Home Assistant Container provides Apps or Ingress. The dated
+[local Supervisor/App lab](../ha-app-lab.md) now covers a real local build,
+startup, health, and authenticated App entry pass; the Symphonia Ingress UI remains blank/loading.
 
 The App metadata currently lives under `addon/`, while its build context and
 `Dockerfile` live at the repository root. The staging helper bridges that
@@ -39,7 +39,8 @@ working Docker Engine:
 4. After changing application code, run **Rebuild and start Symphonia local
    App** to refresh the staged source, rebuild, and inspect App logs.
 
-The official Apps devcontainer needs `--privileged` and persistent Docker,
+Without VS Code, run `python3 tools/ha_app_lab.py up` on the host as described
+in the [local lab guide](../ha-app-lab.md). The official Apps devcontainer needs `--privileged` and persistent Docker,
 containerd, and Supervisor volumes. Treat it as a disposable development
 environment: do not import a production HA backup or account credentials. Its
 ports are forwarded only for local development. The profile can exercise
@@ -51,9 +52,8 @@ multicast/audio-path evidence; macOS container networking is not that proof.
 
 The setup follows Home Assistant's [local App testing guide](https://developers.home-assistant.io/docs/apps/testing/)
 and current [Apps example devcontainer](https://github.com/home-assistant/apps-example/blob/main/.devcontainer.json),
-reviewed 2026-09-30. The files are statically tested in CI, but a real
-Supervisor startup/install/Ingress pass remains pending because this workspace
-currently has no accessible Docker daemon.
+reviewed again 2026-10-04. Static CI and the dated local build/startup smoke
+pass; the authenticated browser reached the App panel but did not display a functional Symphonia UI.
 
 ## Safety and limits
 

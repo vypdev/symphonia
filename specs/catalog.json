@@ -50,11 +50,13 @@
         "docs/decisions/0006-narrow-home-assistant-playback-broker.md",
         "docs/architecture/system-architecture.md",
         "docs/providers/provider-research.md",
-        "docs/providers/home-assistant-ecosystem-review.md"
+        "docs/providers/home-assistant-ecosystem-review.md",
+        "docs/development/ha-app-lab.md"
       ],
       "implementationEvidence": {
         "code": [
           "src/symphonia/runtime/config.py",
+          "src/symphonia/runtime/container_entrypoint.py",
           "src/symphonia/runtime/http.py",
           "src/symphonia/runtime/resources.py",
           "src/symphonia/infrastructure/sqlite_authorization.py",
@@ -65,10 +67,13 @@
           "Dockerfile",
           "addon/config.yaml",
           ".devcontainer/devcontainer.json",
-          "tools/stage_ha_local_app.py"
+          "tools/stage_ha_local_app.py",
+          "tools/stage_ha_local_app_in_devcontainer.sh",
+          "tools/ha_app_lab.py"
         ],
         "tests": [
           "tests/test_runtime_config.py",
+          "tests/test_container_entrypoint.py",
           "tests/test_runtime_cli.py",
           "tests/test_runtime_http.py",
           "tests/test_runtime_resources.py",
@@ -78,10 +83,12 @@
           "tests/test_identity_resolution.py",
           "tests/test_homeassistant_app_metadata.py",
           "tests/test_ha_app_devcontainer.py",
+          "tests/test_ha_app_lab.py",
           "tests/test_architecture_boundaries.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
+          "docs/development/ha-app-lab.md",
           "docs/development/playback-lab/README.md",
           "specs/home-assistant-app-runtime-and-ingress.md"
         ]
@@ -137,7 +144,8 @@
         "docs/development/ui-spike/visual-reference-plan.md",
         "docs/development/ui-lit-spike/README.md",
         "docs/development/ui-lit-spike/gateway-reference.md",
-        "docs/development/ui-lit-spike/browser-review.md"
+        "docs/development/ui-lit-spike/browser-review.md",
+        "docs/development/ha-app-lab.md"
       ],
       "implementationEvidence": {
         "code": [],

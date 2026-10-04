@@ -152,3 +152,22 @@ the direct guard. The local Python suite passes 255 tests (2 skipped), the Lit
 suite passes 7 tests, and the build plus relative-asset check pass. The dated
 [browser review](ui-lit-spike/browser-review.md) records the manual render and
 reactivity fix; it does not satisfy the UI SDD's 92-case budget or HA matrix.
+
+## Follow-up (2026-10-04)
+
+The [local Supervisor/App lab](ha-app-lab.md) now rebuilds the checked-out App in
+Home Assistant and verifies a healthy process running as UID 100. An authenticated
+Home Assistant session lists the App as running and opens its Ingress panel, but
+the frame stays blank/loading; the production UI route remains absent. This is
+packaging and failure-state evidence, not a completed UI or platform matrix.
+
+The ordinary offline suite passes **263 tests (2 skipped)**, specification
+validation and `git diff --check` pass, and the isolated Lit suite passes all
+7 tests plus type, boundary, build, and relative-asset checks. RepoWise's
+safe-only dead-code pass reports **0 findings**. Its refactoring targets still
+include runtime and copy/persistence hotspots; the coverage-gradient marker is
+based on the existing index, not a fresh coverage measurement for this change.
+A fresh Graphify code-only extraction contains **1,341 nodes and 3,498 edges**.
+`OperationRepository` remains the largest hub at 57 edges. Its one-hop
+dependents still include runtime HTTP/resources, copy/import execution, and
+tests, so this lab increment leaves that contract untouched.
