@@ -71,4 +71,3 @@ def migrate_operations(connection: sqlite3.Connection, schema_version: int) -> N
     except BaseException as error:
         _rollback_after_error(connection, error)
         raise
-

@@ -849,6 +849,120 @@ class OperationRepositoryTests(unittest.TestCase):
             ["created", "claimed", "cancellation_requested", "checkpointed"],
         )
 
+    def test_cancelled_unknown_checkpoint_requires_explicit_resolution(self) -> None:
+        for outcome, expected_state in (
+            ("no_effect", "cancelled"),
+            ("effect_confirmed", "partial"),
+        ):
+            with self.subTest(outcome=outcome):
+                operation = self.repository.create(
+                    operation_type="copy",
+                    idempotency_key=f"cancel-unknown-{outcome}",
+                    payload={},
+                    now=self.now,
+                )
+                self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+                self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=1))
+                waiting = self.repository.checkpoint(
+                    operation.operation_id,
+                    worker_id="worker-a",
+                    checkpoint={"unknown_step": "target-create"},
+                    now=self.now + timedelta(seconds=2),
+                    state="waiting_user",
+                )
+                self.assertEqual(waiting.state, "waiting_user")
+                self.assertTrue(waiting.cancel_requested)
+                self.assertTrue(waiting.checkpoint["reconciliation_required"])
+                with self.assertRaises(LeaseConflict):
+                    self.repository.resume(operation.operation_id, now=self.now + timedelta(seconds=3))
+
+                audit_count = len(self.repository.events(operation.operation_id))
+                self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=3))
+                self.assertEqual(len(self.repository.events(operation.operation_id)), audit_count)
+                resolved = self.repository.resolve_cancelled_outcome(
+                    operation.operation_id, outcome=outcome,
+                    now=self.now + timedelta(seconds=4),
+                )
+                self.assertEqual(resolved.state, expected_state)
+                self.assertFalse(resolved.cancel_requested)
+                self.assertEqual(resolved.checkpoint["cancellation_resolution"], outcome)
+                self.assertEqual(
+                    self.repository.events(operation.operation_id)[-1].event_type,
+                    "cancellation_reconciled",
+                )
+                with self.assertRaises(LeaseConflict):
+                    self.repository.resolve_cancelled_outcome(
+                        operation.operation_id, outcome=outcome,
+                        now=self.now + timedelta(seconds=5),
+                    )
+
+    def test_cancelling_waiting_unknown_outcome_keeps_quarantine(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy", idempotency_key="cancel-waiting-unknown",
+            payload={}, now=self.now,
+        )
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+        self.repository.checkpoint(
+            operation.operation_id, worker_id="worker-a",
+            checkpoint={"unknown_step": "entry-add"},
+            now=self.now + timedelta(seconds=1), state="waiting_user",
+        )
+        waiting = self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=2))
+        self.assertEqual(waiting.state, "waiting_user")
+        self.assertTrue(waiting.cancel_requested)
+        self.assertEqual(
+            waiting.checkpoint["recovery_reason"], "cancelled_while_unknown_outcome",
+        )
+        with self.assertRaises(LeaseConflict):
+            self.repository.resume(operation.operation_id, now=self.now + timedelta(seconds=3))
+
+    def test_cancelled_unknown_waits_do_not_schedule_another_write(self) -> None:
+        for method_name in ("schedule_retry", "schedule_rate_limit"):
+            with self.subTest(method=method_name):
+                operation = self.repository.create(
+                    operation_type="copy", idempotency_key=f"cancel-{method_name}",
+                    payload={}, now=self.now,
+                )
+                self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+                self.repository.cancel(operation.operation_id, now=self.now + timedelta(seconds=1))
+                schedule = getattr(self.repository, method_name)
+                waiting = schedule(
+                    operation.operation_id, worker_id="worker-a",
+                    next_run_at=self.now + timedelta(minutes=1),
+                    checkpoint={"unknown_step": "entry-add"},
+                    now=self.now + timedelta(seconds=2),
+                )
+                self.assertEqual(waiting.state, "waiting_user")
+                self.assertIsNone(waiting.next_run_at)
+                self.assertTrue(waiting.checkpoint["reconciliation_required"])
+                self.assertEqual(
+                    self.repository.events(operation.operation_id)[-1].event_type,
+                    "cancellation_reconciliation_required",
+                )
+
+    def test_expired_cancelled_lease_is_quarantined_before_dispatch(self) -> None:
+        operation = self.repository.create(
+            operation_type="copy", idempotency_key="expired-cancelled",
+            payload={}, now=self.now,
+        )
+        self.repository.claim(
+            operation.operation_id, worker_id="worker-a", now=self.now,
+            lease_seconds=1,
+        )
+        self.repository.cancel(operation.operation_id, now=self.now)
+        next_operation = self.repository.claim_next(
+            worker_id="worker-b", now=self.now + timedelta(seconds=2),
+        )
+        self.assertIsNone(next_operation)
+        waiting = self.repository.get(operation.operation_id)
+        self.assertEqual(waiting.state, "waiting_user")
+        self.assertTrue(waiting.checkpoint["reconciliation_required"])
+        self.assertEqual(
+            waiting.checkpoint["recovery_reason"], "cancelled_worker_lease_expired",
+        )
+        with self.assertRaises(LeaseConflict):
+            self.repository.resume(operation.operation_id, now=self.now + timedelta(seconds=3))
+
     def test_legacy_store_is_migrated_forward_without_losing_operations(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/legacy.sqlite3"

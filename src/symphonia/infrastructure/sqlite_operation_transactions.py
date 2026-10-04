@@ -41,4 +41,3 @@ def _serialize_repository_access(
             return method(self, *args, **kwargs)
 
     return wrapped
-
