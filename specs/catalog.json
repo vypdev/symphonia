@@ -392,6 +392,10 @@
         "code": [
           "src/symphonia/providers/importing.py",
           "src/symphonia/providers/http_json.py",
+          "src/symphonia/providers/spotify.py",
+          "src/symphonia/providers/spotify_playlist_reader.py",
+          "src/symphonia/providers/spotify_playlist_mapping.py",
+          "src/symphonia/providers/spotify_error_mapping.py",
           "src/symphonia/domain/projections.py",
           "src/symphonia/application/ports.py",
           "src/symphonia/application/library_import.py",
@@ -402,6 +406,7 @@
         ],
         "tests": [
           "tests/test_provider_import.py",
+          "tests/test_spotify_adapter.py",
           "tests/test_youtube_adapter.py",
           "tests/test_library_import.py",
           "tests/test_architecture_boundaries.py",
@@ -511,14 +516,17 @@
           "src/symphonia/application/copy_checkpoint.py",
           "src/symphonia/application/copy_execution_state.py",
           "src/symphonia/application/copy_execution_target.py",
-          "src/symphonia/application/copy_execution_entries.py"
+          "src/symphonia/application/copy_execution_entries.py",
+          "src/symphonia/providers/spotify.py",
+          "src/symphonia/providers/spotify_error_mapping.py"
         ],
         "tests": [
           "tests/test_architecture_boundaries.py",
           "tests/test_copy_workflow.py",
           "tests/test_sqlite_plans.py",
           "tests/test_copy_execution.py",
-          "tests/test_copy_checkpoint.py"
+          "tests/test_copy_checkpoint.py",
+          "tests/test_spotify_adapter.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",

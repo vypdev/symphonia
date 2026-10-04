@@ -42,7 +42,8 @@ writes. Target creation/reconciliation and ordered entry writes use separate
 application stages with one explicit run context for durable checkpoints and
 leases. Target creation and recovery share one reconciliation path so an
 unknown provider outcome is handled consistently after a crash or an immediate
-error. The provider writer contract remains unchanged. This foundation work
+error. Spotify's write-error classification is isolated in a provider module;
+the provider writer contract remains unchanged. This foundation work
 does not resolve the product or provider-write blockers above.
 
 ## 3. Actors and authorization

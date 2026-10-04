@@ -37,7 +37,7 @@ The durable wrapper persists import intent before provider reads and records ter
 
 The foundation executor checks stored playlist identifier types and the operation/playlist provider binding before invoking an adapter; malformed persisted intent fails without a provider read. Intent parsing and durable outcome policy live in focused application modules. A malformed persisted retry count also fails before a provider read; deterministic tests cover cancellation before reading, transient retries, rate-limit deadlines, and permanent errors.
 
-The official Spotify and YouTube Data foundation adapters use a shared JSON transport instead of importing one adapter through the other. Offline tests confirm provider-specific, secret-safe timeout and network error classification; this does not establish the full provider import capability.
+The official Spotify and YouTube Data foundation adapters use a shared JSON transport instead of importing one adapter through the other. Spotify's bounded playlist traversal, item normalization, and HTTP error classification are separate provider modules behind the same adapter contract. Offline tests confirm provider-specific, secret-safe timeout and network error classification; this does not establish the full provider import capability.
 
 The one-playlist use case now depends on an application-owned projection port
 and returns a domain-owned published snapshot value. SQLite still implements
