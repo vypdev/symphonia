@@ -6,13 +6,13 @@
 - Owners: Symphonia maintainers
 - Scope: preview and execute a finite playlist copy using an immutable plan, explicit non-ready policy, ordered writes, reconciliation, and item-level outcomes.
 - Related requirements: `SYM-PROD-002`, `SYM-PROD-004`–`SYM-PROD-006`, `SYM-PL-001`–`SYM-PL-009`, `SYM-PROV-010`, `SYM-PROV-019`, `SYM-ARCH-009`–`SYM-ARCH-010`, `SYM-JOB-003`–`SYM-JOB-005`, `SYM-TEST-004`, `SYM-TEST-006`
-- Related decisions/research: [ADR 0002](../docs/decisions/0002-copy-and-sync-are-distinct.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [copy domain model](../docs/domain/domain-model.md), [provider research](../docs/providers/provider-research.md), [UI foundation](home-assistant-native-ui.md), `OQ-003`, `RG-001`
+- Related decisions/research: [ADR 0002](../docs/decisions/0002-copy-and-sync-are-distinct.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [copy domain model](../docs/domain/domain-model.md), [provider research](../docs/providers/provider-research.md), [UI foundation](home-assistant-native-ui.md), resolved `OQ-003`, `RG-001`
 - Required review gates: product UX, domain, architecture, provider feasibility, testing, documentation, security/operations
-- Open decisions blocking readiness: default non-ready policy; proven target write behavior; target collision policy; reconciliation semantics for ambiguous provider writes
+- Open decisions blocking readiness: proven target write behavior; provider-specific target name and visibility validation; reconciliation semantics for ambiguous provider writes
 
 ## 1. Executive summary
 
-Symphonia shall copy one imported playlist to another provider as a finite, reviewable operation. Before any target mutation, it shall capture an immutable source snapshot, resolve provider identities, build a dry-run plan, disclose every non-ready or deliberately omitted item, and require explicit acceptance of that exact plan.
+Symphonia shall copy one imported playlist to another provider as a finite, reviewable operation. Before any target mutation, it shall capture an immutable source snapshot, resolve provider identities, build a dry-run plan, disclose every non-ready item, and require explicit acceptance of that exact plan once all occurrences are ready.
 
 The operation is intentionally not persistent synchronization. A later source change does not mutate the accepted plan or trigger another copy. Retrying an operation shall be idempotent and shall reconcile uncertain provider outcomes before issuing another write.
 
@@ -115,7 +115,7 @@ Each source occurrence has exactly one classification required by `SYM-PL-003`:
 - `unavailable`: the canonical recording is known but not playable/addable on the target.
 - `invalid`: the source occurrence cannot participate because its imported representation is malformed or violates an invariant.
 
-Classifications apply per occurrence, not just per recording, so duplicates remain visible and ordered. A separate disposition records whether a non-ready occurrence is blocked or deliberately omitted under the accepted policy; omission does not erase or rename its classification.
+Classifications apply per occurrence, not just per recording, so duplicates remain visible and ordered. In the accepted initial policy, every non-ready occurrence is blocked. A future omission mode would need a separate disposition without erasing or renaming the classification.
 
 ### Plan states
 
@@ -130,13 +130,13 @@ Classifications apply per occurrence, not just per recording, so duplicates rema
 
 The operation uses the durable job vocabulary defined by `durable-operations-and-recovery`: `queued`, `running`, `waiting_rate_limit`, `waiting_user`, `retry_scheduled`, `succeeded`, `partial`, `failed`, or `cancelled`.
 
-### Proposed initial acceptance policy
+### Accepted initial acceptance policy
 
-Until OQ-003 is decided, the proposed default is strict: a plan cannot be accepted while any occurrence is not `ready`. A future explicit best-effort policy may permit itemized omission of `ambiguous`, `unmatched`, `unavailable`, `unsupported`, or `invalid` occurrences after prominent disclosure. This proposal is not final product policy.
+The owner confirmed the strict initial policy on 2026-10-04: a plan cannot be accepted while any occurrence is not `ready`, and no target write can begin. The initial UI has no best-effort or omission override. A future itemized omission mode requires a new product decision and contract revision.
 
 ### Target creation and collision policy
 
-The safe initial behavior is create-only with a provider-visible operation marker when the provider permits it. Symphonia shall not overwrite, clear, or append to a pre-existing playlist solely because its name matches. The final collision policy is a readiness blocker.
+The owner confirmed create-only on 2026-10-04. A matching name does not identify an existing target: Symphonia creates a new playlist and never overwrites, clears, selects, or appends to one by name. A provider-visible operation marker may assist reconciliation where the provider permits it. Provider-specific name/visibility validation and uncertain-create reconciliation remain readiness blockers.
 
 ## 7. Configuration contract
 
@@ -144,8 +144,8 @@ The safe initial behavior is create-only with a provider-visible operation marke
 |---|---|---|---|
 | Target playlist name | Per plan | Source name | Must satisfy target provider rules; normalized value shown before acceptance. |
 | Target visibility | Per plan | Private where supported | Available values come from provider capabilities. |
-| Non-ready entry policy | Product policy | Strict, proposed | Final policy blocked by OQ-003. |
-| Existing target behavior | Product policy | Create only, proposed | No implicit overwrite or append. |
+| Non-ready entry policy | Product policy | Strict, accepted | Every non-ready occurrence blocks acceptance and writes; no initial override. |
+| Existing target behavior | Product policy | Create new, accepted | Matching names do not select, overwrite, or append to an existing playlist. |
 | Batch size | Adapter/runtime | Provider-specific | Bounded by provider limits; not exposed as an arbitrary user tuning knob initially. |
 | Retry policy | Adapter/runtime | Conservative | Must distinguish safe retry from unknown outcome. |
 
@@ -188,7 +188,7 @@ The review page shall show:
 - target account, provider, normalized name, and visibility;
 - total occurrences and counts for every classification;
 - ordered entry details with evidence and alternative candidates;
-- consequences of omitting non-ready entries under the selected policy;
+- the strict block reason for every non-ready occurrence, with no initial omission action;
 - the fact that this is a one-time snapshot, not synchronization;
 - the accepted plan digest in an advanced details view.
 
@@ -275,7 +275,7 @@ Implementation shall update:
 1. A user can select an imported playlist and authorized target connection.
 2. Planning performs no target mutation.
 3. Every source occurrence appears exactly once in the immutable plan, preserving order and duplicates.
-4. The UI discloses every ambiguous, unmatched, unavailable, invalid, unsupported, and deliberately omitted occurrence.
+4. The UI discloses every ambiguous, unmatched, unavailable, invalid, and unsupported occurrence and blocks acceptance while any remain.
 5. Acceptance binds to a specific plan digest, source projection version, capabilities snapshot, and target intent.
 6. A stale or modified plan cannot execute.
 7. Execution survives restart without duplicating the target playlist or confirmed entries.
@@ -285,6 +285,7 @@ Implementation shall update:
 11. Logs and diagnostics contain no provider secrets.
 12. The numeric test budget and required fault-injection scenarios pass.
 13. Plan selection, review, blocked, accepted, running, waiting, reconciling, partial, cancelled, failed, and completed fixtures use the shared Home Assistant-native components and preserve every ordered occurrence, textual consequence, focus/action, and safe recovery path at phone and wide widths.
+14. Given an existing target playlist with the same name, the accepted copy plan still creates a new playlist; after an uncertain create, it waits for reconciliation and does not create another blindly.
 
 ## 17. Requirement traceability
 

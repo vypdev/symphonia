@@ -224,14 +224,12 @@ Planning MUST NOT mutate a provider. Target search calls used during planning ar
 
 ### Execution behavior
 
-Execution creates or selects a target only as described in the accepted plan. Writes are checkpointed in provider-safe batches. On retry, Symphonia first determines whether a timed-out write took effect. If provider APIs cannot make a write provably idempotent, the result becomes `needs_reconciliation` rather than risking duplicate entries.
+The initial copy plan is strict: any non-ready occurrence blocks acceptance and target writes. Execution creates a new target even if an existing playlist has the same name; name equality never selects or mutates an existing playlist. Writes are checkpointed in provider-safe batches. On retry, Symphonia first determines whether a timed-out write took effect. If provider APIs cannot make a write provably idempotent, the result becomes `needs_reconciliation` rather than risking duplicate entries.
 
 The following remain open for the copy RFC:
 
-- strict all-resolved versus best-effort as the default;
-- whether an existing target can be appended to in the MVP;
 - rollback/cleanup behavior after partial target creation;
-- visibility/name collision behavior; and
+- provider-specific target name and visibility validation; and
 - user confirmation rules for a re-executed plan.
 
 ## Playlist synchronization model

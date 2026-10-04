@@ -13,7 +13,7 @@ This is the human-readable view of [`catalog.json`](./catalog.json). Until gener
 | `provider-connections-and-authorization` | Draft | [Provider connections and authorization](provider-connections-and-authorization.md) | Blocked by direct callback reachability, secret/backup design, and provider feasibility spikes |
 | `library-import-and-provider-projections` | Draft | [Library import and provider projections](library-import-and-provider-projections.md) | Blocked by provider completeness, retention, and representative scale |
 | `recording-identity-resolution` | Draft | [Recording identity resolution](recording-identity-resolution.md) | Blocked by the labeled corpus and accepted automatic-link policy |
-| `one-time-playlist-copy` | Draft | [One-time playlist copy](one-time-playlist-copy.md) | Blocked by unresolved-entry policy and proven target write semantics |
+| `one-time-playlist-copy` | Draft | [One-time playlist copy](one-time-playlist-copy.md) | Strict/create-new policy accepted; blocked by proven target write, naming/visibility, and uncertain-write reconciliation semantics |
 | `durable-operations-and-recovery` | Draft | [Durable operations and recovery](durable-operations-and-recovery.md) | Blocked by persistence/lease/restart evidence, operating targets, and the provider-aware/authorized vertical for uncertain-write reconciliation |
 
 ## Foundation evidence boundary

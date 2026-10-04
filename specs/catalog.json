@@ -471,7 +471,7 @@
       "id": "one-time-playlist-copy",
       "title": "One-time playlist copy",
       "status": "draft",
-      "scope": "Preview and execute a finite playlist copy with an immutable plan, explicit omissions, ordered writes, and item-level outcomes",
+      "scope": "Preview and execute a finite playlist copy with an immutable strict plan, a new target, ordered writes, and item-level outcomes",
       "owner": "Symphonia maintainers",
       "specification": "specs/one-time-playlist-copy.md",
       "requirements": [
@@ -504,7 +504,8 @@
         "docs/product/product-specification.md",
         "docs/providers/provider-research.md",
         "docs/providers/provider-specification.md",
-        "docs/development/implementation-baseline.md"
+        "docs/development/implementation-baseline.md",
+        "docs/open-questions.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -534,10 +535,9 @@
         ]
       },
       "blockers": [
-        "OQ-003 default treatment of non-ready entries",
         "RG-001 proven target create/add/order/duplicate behavior",
         "Provider-specific unknown-write reconciliation strategy",
-        "Target naming, visibility, and existing-playlist selection policy"
+        "Provider-specific target naming and visibility validation"
       ]
     },
     {

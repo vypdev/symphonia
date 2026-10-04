@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
-**Status:** open; nothing here is an accepted decision
-**Last reviewed:** 2026-09-28
+**Status:** open items and resolved decisions are marked individually
+**Last reviewed:** 2026-10-04
 
 ## Decisions requiring owner input
 
@@ -28,7 +28,7 @@ Choose provider-owned relationships (Option A), Symphonia-owned logical playlist
 
 **Proposed default:** staged hybrid—provider-owned copy first, retain enough origin/snapshot data to promote later. This is not accepted and persistent sync must not be designed until it is decided.
 
-### OQ-003 — What is the default treatment of non-ready entries in a copy?
+### OQ-003 — What is the default treatment of non-ready entries in a copy? — Resolved design
 
 Options include:
 
@@ -37,7 +37,7 @@ Options include:
 - create target and pause at unresolved entries; or
 - allow placeholders (only if a provider has a meaningful representation).
 
-**Proposed default:** strict by default with an explicit, itemized best-effort override. Rollback/cleanup after partial provider writes still needs design.
+**Decision (2026-10-04, explicit owner response):** the initial copy policy is strict. Any `ambiguous`, `unmatched`, `unsupported`, `unavailable`, or `invalid` occurrence blocks acceptance and all target writes. There is no best-effort override in the initial release. The copy always creates a new target playlist, including when an existing playlist has the same name; matching names never select, append to, or overwrite a target. A later omission mode requires a separate product decision and contract update. Unknown create/add outcomes still require provider-aware reconciliation before retry; this decision does not settle rollback or cleanup after partial provider writes.
 
 ### OQ-004 — Which provider OAuth credentials and callback profile should self-hosters use?
 

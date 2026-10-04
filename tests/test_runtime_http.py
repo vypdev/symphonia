@@ -6,6 +6,7 @@ from pathlib import Path
 import socket
 import tempfile
 import threading
+from types import SimpleNamespace
 import unittest
 
 from symphonia.infrastructure import OperationRepository
@@ -96,6 +97,51 @@ class RuntimeHTTPTests(unittest.TestCase):
                     path, self.repository, ingress_path="/local_symphonia"
                 )
                 self.assertEqual((status, payload), (404, {"error": "not_found"}))
+
+    def test_dashboard_dispatch_requires_the_socket_peer_under_an_ingress_prefix(self) -> None:
+        class FakeHandler:
+            server = SimpleNamespace(
+                ingress_path="/symphonia",
+                repository=self.repository,
+                service_version="0.1.0",
+                readiness_check=self.repository.healthcheck,
+            )
+
+            def __init__(self, path: str, peer: str) -> None:
+                self.path = path
+                self.client_address = (peer, 1234)
+                self.calls: list[tuple[object, ...]] = []
+
+            def _dashboard(self) -> None:
+                self.calls.append(("dashboard",))
+
+            def _asset(self, relative: str) -> None:
+                self.calls.append(("asset", relative))
+
+            def _json(self, status: int, payload: dict[str, object]) -> None:
+                self.calls.append(("json", status, payload))
+
+        for path, expected in (
+            ("/symphonia/", ("asset", "/")),
+            ("/symphonia/assets/app.js", ("asset", "/assets/app.js")),
+            ("/symphonia/api/dashboard", ("dashboard",)),
+        ):
+            with self.subTest(path=path):
+                handler = FakeHandler(path, "172.30.32.2")
+                SymphoniaRequestHandler.do_GET(handler)  # type: ignore[arg-type]
+                self.assertEqual(handler.calls, [expected])
+
+        denied = FakeHandler("/symphonia/api/dashboard", "127.0.0.1")
+        SymphoniaRequestHandler.do_GET(denied)  # type: ignore[arg-type]
+        self.assertEqual(denied.calls, [("json", 403, {"error": "forbidden"})])
+
+        public = FakeHandler("/symphonia/ready", "127.0.0.1")
+        SymphoniaRequestHandler.do_GET(public)  # type: ignore[arg-type]
+        self.assertEqual(public.calls[0][:2], ("json", 200))
+
+        sibling = FakeHandler("/symphonia-extra/api/dashboard", "172.30.32.2")
+        SymphoniaRequestHandler.do_GET(sibling)  # type: ignore[arg-type]
+        self.assertEqual(sibling.calls, [("json", 404, {"error": "not_found"})])
 
     def test_server_configuration_rejects_missing_or_conflicting_store(self) -> None:
         with self.assertRaisesRegex(ValueError, "must be supplied"):

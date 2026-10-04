@@ -157,12 +157,12 @@ The cross-cutting `SYM-UI-001`–`SYM-UI-016` requirements live in the [Home Ass
 - **SYM-PL-001:** Copy MUST be modeled as a finite operation, not as a continuing relationship.
 - **SYM-PL-002:** Every copy MUST produce a non-mutating plan tied to a captured source playlist version or snapshot.
 - **SYM-PL-003:** A plan MUST report every source entry as `ready`, `ambiguous`, `unmatched`, `unsupported`, `unavailable`, or `invalid` before execution.
-- **SYM-PL-004:** Execution MUST require an explicit policy for non-ready entries; the MVP default policy is an open question.
+- **SYM-PL-004:** The initial copy policy is strict: any non-ready occurrence MUST block plan acceptance and target writes. A future omission mode requires a separately accepted contract and explicit user consent.
 - **SYM-PL-005:** Copy MUST preserve relative order and duplicate occurrences among entries that are written, subject to declared target capabilities.
 - **SYM-PL-006:** Copy execution MUST have a stable idempotency key and MUST reconcile target state before repeating an uncertain provider write.
 - **SYM-PL-007:** A source change after planning MUST be visible. The system MUST either require re-planning or explicitly execute the captured plan; it MUST NOT silently mix versions.
 - **SYM-PL-008:** A copy result MUST include the created or selected target, outcome for every source entry, provider errors, and whether safe retry is possible.
-- **SYM-PL-009:** Destructive overwrite of an existing target playlist MUST NOT be an implicit copy behavior.
+- **SYM-PL-009:** The initial copy MUST create a new target playlist even when another playlist has the same name. It MUST NOT select, append to, or overwrite an existing target by name. Destructive overwrite MUST NOT be an implicit copy behavior in any later mode.
 
 ### Operation history
 
