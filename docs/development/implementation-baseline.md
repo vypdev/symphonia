@@ -131,6 +131,7 @@ docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 ```
 
 The container exposes health/readiness/version plus the separately scoped [operational dashboard](../../specs/operational-dashboard.md). Experimental App metadata enables an administrator-only Ingress panel and two build architectures. A local [Core-to-Supervisor smoke](ha-app-lab.md) verifies session enforcement, health/readiness, root, built JS, and live redacted dashboard API routing through Ingress; the authenticated in-app browser renders and refreshes that first view. A supported platform matrix, backup/restore declarations, and any direct callback policy remain behind the runtime and broader UI SDD gates.
+- Runtime composition closes partially opened stores in reverse order. Failure-injection tests verify cleanup continues after a close error and preserves the original startup failure.
 - Deterministic `unittest` coverage under `tests/`.
 - Static AST boundary tests keep the domain free of adapters/host frameworks and keep the foundation limited to Python's standard library plus local `symphonia` modules.
 

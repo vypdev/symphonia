@@ -18,6 +18,47 @@ from symphonia.runtime import RuntimeResources
 
 
 class RuntimeResourcesTests(unittest.TestCase):
+    def test_failed_startup_closes_in_reverse_and_preserves_primary_error(self) -> None:
+        expected_order = [
+            "projections", "authorization", "connections", "plans", "operations",
+        ]
+        for close_failure in (False, True):
+            with self.subTest(close_failure=close_failure):
+                closed: list[str] = []
+
+                class Store:
+                    def __init__(self, name: str) -> None:
+                        self.name = name
+
+                    def close(self) -> None:
+                        closed.append(self.name)
+                        if close_failure and self.name == "connections":
+                            raise OSError("close failed")
+
+                def factory(name: str):
+                    return lambda _path: Store(name)
+
+                def fail_open(_path: str):
+                    raise RuntimeError("migration failed")
+
+                with patch.multiple(
+                    "symphonia.runtime.resources",
+                    OperationRepository=factory("operations"),
+                    CopyPlanRepository=factory("plans"),
+                    ProviderConnectionRepository=factory("connections"),
+                    AuthorizationAttemptRepository=factory("authorization"),
+                    PlaylistProjectionRepository=factory("projections"),
+                    ResolutionDecisionRepository=fail_open,
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "migration failed") as caught:
+                        RuntimeResources.open(":memory:")
+
+                self.assertEqual(closed, expected_order)
+                if close_failure:
+                    self.assertIn("OSError", " ".join(caught.exception.__notes__))
+                else:
+                    self.assertFalse(getattr(caught.exception, "__notes__", []))
+
     def test_open_creates_all_durable_store_schemas_and_closes_them(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = str(Path(directory) / "symphonia.sqlite3")

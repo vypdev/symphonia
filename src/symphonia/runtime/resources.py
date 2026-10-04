@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
 
 from symphonia.infrastructure import (
     AuthorizationAttemptRepository,
@@ -16,6 +16,29 @@ from symphonia.infrastructure import (
 )
 from .backup import create_backup, validate_backup
 from .config import normalize_database_path
+
+
+class _ClosableRepository(Protocol):
+    def close(self) -> None: ...
+
+
+def _close_after_startup_failure(
+    opened: list[_ClosableRepository], startup_error: BaseException,
+) -> None:
+    """Close partial startup in reverse order without replacing its cause."""
+
+    cleanup_error_types: list[str] = []
+    for repository in reversed(opened):
+        try:
+            repository.close()
+        except BaseException as cleanup_error:
+            cleanup_error_types.append(type(cleanup_error).__name__)
+    if cleanup_error_types:
+        error_types = ", ".join(cleanup_error_types)
+        startup_error.add_note(
+            "startup cleanup also encountered repository close errors "
+            f"({error_types})"
+        )
 
 
 @dataclass(slots=True)
@@ -40,7 +63,7 @@ class RuntimeResources:
     @classmethod
     def open(cls, database_path: str) -> "RuntimeResources":
         database_path = normalize_database_path(database_path)
-        opened: list[object] = []
+        opened: list[_ClosableRepository] = []
         try:
             operations = OperationRepository(database_path)
             opened.append(operations)
@@ -55,18 +78,7 @@ class RuntimeResources:
             resolutions = ResolutionDecisionRepository(database_path)
             opened.append(resolutions)
         except BaseException as startup_error:
-            cleanup_error_types: list[str] = []
-            for repository in reversed(opened):
-                try:
-                    repository.close()  # type: ignore[attr-defined]
-                except BaseException as cleanup_error:
-                    cleanup_error_types.append(type(cleanup_error).__name__)
-            if cleanup_error_types:
-                error_types = ", ".join(cleanup_error_types)
-                startup_error.add_note(
-                    "startup cleanup also encountered repository close errors "
-                    f"({error_types})"
-                )
+            _close_after_startup_failure(opened, startup_error)
             raise
         return cls(operations, plans, connections, authorization, projections, resolutions, database_path)
 
