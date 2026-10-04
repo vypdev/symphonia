@@ -164,7 +164,7 @@
     {
       "id": "operational-dashboard",
       "title": "Operational dashboard in the Home Assistant App",
-      "status": "ready-for-implementation",
+      "status": "implemented",
       "scope": "Read-only administrator dashboard of persisted App health and redacted operational state through Supervisor Ingress",
       "owner": "Symphonia maintainers",
       "specification": "specs/operational-dashboard.md",
@@ -186,7 +186,29 @@
         "docs/decisions/0004-home-assistant-native-ui.md",
         "docs/decisions/0005-lit-typescript-vite-ui.md"
       ],
-      "implementationEvidence": {"code": [], "tests": [], "documentation": []},
+      "implementationEvidence": {
+        "code": [
+          "src/symphonia/application/operational_dashboard.py",
+          "src/symphonia/runtime/http.py",
+          "src/symphonia/runtime/ui_assets/index.html",
+          "ui/src/main.ts",
+          "ui/src/model.ts",
+          "ui/src/styles.ts",
+          "addon/config.yaml"
+        ],
+        "tests": [
+          "tests/test_operational_dashboard.py",
+          "tests/test_runtime_http.py",
+          "tests/test_ha_ingress_probe.py",
+          "ui/src/model.test.ts",
+          "docs/development/ha-app-lab.md"
+        ],
+        "documentation": [
+          "docs/development/operational-dashboard.md",
+          "docs/development/ha-app-lab.md",
+          "specs/operational-dashboard.md"
+        ]
+      },
       "blockers": []
     },
     {

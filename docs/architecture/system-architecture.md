@@ -337,4 +337,4 @@ The MVP may render metrics in its UI and logs; choosing Prometheus/OpenTelemetry
 | Companion integration transport | Need push, authentication, discovery, and version compatibility | Home Assistant integration RFC |
 | Public API/event protocol | Only internal UI needs are currently concrete | UI and companion-integration contract design |
 
-The remaining choices must not be inferred from `homeassistant-gateway`. The UI stack is a separate, explicit owner decision in ADR 0005, not an automatic dependency selection. `RG-006` still requires public-context, package-boundary, bundle, Ingress, catalog, browser, and visual evidence before production UI work.
+The remaining choices must not be inferred from `homeassistant-gateway`. The UI stack is a separate, explicit owner decision in ADR 0005, not an automatic dependency selection. The [operational dashboard](../../specs/operational-dashboard.md) is a narrow, separately approved read-only slice with live Ingress evidence. `RG-006` still requires public-context, package-boundary, bundle, Ingress, catalog, browser, and visual evidence before the broader UI foundation and feature views are implemented.

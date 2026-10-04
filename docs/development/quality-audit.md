@@ -191,3 +191,32 @@ now uses the documented Node 24 compatible major versions of
 [setup-node](https://github.com/actions/setup-node), pins Ubuntu 24.04 for its
 existing Linux jobs, and avoids persisting checkout credentials. The YAML
 parses locally; the pushed workflow run is the compatibility check.
+
+## Operational dashboard audit (2026-10-04)
+
+The first production [dashboard](operational-dashboard.md) is now served by the
+App. The local Supervisor lab returns `401` without a session and `200` for
+root, built JavaScript, and the redacted dashboard API with a valid session. A
+direct Core-to-App API request with forged `X-Ingress-Path` returns `403`. The
+in-app browser renders real empty-state counts; navigation, Refresh, light/dark,
+a narrow viewport, and the keyboard skip link were inspected. These checks do
+not claim provider functionality or the full UI foundation matrix.
+
+`make verify` passes **272 Python tests (2 skipped in the restricted local
+sandbox)**. The production UI passes five state/race/validation tests, type
+checking, and a reproducible Vite build with a 29.67 kB JavaScript asset
+(10.48 kB gzip). The isolated Lit fixture remains a separate CI job. GitHub
+[Verify](https://github.com/vypdev/symphonia/actions/runs/37224401052) passed
+all seven jobs on the functional commit `557ceab`, including Python 3.11,
+3.12, 3.13, coverage, the production UI, and the fixture.
+
+RepoWise's offline safe-only dead-code pass found **0 candidates**. Its health
+heuristic lists `runtime/http.py` among refactoring targets (score 2.2,
+`prior_defect` marker); the present route boundary has focused tests and live
+Ingress evidence, so a broader split is deferred until its API grows. A fresh
+Graphify `--code-only` extraction has **1,534 nodes and 3,850 edges**.
+`OperationRepository` remains the most connected node (57 edges). The new
+`project_dashboard()` is imported only by runtime HTTP and called by that
+adapter and focused tests; no provider or infrastructure dependency was added
+to the application projection. Both tools are advisory evidence, not release
+gates or substitutes for behavioral tests.

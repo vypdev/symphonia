@@ -12,11 +12,11 @@ Lit provides standards-based custom elements and reactive templates. TypeScript 
 
 ## Decision
 
-When the [UI foundation SDD](../../specs/home-assistant-native-ui.md) becomes `Ready for implementation`, the production presentation package will use **Lit 3, TypeScript, and Vite**, subject to a reproducible lockfile and the then-supported versions. Lit component primitives will be presentation-only; feature controllers and API clients remain outside the public component package. The built UI will be independently served inside Home Assistant Ingress and use the same feature/component semantics in a standalone profile.
+When the [UI foundation SDD](../../specs/home-assistant-native-ui.md) becomes `Ready for implementation`, the complete production presentation package will use **Lit 3, TypeScript, and Vite**, subject to a reproducible lockfile and the then-supported versions. A separately specified and owner-approved [operational dashboard](../../specs/operational-dashboard.md) uses the same stack for a bounded read-only App view without claiming completion of the full component catalog or browser matrix. Lit component primitives remain presentation-only; feature controllers and API clients remain outside the shared component package. The built UI is independently served inside Home Assistant Ingress.
 
 The implementation will not import private Home Assistant frontend modules, traverse the parent DOM, or assume Home Assistant theme/locale data is forwarded to App iframes. A validated public host-context adapter and deterministic browser/standalone fallbacks remain separate contracts. The App's parent owns the Home Assistant shell; Symphonia owns only its interior navigation and content.
 
-This decision selects a framework/build direction, **not** a package manager, visual baseline, supported HA/browser matrix, validated host-context protocol, or permission to begin production UI. `RG-006` and the SDD readiness/owner-approval gates still apply. If bundle cost, browser support, accessibility, or Ingress compatibility cannot be demonstrated, a new ADR must supersede this one.
+This decision selects a framework/build direction, **not** a package manager, visual baseline, supported HA/browser matrix, validated host-context protocol, or blanket permission to build all feature UI. `RG-006` and the applicable SDD readiness/owner-approval gates still apply. The dashboard's narrow SDD and explicit owner request supply its own gate. If bundle cost, browser support, accessibility, or Ingress compatibility cannot be demonstrated for the full foundation, a new ADR must supersede this one.
 
 ## Consequences and verification
 

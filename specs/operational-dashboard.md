@@ -1,6 +1,6 @@
 # Operational dashboard in the Home Assistant App
 
-- Status: Ready for implementation
+- Status: Implemented
 - Date: 2026-10-04
 - Catalog capability ID: `operational-dashboard`
 - Owners: Symphonia maintainers
@@ -179,7 +179,7 @@ No schema or data change. The UI is built from a pinned lockfile and shipped as 
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **18 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 3 client state/race, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. Browser visual review covers desktop and narrow widths, light/dark, keyboard focus and an explicit failed refresh.
+Minimum **18 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 3 client state/race, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The five production UI tests exercise empty, initial failure, stale, overlapping, and invalid responses; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser.
 
 ## 15. Documentation and discoverability
 
@@ -221,12 +221,12 @@ Minimum **18 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 3 c
 
 ## 19. Definition of Done
 
-- [ ] Root panel, relative assets and live API work through authenticated Ingress.
-- [ ] Direct access is denied and DTO redaction tests pass.
-- [ ] At least 18 distinct cases and the repository verification suite pass.
-- [ ] User/operator/contributor documentation and catalog evidence are current.
-- [ ] Browser visual and keyboard review is recorded.
-- [ ] GitHub checks pass for the pushed commit.
+- [x] Root panel, relative assets and live API work through authenticated Ingress.
+- [x] Direct access is denied and DTO redaction tests pass.
+- [x] At least 18 distinct cases across projection, routing, client state, build, browser, and lab checks; the repository verification suite passes.
+- [x] User/operator/contributor documentation and catalog evidence are current.
+- [x] Browser visual and keyboard review is recorded in the lab guide.
+- [x] GitHub Verify passed for the functional commit `557ceab` ([run](https://github.com/vypdev/symphonia/actions/runs/37224401052)); the final evidence commit requires its own green run.
 
 ## 20. References and decisions
 
