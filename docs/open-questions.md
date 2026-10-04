@@ -3,9 +3,9 @@
 **Status:** open items and resolved decisions are marked individually
 **Last reviewed:** 2026-10-04
 
-## Decisions requiring owner input
+## Owner decisions and recorded outcomes
 
-These are ordered by how soon they block the next specification pass.
+Open items are ordered roughly by how soon they block the next specification pass. Resolved items remain here for traceability.
 
 ### OQ-001 — What does “YouTube Music provider” mean for the MVP?
 
@@ -214,10 +214,10 @@ These need evidence and small RFCs; popularity is not evidence.
 
 1. **Provider feasibility report (`RG-001`).** Prove or narrow the Spotify ↔ YouTube promise using official APIs and dedicated accounts; feed the evidence into the provider, [import](../specs/library-import-and-provider-projections.md), and [copy](../specs/one-time-playlist-copy.md) SDDs. Report unofficial YT Music evidence separately and keep Apple as an explicit future/contingency spike.
 2. **Close the [authorization SDD](../specs/provider-connections-and-authorization.md) blockers (`RG-002` + `OQ-004`).** Validate the direct App callback flow, then settle bring-your-own credentials, encryption, revocation, and backups.
-3. **Close the [copy SDD](../specs/one-time-playlist-copy.md) policy blocker (`OQ-003`).** Decide target creation, strict/best-effort behavior, batching, partial failure, reconciliation, cancellation, and exact acceptance examples.
+3. **Close the remaining [copy SDD](../specs/one-time-playlist-copy.md) feasibility blockers.** The strict/create-new policy is accepted; prove target create/add/order/duplicate behavior with dedicated accounts, provider-specific name/visibility validation, unknown-write reconciliation, and partial-failure recovery before implementation readiness.
 4. **Close the [identity SDD](../specs/recording-identity-resolution.md) evidence blockers (`RG-003`).** Build the corpus and settle normalization, candidate sources, evidence, versioned rules, manual decisions, and measurable safety targets.
 5. **Define the [listening](../specs/listening-and-playback-control.md) vertical (`OQ-011`/`RG-007`) alongside [runtime](../specs/home-assistant-app-runtime-and-ingress.md) and [durable-operation](../specs/durable-operations-and-recovery.md) blockers (`RG-004`).** Specify and threat-review the selected companion-broker protocol and prove source/account/player/output behavior before promising Spotify or YouTube Music controls; choose process topology/storage only after crash, lease, migration, backup, and representative-scale evidence.
 
 After those tasks, revisit playlist ownership (`OQ-002`) before creating any persistent-synchronization SDD. The Home Assistant native surface (`RG-005`) can proceed in parallel once the service API shape is stable, but it is not a prerequisite for the copy MVP.
 
-The UI compatibility spike (`RG-006`) can also proceed in parallel as non-production evidence. It must prove the supported host/browser/context matrix and selected Lit/Vite tooling before any production frontend work, while feature content and behavior continue to be owned by their existing SDDs.
+The UI compatibility spike (`RG-006`) can also proceed in parallel as non-production evidence. It must prove the supported host/browser/context matrix and selected Lit/Vite tooling before the broader UI foundation or feature views are implemented; the separately approved read-only operational dashboard is already available, while feature content and behavior remain owned by their SDDs.
