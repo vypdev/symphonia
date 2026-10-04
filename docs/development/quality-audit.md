@@ -181,3 +181,13 @@ refactoring targets remain advisory. A fresh Graphify code-only graph has
 **1,361 nodes and 3,535 edges**. `OperationRepository` is still first at
 57 edges; the new `probe()` is called only by its lab CLI and tests, with no
 domain/application dependency on Home Assistant.
+
+The [GitHub Verify runs](https://github.com/vypdev/symphonia/actions/runs/37222603556)
+for the Ingress increment succeeded, but annotated the Node 20 action-runtime
+deprecation and the forthcoming `ubuntu-latest` image migration. The workflow
+now uses the documented Node 24 compatible major versions of
+[checkout](https://github.com/actions/checkout),
+[setup-python](https://github.com/actions/setup-python), and
+[setup-node](https://github.com/actions/setup-node), pins Ubuntu 24.04 for its
+existing Linux jobs, and avoids persisting checkout credentials. The YAML
+parses locally; the pushed workflow run is the compatibility check.
