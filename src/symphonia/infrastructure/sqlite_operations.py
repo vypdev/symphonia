@@ -8,7 +8,6 @@ are introduced. The database is the authority; worker memory is not.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 import heapq
@@ -18,6 +17,8 @@ import sqlite3
 from threading import RLock
 from typing import Any, Concatenate, ParamSpec, TypeVar
 import uuid
+
+from symphonia.domain.operations import LeaseConflict, OperationEvent, OperationRecord
 
 from .sqlite_common import connect, initialize_with_cleanup
 
@@ -40,10 +41,6 @@ class OperationNotFound(LookupError):
 
 
 class IdempotencyConflict(ValueError):
-    pass
-
-
-class LeaseConflict(RuntimeError):
     pass
 
 
@@ -187,35 +184,6 @@ def _checkpoint_requires_reconciliation(checkpoint: dict[str, Any]) -> bool:
         checkpoint.get("unknown_step") is not None
         or checkpoint.get("reconciliation_required") is True
     )
-
-
-@dataclass(frozen=True, slots=True)
-class OperationRecord:
-    operation_id: str
-    operation_type: str
-    state: str
-    idempotency_key: str
-    payload: dict[str, Any]
-    checkpoint: dict[str, Any]
-    worker_id: str | None
-    lease_expires_at: datetime | None
-    next_run_at: datetime | None
-    cancel_requested: bool
-    created_at: datetime
-    updated_at: datetime
-
-
-@dataclass(frozen=True, slots=True)
-class OperationEvent:
-    """Append-only audit record for an operation state transition."""
-
-    sequence: int
-    operation_id: str
-    event_type: str
-    state: str
-    worker_id: str | None
-    payload: dict[str, Any]
-    created_at: datetime
 
 
 class OperationRepository:

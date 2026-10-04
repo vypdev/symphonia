@@ -6,7 +6,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 
-from symphonia.infrastructure.sqlite_operations import OperationRecord, OperationRepository
+from symphonia.domain.operations import OperationRecord
+
+from .ports import OperationPort
 
 
 OperationHandler = Callable[[OperationRecord, str, datetime], OperationRecord]
@@ -14,7 +16,7 @@ OperationHandler = Callable[[OperationRecord, str, datetime], OperationRecord]
 
 @dataclass(frozen=True, slots=True)
 class OperationRunner:
-    operations: OperationRepository
+    operations: OperationPort
     handlers: Mapping[str, OperationHandler]
 
     def run_once(

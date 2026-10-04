@@ -8,20 +8,16 @@ from typing import Any
 
 from symphonia.domain.models import PlanAcceptanceError
 from symphonia.domain.plans import CopyPlanRecord
-from symphonia.infrastructure.sqlite_operations import (
-    LeaseConflict,
-    OperationRecord,
-    OperationRepository,
-)
+from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.providers.writing import PlaylistWriter, ProviderWriteError, WriteOutcome
 
-from .ports import CopyPlanPort
+from .ports import CopyPlanPort, OperationPort
 
 
 @dataclass(frozen=True, slots=True)
 class CopyExecutionService:
     plans: CopyPlanPort
-    operations: OperationRepository
+    operations: OperationPort
     retry_delay_seconds: int = 60
     max_retry_attempts: int = 5
 

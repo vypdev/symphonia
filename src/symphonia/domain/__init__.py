@@ -11,6 +11,7 @@ from .models import (
 )
 from .projections import PublishedPlaylistSnapshot
 from .plans import CopyPlanRecord
+from .operations import LeaseConflict, OperationEvent, OperationRecord
 
 __all__ = [
     "CopyPlan",
@@ -18,6 +19,9 @@ __all__ = [
     "CopyPlanRecord",
     "CopyPolicy",
     "EntryClassification",
+    "LeaseConflict",
+    "OperationEvent",
+    "OperationRecord",
     "PlanAcceptanceError",
     "PlaylistSnapshot",
     "PublishedPlaylistSnapshot",

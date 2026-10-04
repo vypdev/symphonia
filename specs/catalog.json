@@ -571,6 +571,8 @@
           "src/symphonia/infrastructure/sqlite_plans.py",
           "src/symphonia/infrastructure/sqlite_resolutions.py",
           "src/symphonia/domain/models.py",
+          "src/symphonia/domain/operations.py",
+          "src/symphonia/application/ports.py",
           "src/symphonia/application/operation_runner.py",
           "src/symphonia/application/operation_worker.py",
           "src/symphonia/application/copy_execution.py",

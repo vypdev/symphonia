@@ -7,9 +7,10 @@ The contracts carry provider-neutral values and never expose SQLite details.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Protocol
+from typing import Any, Protocol
 
 from symphonia.domain.models import CopyPlan
+from symphonia.domain.operations import OperationRecord
 from symphonia.domain.plans import CopyPlanRecord
 from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.authorization import AuthorizationAttempt
@@ -87,3 +88,49 @@ class CopyPlanPort(Protocol):
     def get(self, digest: str) -> CopyPlanRecord: ...
 
     def accept(self, digest: str, *, expected_digest: str, now: datetime) -> CopyPlanRecord: ...
+
+
+class OperationPort(Protocol):
+    """The durable operations needed by current application use cases."""
+
+    def create(
+        self,
+        *,
+        operation_type: str,
+        idempotency_key: str,
+        payload: dict[str, Any],
+        now: datetime,
+        operation_id: str | None = None,
+    ) -> OperationRecord: ...
+
+    def get(self, operation_id: str) -> OperationRecord: ...
+
+    def claim(
+        self, operation_id: str, *, worker_id: str, now: datetime,
+        lease_seconds: int = 30,
+    ) -> OperationRecord: ...
+
+    def claim_next(
+        self, *, worker_id: str, now: datetime, lease_seconds: int = 30,
+        operation_type: str | None = None,
+    ) -> OperationRecord | None: ...
+
+    def renew_lease(
+        self, operation_id: str, *, worker_id: str, now: datetime,
+        lease_seconds: int = 30,
+    ) -> OperationRecord: ...
+
+    def checkpoint(
+        self, operation_id: str, *, worker_id: str, checkpoint: dict[str, Any],
+        now: datetime, state: str = "running",
+    ) -> OperationRecord: ...
+
+    def schedule_retry(
+        self, operation_id: str, *, worker_id: str, next_run_at: datetime,
+        checkpoint: dict[str, Any], now: datetime,
+    ) -> OperationRecord: ...
+
+    def schedule_rate_limit(
+        self, operation_id: str, *, worker_id: str, next_run_at: datetime,
+        checkpoint: dict[str, Any], now: datetime,
+    ) -> OperationRecord: ...

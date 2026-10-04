@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from dataclasses import replace
 import unittest
 
 from symphonia.application import OperationRunner
+from symphonia.domain.operations import OperationRecord
 from symphonia.infrastructure import OperationRepository
 
 
@@ -101,6 +103,32 @@ class OperationRunnerTests(unittest.TestCase):
         self.assertEqual(result.state, "failed")
         self.assertEqual(result.checkpoint["failure_code"], "handler_exception:TypeError")
         self.assertEqual(self.repository.get(operation.operation_id).state, "failed")
+
+    def test_runner_accepts_an_inward_port_without_sqlite(self) -> None:
+        claimed = OperationRecord(
+            operation_id="operation-1", operation_type="fixture", state="running",
+            idempotency_key="key-1", payload={}, checkpoint={}, worker_id="worker-a",
+            lease_expires_at=NOW, next_run_at=None, cancel_requested=False,
+            created_at=NOW, updated_at=NOW,
+        )
+
+        class FakeOperationPort:
+            def claim_next(self, **kwargs):
+                self.claim_args = kwargs
+                return claimed
+
+            def get(self, operation_id):
+                self.read_id = operation_id
+                return replace(claimed, state="succeeded")
+
+        port = FakeOperationPort()
+        runner = OperationRunner(port, {"fixture": lambda operation, _worker, _now: operation})
+
+        result = runner.run_once(worker_id="worker-a", now=NOW)
+
+        self.assertEqual(result.state, "succeeded")
+        self.assertEqual(port.claim_args["worker_id"], "worker-a")
+        self.assertEqual(port.read_id, "operation-1")
 
 
 if __name__ == "__main__":

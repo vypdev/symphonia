@@ -7,15 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from symphonia.infrastructure.sqlite_operations import (
-    LeaseConflict,
-    OperationRecord,
-    OperationRepository,
-)
+from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
 from symphonia.providers.errors import ProviderApiError, ProviderErrorCategory
 
 from .library_import import ImportPublication, LibraryImportService
+from .ports import OperationPort
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,7 +20,7 @@ class LibraryImportExecutionService:
     """Make import publication resumable and visible as a durable operation."""
 
     imports: LibraryImportService
-    operations: OperationRepository
+    operations: OperationPort
     retry_delay_seconds: int = 60
     max_retry_attempts: int = 5
 

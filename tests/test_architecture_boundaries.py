@@ -111,10 +111,9 @@ class ArchitectureBoundaryTests(unittest.TestCase):
                     violations.append(f"{path.relative_to(ROOT)} imports {module}")
         self.assertEqual(violations, [])
 
-    def test_foundation_use_cases_depend_on_ports(self) -> None:
+    def test_all_application_use_cases_depend_on_ports_not_infrastructure(self) -> None:
         violations = []
-        for name in ("authorization", "provider_connections", "library_import", "ports"):
-            path = SOURCE_ROOT / "application" / f"{name}.py"
+        for path in sorted((SOURCE_ROOT / "application").glob("*.py")):
             for module in _absolute_imports(path):
                 if module.startswith("symphonia.infrastructure"):
                     violations.append(f"{path.relative_to(ROOT)} imports {module}")

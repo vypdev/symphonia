@@ -7,11 +7,11 @@ from datetime import datetime
 
 from symphonia.domain.models import CopyPlan, CopyPolicy, PlanAcceptanceError, PlaylistSnapshot
 from symphonia.domain.plans import CopyPlanRecord
-from symphonia.infrastructure.sqlite_operations import OperationRecord, OperationRepository
+from symphonia.domain.operations import OperationRecord
 from symphonia.providers.contracts import ProviderCapabilities
 
 from .copy_planning import CopyPlanningService
-from .ports import CopyPlanPort
+from .ports import CopyPlanPort, OperationPort
 
 
 class CapabilityUnavailableError(ValueError):
@@ -24,7 +24,7 @@ class CopyWorkflowService:
 
     planning: CopyPlanningService
     plans: CopyPlanPort
-    operations: OperationRepository
+    operations: OperationPort
 
     def create_plan(
         self,

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import math
 import threading
 
-from symphonia.infrastructure.sqlite_operations import OperationRecord
+from symphonia.domain.operations import OperationRecord
 
 from .operation_runner import OperationRunner
 
