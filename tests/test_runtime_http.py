@@ -222,6 +222,12 @@ class RuntimeHTTPTests(unittest.TestCase):
                     connection.request("GET", "/symphonia/ready")
                     ready = connection.getresponse()
                     ready_body = ready.read().decode("utf-8")
+                    connection.request("GET", "/symphonia/")
+                    denied_root = connection.getresponse()
+                    denied_root.read()
+                    connection.request("GET", "/symphonia/api/dashboard", headers={"X-Ingress-Path": "/forged"})
+                    denied_api = connection.getresponse()
+                    denied_api.read()
                 finally:
                     connection.close()
 
@@ -229,6 +235,8 @@ class RuntimeHTTPTests(unittest.TestCase):
                 self.assertIn('"status": "ok"', health_body)
                 self.assertEqual(ready.status, 200)
                 self.assertIn('"status": "ready"', ready_body)
+                self.assertEqual(denied_root.status, 403)
+                self.assertEqual(denied_api.status, 403)
             finally:
                 server.shutdown()
                 server.server_close()

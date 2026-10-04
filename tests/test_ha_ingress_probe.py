@@ -15,6 +15,8 @@ class IngressProbeTests(unittest.TestCase):
         self.assertEqual(proxy_path(INGRESS_URL, "health"), "/ingress/synthetic_route/health")
         self.assertEqual(proxy_path(INGRESS_URL + "/optional-entry", "ready"), "/ingress/synthetic_route/ready")
         self.assertEqual(proxy_path(INGRESS_URL, ""), "/ingress/synthetic_route/")
+        self.assertEqual(proxy_path(INGRESS_URL, "api/dashboard"), "/ingress/synthetic_route/api/dashboard")
+        self.assertEqual(proxy_path(INGRESS_URL, "assets/index-abc.js"), "/ingress/synthetic_route/assets/index-abc.js")
 
     def test_rejects_external_malformed_or_unbounded_routes(self) -> None:
         for url in (
@@ -46,17 +48,25 @@ class IngressProbeTests(unittest.TestCase):
                 return 200, b'{"service":"symphonia","status":"ok"}'
             if path.endswith("/ready"):
                 return 200, b'{"service":"symphonia","status":"ready"}'
-            return 404, b'{"error":"not_found"}'
+            if path.endswith("/api/dashboard"):
+                return 200, b'{"service":"symphonia","ready":true}'
+            if path.endswith("/assets/index-abc.js"):
+                return 200, b"console.log('fixture')"
+            return 200, b'<html><script src="./assets/index-abc.js"></script></html>'
 
         result = probe(request)
 
         self.assertEqual(result["without_session"], 401)
         self.assertEqual(result["health"], 200)
         self.assertEqual(result["ready"], 200)
-        self.assertEqual(result["root"], 404)
+        self.assertEqual(result["root"], 200)
+        self.assertEqual(result["dashboard"], 200)
+        self.assertTrue(result["has_ui_asset"])
+        self.assertEqual(result["asset"], 200)
+        self.assertTrue(result["dashboard_ready"])
         self.assertNotIn(SESSION, json.dumps(result))
         self.assertNotIn("synthetic_route", json.dumps(result))
-        self.assertEqual(len(calls), 6)
+        self.assertEqual(len(calls), 8)
 
     def test_probe_fails_if_proxy_allows_a_request_without_session(self) -> None:
         def request(path: str, method: str, data: bytes | None, session: str | None) -> tuple[int, bytes]:

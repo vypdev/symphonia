@@ -1,0 +1,17 @@
+{
+  "name": "symphonia-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/*.test.ts",
+    "build": "vite build"
+  },
+  "dependencies": {"lit": "3.3.3"},
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.1"
+  }
+}

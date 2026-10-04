@@ -13,6 +13,7 @@ class HomeAssistantAppMetadataTests(unittest.TestCase):
         self.assertIn("stage: experimental", config)
         self.assertIn("ingress: true", config)
         self.assertIn("ingress_port: 8099", config)
+        self.assertIn("panel_admin: true", config)
         self.assertIn("- data:rw", config)
         self.assertNotIn("ports:", config)
         self.assertNotIn("homeassistant_api:", config)

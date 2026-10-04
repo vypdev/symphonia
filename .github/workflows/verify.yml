@@ -75,6 +75,33 @@ jobs:
       - name: Inspect relative assets
         run: npm run verify-output
 
+  operational-ui:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Install pinned production UI dependencies
+        run: npm ci --ignore-scripts
+      - name: Check types
+        run: npm run check
+      - name: Test UI state transitions
+        run: npm test
+      - name: Build App UI
+        run: npm run build
+      - name: Check committed App assets are reproducible
+        run: git diff --exit-code -- ../src/symphonia/runtime/ui_assets
+
   branch-coverage:
     runs-on: ubuntu-24.04
     steps:

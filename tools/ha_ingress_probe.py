@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 SUPERVISOR = "http://supervisor"
 TOKEN = re.compile(r"[A-Za-z0-9_-]+\Z")
+ASSET = re.compile(r"assets/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.js\Z")
 Response = tuple[int, bytes]
 Requester = Callable[[str, str, bytes | None, str | None], Response]
 
@@ -31,7 +32,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def proxy_path(ingress_url: object, endpoint: str) -> str:
     """Select a fixed diagnostic route from a Supervisor-provided relative URL."""
-    if not isinstance(ingress_url, str) or endpoint not in {"", "health", "ready"}:
+    if not isinstance(ingress_url, str) or (
+        endpoint not in {"", "health", "ready", "api/dashboard"}
+        and not ASSET.fullmatch(endpoint)
+    ):
         raise ValueError("invalid Ingress probe route")
     parsed = urlsplit(ingress_url)
     if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
@@ -46,7 +50,7 @@ def proxy_path(ingress_url: object, endpoint: str) -> str:
 
 
 def probe(request: Requester) -> dict[str, object]:
-    """Verify session enforcement, upstream routing, and current UI absence."""
+    """Verify session enforcement, live dashboard, and relative UI assets."""
     session_status, session_body = request("/ingress/session", "POST", b"{}", None)
     if session_status != 200:
         raise RuntimeError("Supervisor did not create an Ingress session")
@@ -66,7 +70,14 @@ def probe(request: Requester) -> dict[str, object]:
     denied_status, _ = request(health_path, "GET", None, None)
     health_status, health_body = request(health_path, "GET", None, session)
     ready_status, ready_body = request(proxy_path(ingress_url, "ready"), "GET", None, session)
-    root_status, _ = request(proxy_path(ingress_url, ""), "GET", None, session)
+    root_status, root_body = request(proxy_path(ingress_url, ""), "GET", None, session)
+    dashboard_status, dashboard_body = request(proxy_path(ingress_url, "api/dashboard"), "GET", None, session)
+    dashboard = json.loads(dashboard_body) if dashboard_status == 200 else {}
+    root_html = root_body.decode("utf-8", errors="replace")
+    match = re.search(r'src="\./(assets/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.js)"', root_html)
+    asset_status = None
+    if match is not None:
+        asset_status, _ = request(proxy_path(ingress_url, match.group(1)), "GET", None, session)
     health = json.loads(health_body) if health_status == 200 else {}
     ready = json.loads(ready_body) if ready_status == 200 else {}
     result = {
@@ -75,6 +86,10 @@ def probe(request: Requester) -> dict[str, object]:
         "health": health_status,
         "ready": ready_status,
         "root": root_status,
+        "dashboard": dashboard_status,
+        "has_ui_asset": match is not None,
+        "asset": asset_status,
+        "dashboard_ready": dashboard.get("ready"),
         "health_service": health.get("service"),
         "ready_state": ready.get("status"),
     }
@@ -83,7 +98,11 @@ def probe(request: Requester) -> dict[str, object]:
         "without_session": 401,
         "health": 200,
         "ready": 200,
-        "root": 404,
+        "root": 200,
+        "dashboard": 200,
+        "has_ui_asset": True,
+        "asset": 200,
+        "dashboard_ready": True,
         "health_service": "symphonia",
         "ready_state": "ready",
     }:

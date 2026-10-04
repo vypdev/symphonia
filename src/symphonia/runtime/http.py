@@ -1,15 +1,19 @@
-"""Dependency-free HTTP health surface for the first runtime slice."""
+"""HTTP health checks and a Supervisor-only operational dashboard."""
 
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from collections.abc import Callable
+from datetime import datetime, timezone
+from pathlib import Path
+import re
 from socket import socket
 from typing import Any
 from urllib.parse import urlsplit
 
 from symphonia import __version__
+from symphonia.application.operational_dashboard import project_dashboard
 from symphonia.infrastructure.sqlite_operations import OperationRepository
 from .config import RuntimeConfig, normalize_ingress_path
 from .resources import RuntimeResources
@@ -51,7 +55,7 @@ class SymphoniaHTTPServer(HTTPServer):
 
 
 class SymphoniaRequestHandler(BaseHTTPRequestHandler):
-    """Only health/readiness/version are exposed until the API SDD is ready."""
+    """Keep the operational UI behind the verified Supervisor proxy peer."""
 
     server_version = "Symphonia"
     sys_version = ""
@@ -59,6 +63,18 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
     server: SymphoniaHTTPServer
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
+        relative = _relative_path(self.path, self.server.ingress_path)
+        if relative in {"/", "/api/dashboard"} or (
+            relative is not None and relative.startswith("/assets/")
+        ):
+            if not trusted_ingress_peer(self.client_address[0]):
+                self._json(403, {"error": "forbidden"})
+                return
+            if relative == "/api/dashboard":
+                self._dashboard()
+            else:
+                self._asset(relative)
+            return
         status, payload = route_get(
             self.path,
             self.server.repository,
@@ -67,6 +83,24 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
             self.server.readiness_check,
         )
         self._json(status, payload)
+
+    def _dashboard(self) -> None:
+        resources = self.server.resources
+        if resources is None:
+            self._json(503, {"service": "symphonia", "ready": False})
+            return
+        now = datetime.now(timezone.utc)
+        diagnostics = resources.diagnostics(now=now, operation_limit=10, event_limit=1)
+        payload = project_dashboard(diagnostics, now=now, version=self.server.service_version)
+        self._json(200 if payload["ready"] else 503, payload)
+
+    def _asset(self, relative: str) -> None:
+        asset = ui_asset(relative)
+        if asset is None:
+            self._json(404, {"error": "not_found"})
+            return
+        content_type, body = asset
+        self._send_bytes(200, content_type, body)
 
     def send_error(
         self,
@@ -96,13 +130,32 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
             sort_keys=True,
             allow_nan=False,
         ).encode("utf-8")
+        SymphoniaRequestHandler._send_bytes(
+            self,
+            status, "application/json; charset=utf-8", body,
+            close_connection=close_connection,
+        )
+
+    def _send_bytes(
+        self,
+        status: int,
+        content_type: str,
+        body: bytes,
+        *,
+        close_connection: bool = False,
+    ) -> None:
         try:
             self.send_response(status)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header(
+                "Content-Security-Policy",
+                "default-src 'none'; script-src 'self'; style-src 'self'; "
+                "connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'",
+            )
             if close_connection:
                 self.close_connection = True
                 self.send_header("Connection", "close")
@@ -113,10 +166,43 @@ class SymphoniaRequestHandler(BaseHTTPRequestHandler):
             self.close_connection = True
 
     def log_message(self, format: str, *args: object) -> None:
-        # Keep the first runtime quiet; structured logging belongs to the
-        # observability adapter and must not include request payloads by default.
+        # Never log Ingress route tokens, credentials, or request payloads.
         return
 
+
+INGRESS_PEER = "172.30.32.2"
+ASSET_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.(?:js|css|svg)\Z")
+
+
+def trusted_ingress_peer(address: str) -> bool:
+    """A forwarded header can never grant access to the UI/API."""
+    return address == INGRESS_PEER
+
+
+def ui_asset(relative: str) -> tuple[str, bytes] | None:
+    """Resolve only Vite's single-level, allowlisted output assets."""
+    root = Path(__file__).with_name("ui_assets")
+    if relative == "/":
+        path = root / "index.html"
+        content_type = "text/html; charset=utf-8"
+    elif relative.startswith("/assets/"):
+        name = relative[len("/assets/"):]
+        if not ASSET_NAME.fullmatch(name):
+            return None
+        path = root / "assets" / name
+        content_type = {
+            ".js": "text/javascript; charset=utf-8",
+            ".css": "text/css; charset=utf-8",
+            ".svg": "image/svg+xml",
+        }[path.suffix]
+    else:
+        return None
+    try:
+        if not path.is_file() or path.stat().st_size > 2_000_000:
+            return None
+        return content_type, path.read_bytes()
+    except OSError:
+        return None
 
 def create_server(
     host: str = "127.0.0.1",
