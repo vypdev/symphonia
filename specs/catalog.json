@@ -69,7 +69,8 @@
           ".devcontainer/devcontainer.json",
           "tools/stage_ha_local_app.py",
           "tools/stage_ha_local_app_in_devcontainer.sh",
-          "tools/ha_app_lab.py"
+          "tools/ha_app_lab.py",
+          "tools/ha_ingress_probe.py"
         ],
         "tests": [
           "tests/test_runtime_config.py",
@@ -84,6 +85,7 @@
           "tests/test_homeassistant_app_metadata.py",
           "tests/test_ha_app_devcontainer.py",
           "tests/test_ha_app_lab.py",
+          "tests/test_ha_ingress_probe.py",
           "tests/test_architecture_boundaries.py"
         ],
         "documentation": [

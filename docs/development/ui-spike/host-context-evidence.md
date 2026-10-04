@@ -1,6 +1,6 @@
 # RG-006 host-context and compatibility evidence
 
-**Reviewed:** 2026-09-27. **Status:** partial research; no supported HA/browser matrix or production App-context claim yet. This is evidence for the [UI foundation SDD](../../../specs/home-assistant-native-ui.md), not an implementation contract.
+**Reviewed:** 2026-09-27; local lab updated 2026-10-04. **Status:** partial research; no supported HA/browser matrix or production App-context claim yet. This is evidence for the [UI foundation SDD](../../../specs/home-assistant-native-ui.md), not an implementation contract.
 
 ## What the public sources actually establish
 
@@ -37,4 +37,4 @@ An unsupported or absent host property is not an error by itself: the UI remains
 5. Change Home Assistant user theme, locale, and timezone. Record whether the iframe receives any supported public signal. If it does not, retain and document browser/standalone fallbacks; do not infer equality with the HA user preference.
 6. Run component/browser/accessibility and visual-reference review at phone, tablet, and desktop sizes, light/dark, forced colors, reduced motion, 200% zoom, long/RTL text, and virtual keyboard. Record explicit reviewer approval or a divergence with rationale.
 
-The [fixture review checklist](README.md) is a starting point only. No live Home Assistant probe, screenshot, or browser visual/accessibility approval was performed in this evidence pass.
+The [local Supervisor/App lab](../ha-app-lab.md) now proves Core-to-Supervisor Ingress session enforcement and proxy routing to `/health` and `/ready` on one disposable installation. It also records an authenticated Home Assistant App entry whose iframe stayed `about:blank` in the in-app browser. No App host-context message, Lit asset/deep-route behavior, or browser visual/accessibility approval was obtained. The [fixture review checklist](README.md) remains a starting point only.

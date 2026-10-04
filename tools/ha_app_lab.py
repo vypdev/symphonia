@@ -1,4 +1,4 @@
-"""Run a disposable, locally bound Supervisor/App smoke lab from the host.
+"""Run a disposable, locally bound Supervisor/App/Ingress smoke lab.
 
 The images are pinned to the digests exercised on 2026-10-04. This helper
 does not create a Home Assistant user or remove persistent Docker volumes.
@@ -25,6 +25,7 @@ STAGING_IMAGE = (
     "docker.io/library/python@"
     "sha256:02108f5d322dd89f1c9e552442c25acb0543dfdbc455693a5599624f20d9155d"
 )
+INGRESS_PROBE = PROJECT / "tools" / "ha_ingress_probe.py"
 
 
 def container_command(project: Path = PROJECT) -> list[str]:
@@ -174,7 +175,7 @@ def _install_app() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("up", "stage", "status", "stop"))
+    parser.add_argument("command", choices=("up", "stage", "status", "ingress-smoke", "stop"))
     args = parser.parse_args()
     try:
         if args.command == "up":
@@ -190,6 +191,16 @@ def main() -> int:
             print("Lab container: absent" if details is None else f"Lab container: {'running' if details['running'] == 'true' else 'stopped'}")
             if details and details["running"] == "true":
                 print(f"Supervisor API ready: {_supervisor_ready()}")
+        elif args.command == "ingress-smoke":
+            details = _container_details()
+            if details is None or details["label"] != "ha-app" or details["running"] != "true":
+                raise RuntimeError("Symphonia App lab is not running")
+            script = INGRESS_PROBE.read_text(encoding="utf-8")
+            result = _run(
+                "docker", "exec", CONTAINER, "docker", "exec", "homeassistant",
+                "python3", "-c", script,
+            )
+            print(result.stdout.strip())
         else:
             details = _container_details()
             if details is not None and details["label"] != "ha-app":

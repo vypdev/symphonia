@@ -171,3 +171,13 @@ A fresh Graphify code-only extraction contains **1,341 nodes and 3,498 edges**.
 `OperationRepository` remains the largest hub at 57 edges. Its one-hop
 dependents still include runtime HTTP/resources, copy/import execution, and
 tests, so this lab increment leaves that contract untouched.
+
+The Ingress follow-up adds a bounded, token-redacted Core-to-Supervisor smoke.
+On the disposable lab it observes `401` without a session, `200` for health
+and readiness with a session, and `404` for the current root route. The
+ordinary suite passes **267 tests (2 skipped)** and the isolated Lit suite
+still passes 7. RepoWise again reports **0 safe dead-code findings**; its
+refactoring targets remain advisory. A fresh Graphify code-only graph has
+**1,361 nodes and 3,535 edges**. `OperationRepository` is still first at
+57 edges; the new `probe()` is called only by its lab CLI and tests, with no
+domain/application dependency on Home Assistant.

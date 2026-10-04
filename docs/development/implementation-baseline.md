@@ -129,7 +129,7 @@ docker build -t symphonia:dev .
 docker run --rm -p 8099:8099 -v symphonia-data:/data symphonia:dev
 ```
 
-The container exposes only the current health/readiness/version surface. Experimental App metadata already enables an Ingress panel and two build architectures; an authenticated Home Assistant browser can open the App entry, but the frame remains blank/loading. The runtime has no functional UI route. A supported platform matrix, backup/restore declarations, and any direct callback policy remain behind the runtime and UI SDD gates.
+The container exposes only the current health/readiness/version surface. Experimental App metadata already enables an Ingress panel and two build architectures. A local [Core-to-Supervisor smoke](ha-app-lab.md) verifies session enforcement and health/readiness routing through Ingress; its root route returns `404`. An authenticated Home Assistant browser can open the App entry, but the frame remains `about:blank`/loading in the observed in-app browser. The runtime has no functional UI route. A supported platform matrix, backup/restore declarations, and any direct callback policy remain behind the runtime and UI SDD gates.
 - Deterministic `unittest` coverage under `tests/`.
 - Static AST boundary tests keep the domain free of adapters/host frameworks and keep the foundation limited to Python's standard library plus local `symphonia` modules.
 
