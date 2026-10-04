@@ -27,6 +27,11 @@ from .spotify_playlist_reader import read_playlist_pages
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
 
+def _require_nonblank(value: object, description: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Spotify {description} must not be empty")
+
+
 class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
     """Translate Spotify playlist pages into Symphonia provider values."""
 
@@ -53,6 +58,8 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
             raise ValueError("Spotify playlist page_size must be between 1 and 50")
         if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages <= 0:
             raise ValueError("Spotify max_pages must be positive")
+        if not isinstance(allow_writes, bool):
+            raise ValueError("Spotify allow_writes must be a boolean")
         self._client = client
         self._token_for_connection = token_for_connection
         self._page_size = page_size
@@ -92,10 +99,8 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
     ) -> TargetPlaylist:
         if provider != self.manifest.provider:
             raise ValueError("Spotify adapter requires a Spotify target provider")
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError("Spotify playlist name must not be empty")
-        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
-            raise ValueError("Spotify playlist idempotency_key must not be empty")
+        _require_nonblank(name, "playlist name")
+        _require_nonblank(idempotency_key, "playlist idempotency_key")
         if visibility not in {"private", "public"}:
             raise ValueError("Spotify playlist visibility must be private or public")
         connection_id = self._write_connection_id()
@@ -129,15 +134,8 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         provider_track_id: str,
         idempotency_key: str,
     ) -> WriteResult:
-        if (
-            not isinstance(target_playlist_id, str)
-            or not target_playlist_id.strip()
-            or not isinstance(provider_track_id, str)
-            or not provider_track_id.strip()
-            or not isinstance(idempotency_key, str)
-            or not idempotency_key.strip()
-        ):
-            raise ValueError("Spotify write identifiers must not be empty")
+        for identifier in (target_playlist_id, provider_track_id, idempotency_key):
+            _require_nonblank(identifier, "write identifiers")
         try:
             connection_id = self._write_connection_id()
         except ProviderWriteError as error:
@@ -171,7 +169,12 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         return False
 
     def _write_connection_id(self) -> str:
-        if self._connection_id is None or not self._connection_id.strip():
+        if not self._allow_writes:
+            raise ProviderWriteError(
+                WriteOutcome.PERMANENT_FAILURE,
+                "Spotify writes are disabled for this adapter",
+            )
+        if not isinstance(self._connection_id, str) or not self._connection_id.strip():
             raise ProviderWriteError(
                 WriteOutcome.PERMANENT_FAILURE,
                 "Spotify writer is not bound to a provider connection",

@@ -59,7 +59,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Copy plans bind target connection and effective write-capability evidence into their digest.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
 - Concrete provider manifests expose upstream dependencies and a dated research review marker.
-- Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories. Playlist traversal, item/offset mapping, and HTTP/write-error classification are separate provider modules behind the same adapter interface.
+- Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories. The `allow_writes` composition flag must be a boolean and is enforced at each write call, so a read-only adapter cannot send a POST even if a caller bypasses capability discovery. Playlist traversal, item/offset mapping, and HTTP/write-error classification are separate provider modules behind the same adapter interface.
 - Spotify and YouTube Data share a provider-neutral JSON transport; the YouTube adapter no longer imports the Spotify adapter, and default transport errors identify the correct provider without echoing tokens.
 - Spotify write adapters reject blank playlist/entry identifiers and unknown visibility values before issuing provider requests.
 - Explicitly scoped official YouTube Data API video-playlist reader; it is not represented as YouTube Music.

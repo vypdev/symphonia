@@ -43,7 +43,10 @@ application stages with one explicit run context for durable checkpoints and
 leases. Target creation and recovery share one reconciliation path so an
 unknown provider outcome is handled consistently after a crash or an immediate
 error. Spotify's write-error classification is isolated in a provider module;
-the provider writer contract remains unchanged. Target-stage tests now cover
+the provider writer contract remains unchanged. Its read-only composition
+default now rejects direct write calls before HTTP, and invalid opt-in flags
+fail at construction; an explicitly enabled, bound adapter retains the
+existing normalized write outcomes. Target-stage tests now cover
 retryable, rate-limited, permanent, and ambiguous creation failures plus a
 conflicting reconciliation result without subsequent entry writes. This foundation work
 does not resolve the product or provider-write blockers above.

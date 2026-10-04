@@ -10,6 +10,7 @@ from symphonia.providers import (
     ProviderObjectRef,
     SpotifyAdapter,
 )
+from symphonia.providers.writing import ProviderWriteError, WriteOutcome
 
 
 class FakeClient:
@@ -86,6 +87,33 @@ class SpotifyAdapterTests(unittest.TestCase):
         self.assertTrue(capabilities.supports(Capability.CREATE_PLAYLIST))
         self.assertTrue(capabilities.supports(Capability.ADD_PLAYLIST_ENTRIES))
         self.assertEqual(capabilities.evidence_version, "spotify-playlist-read-write-v1")
+
+    def test_disabled_writer_cannot_send_post_even_when_called_directly(self) -> None:
+        client = FakeClient({"capabilities": JsonResponse(201, {"id": "target-1"}, {})})
+        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1")
+
+        with self.assertRaises(ProviderWriteError) as context:
+            adapter.ensure_target_playlist(
+                provider="spotify", name="Imported", visibility="private", idempotency_key="target-1",
+            )
+        self.assertEqual(context.exception.outcome, WriteOutcome.PERMANENT_FAILURE)
+        result = adapter.add_entry(
+            target_playlist_id="target-1", provider_track_id="track-1", idempotency_key="entry-1",
+        )
+        self.assertEqual(result.outcome, WriteOutcome.PERMANENT_FAILURE)
+        self.assertEqual(client.calls, [])
+
+    def test_invalid_write_configuration_and_unbound_writer_fail_closed(self) -> None:
+        client = FakeClient({"capabilities": JsonResponse(201, {"id": "target-1"}, {})})
+        with self.assertRaises(ValueError):
+            SpotifyAdapter(client, lambda connection_id: "access-token", allow_writes="yes")  # type: ignore[arg-type]
+        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", allow_writes=True)
+        with self.assertRaises(ProviderWriteError) as context:
+            adapter.ensure_target_playlist(
+                provider="spotify", name="Imported", visibility="private", idempotency_key="target-1",
+            )
+        self.assertEqual(context.exception.outcome, WriteOutcome.PERMANENT_FAILURE)
+        self.assertEqual(client.calls, [])
 
     def test_rate_limit_is_normalized_with_retry_hint(self) -> None:
         client = FakeClient({"0": JsonResponse(429, {"error": {"status": 429}}, {"Retry-After": "10"})})
@@ -207,7 +235,7 @@ class SpotifyAdapterTests(unittest.TestCase):
 
     def test_confirmed_writes_use_spotify_json_contract(self) -> None:
         client = FakeClient({"capabilities": JsonResponse(201, {"id": "target-1"}, {})})
-        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1")
+        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1", allow_writes=True)
         target = adapter.ensure_target_playlist(
             provider="spotify",
             name="Imported",
@@ -229,7 +257,7 @@ class SpotifyAdapterTests(unittest.TestCase):
 
     def test_write_rate_limit_and_unknown_outcome_are_not_blind_retries(self) -> None:
         client = FakeClient({"capabilities": JsonResponse(429, {"error": {"status": 429}}, {"Retry-After": "10"})})
-        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1")
+        adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1", allow_writes=True)
         rate_limited = adapter.add_entry(target_playlist_id="target-1", provider_track_id="track-1", idempotency_key="entry-1")
         self.assertEqual(rate_limited.outcome.value, "rate_limited")
         self.assertIsNotNone(rate_limited.retry_at)
@@ -238,7 +266,7 @@ class SpotifyAdapterTests(unittest.TestCase):
             def request(self, method: str, path: str, *, token: str, query: dict[str, str], body=None) -> JsonResponse:
                 raise ProviderApiError(ProviderErrorCategory.TIMEOUT, "request timed out")
 
-        unknown = SpotifyAdapter(UnknownClient({}), lambda connection_id: "access-token", connection_id="connection-1")
+        unknown = SpotifyAdapter(UnknownClient({}), lambda connection_id: "access-token", connection_id="connection-1", allow_writes=True)
         result = unknown.add_entry(target_playlist_id="target-1", provider_track_id="track-1", idempotency_key="entry-1")
         self.assertEqual(result.outcome.value, "unknown_outcome")
         self.assertFalse(unknown.reconcile_entry(target_playlist_id="target-1", provider_track_id="track-1", idempotency_key="entry-1"))
