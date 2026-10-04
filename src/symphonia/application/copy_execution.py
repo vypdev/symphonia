@@ -11,6 +11,7 @@ from symphonia.domain.plans import CopyPlanRecord
 from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.providers.writing import PlaylistWriter, ProviderWriteError, WriteOutcome
 
+from .copy_checkpoint import parse_copy_progress
 from .ports import CopyPlanPort, OperationPort
 
 
@@ -104,87 +105,18 @@ class CopyExecutionService:
         checkpoint = dict(operation.checkpoint)
         if operation.cancel_requested:
             return self._finish(operation, worker_id, checkpoint, now, "cancelled")
+        progress = parse_copy_progress(stored.plan, checkpoint)
+        if isinstance(progress, str):
+            return self._wait_for_user(
+                operation, worker_id, checkpoint | {"failure_code": progress}, now
+            )
         writable_entries = stored.plan.writable_entries
-        writable_ids = {entry.occurrence_id for entry in writable_entries}
-        raw_confirmed = checkpoint.get("confirmed_occurrences", [])
-        raw_issues = checkpoint.get("issues", [])
-        target_id = checkpoint.get("target_playlist_id")
-        unknown_step = checkpoint.get("unknown_step")
-        if (
-            not isinstance(raw_confirmed, list)
-            or not all(isinstance(item, str) for item in raw_confirmed)
-            or not isinstance(raw_issues, list)
-            or (target_id is not None and (not isinstance(target_id, str) or not target_id.strip()))
-        ):
-            return self._wait_for_user(
-                operation,
-                worker_id,
-                checkpoint | {"failure_code": "invalid_copy_checkpoint"},
-                now,
-            )
-        confirmed = list(raw_confirmed)
-        issues = list(raw_issues)
-        confirmed_ids = set(confirmed)
-        issue_steps = [issue.get("step") if isinstance(issue, dict) else None for issue in issues]
-        if any(not isinstance(step, str) or step not in writable_ids for step in issue_steps):
-            return self._wait_for_user(
-                operation,
-                worker_id,
-                checkpoint | {"failure_code": "invalid_copy_checkpoint"},
-                now,
-            )
-        failed_steps = set(issue_steps)
-        if (
-            len(confirmed_ids) != len(confirmed)
-            or not confirmed_ids <= writable_ids
-            or confirmed != [entry.occurrence_id for entry in writable_entries if entry.occurrence_id in confirmed_ids]
-            or len(failed_steps) != len(issue_steps)
-            or confirmed_ids & failed_steps
-        ):
-            return self._wait_for_user(
-                operation,
-                worker_id,
-                checkpoint | {"failure_code": "invalid_copy_checkpoint"},
-                now,
-            )
-
-        if target_id is None and confirmed:
-            return self._wait_for_user(
-                operation,
-                worker_id,
-                checkpoint | {"failure_code": "invalid_target_checkpoint"},
-                now,
-            )
-
-        if unknown_step is not None:
-            first_unconfirmed = next(
-                (
-                    entry.occurrence_id
-                    for entry in writable_entries
-                    if entry.occurrence_id not in confirmed_ids and entry.occurrence_id not in failed_steps
-                ),
-                None,
-            )
-            if unknown_step != "target" and (
-                not isinstance(unknown_step, str)
-                or unknown_step not in writable_ids
-                or unknown_step in confirmed_ids
-                or unknown_step != first_unconfirmed
-                or target_id is None
-            ):
-                return self._wait_for_user(
-                    operation,
-                    worker_id,
-                    checkpoint | {"failure_code": "invalid_unknown_step_checkpoint"},
-                    now,
-                )
-            if unknown_step == "target" and target_id is None and confirmed:
-                return self._wait_for_user(
-                    operation,
-                    worker_id,
-                    checkpoint | {"failure_code": "invalid_unknown_step_checkpoint"},
-                    now,
-                )
+        confirmed = progress.confirmed
+        confirmed_ids = progress.confirmed_ids
+        issues = progress.issues
+        failed_steps = progress.failed_steps
+        target_id = progress.target_id
+        unknown_step = progress.unknown_step
 
         target_key = f"{digest}:target"
         if unknown_step == "target":

@@ -81,9 +81,12 @@ copy-plan, and durable-operation repository protocols in
 `symphonia.application.ports`; SQLite repositories satisfy them at composition
 time. Published playlist, accepted plan, and durable-operation facts belong to
 the domain. A package-wide AST test rejects infrastructure imports from every
-application module. The operation repository remains a large persistence
-adapter; its transaction/state-machine decomposition needs separate recovery
-characterization and is not solved merely by the port boundary.
+application module. The operation repository delegates bounded diagnostic reads
+to `sqlite_operation_diagnostics.py` and shared timestamp/audit encoding to
+`sqlite_operation_codec.py`. Its transaction and state transitions remain in
+`sqlite_operations.py`; further decomposition needs recovery characterization.
+Copy execution validates persisted progress in the pure
+`application/copy_checkpoint.py` module before any provider write.
 
 This follows the useful boundary pattern in `homeassistant-gateway` without carrying that project's language, frameworks, or non-music policies into Symphonia automatically.
 

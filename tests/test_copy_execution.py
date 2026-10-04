@@ -400,6 +400,21 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(operation.checkpoint["failure_code"], "invalid_copy_checkpoint")
         self.assertEqual(self.writer.added, [])
 
+    def test_gap_in_confirmed_progress_waits_without_provider_writes(self) -> None:
+        digest = self.accepted_digest(include_second_ready=True)
+        self.resume_with_checkpoint(
+            digest,
+            {"target_playlist_id": "target-playlist-1", "confirmed_occurrences": ["occ-2"]},
+        )
+
+        operation = self.executor.execute(
+            digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1)
+        )
+
+        self.assertEqual(operation.state, "waiting_user")
+        self.assertEqual(operation.checkpoint["failure_code"], "invalid_copy_checkpoint")
+        self.assertEqual(self.writer.added, [])
+
     def test_malformed_target_identifier_waits_without_provider_writes(self) -> None:
         digest = self.accepted_digest()
         self.resume_with_checkpoint(digest, {"target_playlist_id": ["not", "an", "id"]})

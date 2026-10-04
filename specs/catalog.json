@@ -505,13 +505,15 @@
           "src/symphonia/application/ports.py",
           "src/symphonia/application/copy_workflow.py",
           "src/symphonia/infrastructure/sqlite_plans.py",
-          "src/symphonia/application/copy_execution.py"
+          "src/symphonia/application/copy_execution.py",
+          "src/symphonia/application/copy_checkpoint.py"
         ],
         "tests": [
           "tests/test_architecture_boundaries.py",
           "tests/test_copy_workflow.py",
           "tests/test_sqlite_plans.py",
-          "tests/test_copy_execution.py"
+          "tests/test_copy_execution.py",
+          "tests/test_copy_checkpoint.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
@@ -572,6 +574,8 @@
         "code": [
           "src/symphonia/infrastructure/sqlite_common.py",
           "src/symphonia/infrastructure/sqlite_operations.py",
+          "src/symphonia/infrastructure/sqlite_operation_diagnostics.py",
+          "src/symphonia/infrastructure/sqlite_operation_codec.py",
           "tools/storage_recovery_spike.py",
           "src/symphonia/infrastructure/sqlite_authorization.py",
           "src/symphonia/infrastructure/sqlite_connections.py",
@@ -584,6 +588,7 @@
           "src/symphonia/application/operation_runner.py",
           "src/symphonia/application/operation_worker.py",
           "src/symphonia/application/copy_execution.py",
+          "src/symphonia/application/copy_checkpoint.py",
           "src/symphonia/application/library_import_execution.py"
         ],
         "tests": [
@@ -596,6 +601,7 @@
           "tests/test_operation_runner.py",
           "tests/test_operation_worker.py",
           "tests/test_copy_execution.py",
+          "tests/test_copy_checkpoint.py",
           "tests/test_library_import_execution.py",
           "tests/test_architecture_boundaries.py"
         ],

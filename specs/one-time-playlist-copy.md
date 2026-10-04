@@ -32,13 +32,14 @@ Evidence sources:
 - [Dated official write/reconciliation research](../docs/providers/provider-research.md#2026-09-27-write-outcome-and-reconciliation-update)
 - [Owner-approved implementation baseline](../docs/development/implementation-baseline.md) (foundation evidence only; it does not close this SDD's blockers or authorize the full capability)
 
-The foundation's copy workflow and executor now depend on an
-[application-owned plan repository port](../src/symphonia/application/ports.py)
-and a [domain-owned accepted-plan record](../src/symphonia/domain/plans.py).
+The foundation's copy workflow and executor now depend on
+[application-owned plan and operation repository ports](../src/symphonia/application/ports.py)
+and [domain-owned accepted-plan and operation records](../src/symphonia/domain/plans.py).
 The [SQLite adapter](../src/symphonia/infrastructure/sqlite_plans.py) retains
-its previous exported record name as a compatibility alias. The operation
-repository and provider writer contract remain unchanged. This dependency
-refactor does not resolve the product or provider-write blockers above.
+its previous exported record name as a compatibility alias. The copy executor
+validates persisted progress in a pure application module before provider
+writes. The provider writer contract remains unchanged. This foundation work
+does not resolve the product or provider-write blockers above.
 
 ## 3. Actors and authorization
 
@@ -207,7 +208,7 @@ Status shall never rely only on color. Keyboard navigation, visible focus, seman
 | Rate limit | Enter `waiting_rate_limit` with next eligible time | Automatic bounded resume; cancellation remains available |
 | Some items fail permanently | Checkpoint each failure as a terminal item issue; never resend that occurrence when a later step waits or resumes; finish as `partial` with per-item reasons | Create a new remediation plan for failed entries |
 | Process or host restarts | Resume from durable checkpoint and lease rules | No manual action unless state becomes uncertain |
-| Stored copy progress contradicts the accepted plan | Stop before another provider mutation and retain the checkpoint in `waiting_user` | Investigate or restore compatible evidence; do not infer success or retry from malformed progress |
+| Stored copy progress contradicts the accepted plan, including a gap before a confirmed or permanently failed occurrence | Stop before another provider mutation and retain the checkpoint in `waiting_user`; processed occurrences must form a prefix of the accepted writable order | Investigate or restore compatible evidence; do not infer success or retry from malformed progress |
 | User cancels | Stop scheduling further writes; preserve confirmed results | Review partial result; cancellation is not rollback |
 
 ## 11. Security and privacy
@@ -268,7 +269,7 @@ Implementation shall update:
 5. Acceptance binds to a specific plan digest, source projection version, capabilities snapshot, and target intent.
 6. A stale or modified plan cannot execute.
 7. Execution survives restart without duplicating the target playlist or confirmed entries.
-8. Target and entry steps are durably marked in-flight before each provider mutation; after restart/resume, reconciliation runs before any repeated create/add call, and inconclusive evidence or reconciliation errors remain `waiting_user` without another mutation.
+8. Target and entry steps are durably marked in-flight before each provider mutation; after restart/resume, reconciliation runs before any repeated create/add call, and inconclusive evidence or reconciliation errors remain `waiting_user` without another mutation. A resumed checkpoint with a gap before confirmed or permanently failed work also enters `waiting_user` before any provider write.
 9. Cancellation stops future work and accurately reports already confirmed writes.
 10. Partial success has per-item explanations and a safe remediation path.
 11. Logs and diagnostics contain no provider secrets.

@@ -1,16 +1,10 @@
-"""SQLite persistence for durable operation state.
-
-This adapter is deliberately small: it proves the transaction/lease contract
-needed by the durable-operations SDD before provider handlers and a scheduler
-are introduced. The database is the authority; worker memory is not.
-"""
+"""Transactional SQLite state machine for durable operations and worker leases."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from functools import wraps
-import heapq
 import json
 import re
 import sqlite3
@@ -21,19 +15,8 @@ import uuid
 from symphonia.domain.operations import LeaseConflict, OperationEvent, OperationRecord
 
 from .sqlite_common import connect, initialize_with_cleanup
-
-
-def _utc(value: datetime) -> str:
-    if value.tzinfo is None or value.utcoffset() is None:
-        raise ValueError("timestamps must be timezone-aware")
-    return value.astimezone(timezone.utc).isoformat(timespec="microseconds")
-
-
-def _parse_utc(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value)
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise ValueError("timestamps must be timezone-aware")
-    return parsed.astimezone(timezone.utc)
+from .sqlite_operation_codec import _checkpoint_summary, _parse_utc, _require_text, _utc
+from .sqlite_operation_diagnostics import OperationDiagnostics
 
 
 class OperationNotFound(LookupError):
@@ -48,9 +31,6 @@ _SECRET_PAYLOAD_KEY = re.compile(
     r"(?i)(?:^|[_-])(access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|api[_-]?key|password|cookie|authorization|secret[_-]?token)(?:$|[_-])|^(?:secret|token)$"
 )
 _CAMEL_CASE_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
-_MAX_DIAGNOSTIC_OPERATIONS = 100
-_MAX_DIAGNOSTIC_EVENTS = 100
-_MAX_DIAGNOSTIC_KEYS = 100
 _OPERATION_STATES = frozenset(
     {
         "queued",
@@ -66,21 +46,9 @@ _OPERATION_STATES = frozenset(
 )
 
 
-def _require_text(value: Any, *, label: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{label} must be a non-empty string")
-    return value
-
-
 def _require_positive_int(value: Any, *, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValueError(f"{label} must be a positive integer")
-    return value
-
-
-def _require_bounded_int(value: Any, *, label: str, maximum: int) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= maximum:
-        raise ValueError(f"{label} must be an integer between 1 and {maximum}")
     return value
 
 
@@ -195,6 +163,7 @@ class OperationRepository:
         self._connection_lock = RLock()
         self._connection = connect(path)
         initialize_with_cleanup(self._connection, self._migrate)
+        self._diagnostic_views = OperationDiagnostics(self._connection, self.get, self._event)
 
     @_serialize_repository_access
     def close(self) -> None:
@@ -377,145 +346,15 @@ class OperationRepository:
 
     @_serialize_repository_access
     def diagnostic(self, operation_id: str, *, event_limit: int = 100) -> dict[str, Any]:
-        """Return a bounded, redacted support view of one operation."""
-
-        _require_text(operation_id, label="operation_id")
-        _require_bounded_int(
-            event_limit, label="event_limit", maximum=_MAX_DIAGNOSTIC_EVENTS
-        )
-        record = self.get(operation_id)
-        event_rows = self._connection.execute(
-            """
-            SELECT sequence, operation_id, event_type, state, worker_id, payload_json, created_at
-              FROM operation_events
-             WHERE operation_id = ?
-             ORDER BY sequence DESC
-             LIMIT ?
-            """,
-            (operation_id, event_limit + 1),
-        ).fetchall()
-        events_truncated = len(event_rows) > event_limit
-        selected_events = tuple(
-            self._event(row) for row in reversed(event_rows[:event_limit])
-        )
-        payload_keys, payload_keys_truncated = self._bounded_keys(record.payload)
-        return {
-            "operation_id": record.operation_id,
-            "operation_type": record.operation_type,
-            "state": record.state,
-            "worker_id": record.worker_id,
-            "next_run_at": None if record.next_run_at is None else _utc(record.next_run_at),
-            "cancel_requested": record.cancel_requested,
-            "created_at": _utc(record.created_at),
-            "updated_at": _utc(record.updated_at),
-            "payload_keys": payload_keys,
-            "payload_keys_truncated": payload_keys_truncated,
-            "checkpoint": self._checkpoint_summary(record.checkpoint),
-            "events_truncated": events_truncated,
-            "events": [
-                {
-                    "sequence": event.sequence,
-                    "event_type": event.event_type,
-                    "state": event.state,
-                    "worker_id": event.worker_id,
-                    "payload": event.payload,
-                    "created_at": _utc(event.created_at),
-                }
-                for event in selected_events
-            ],
-        }
+        return self._diagnostic_views.diagnostic(operation_id, event_limit=event_limit)
 
     @_serialize_repository_access
     def diagnostics(self, *, limit: int = 50, event_limit: int = 20) -> tuple[dict[str, Any], ...]:
-        """Return a bounded list of redacted operation support views."""
-
-        _require_bounded_int(limit, label="limit", maximum=_MAX_DIAGNOSTIC_OPERATIONS)
-        _require_bounded_int(
-            event_limit, label="event_limit", maximum=_MAX_DIAGNOSTIC_EVENTS
-        )
-        rows = self._connection.execute(
-            """
-            SELECT operation_id
-              FROM operations
-             ORDER BY updated_at DESC, operation_id DESC
-             LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
-        return tuple(self.diagnostic(row["operation_id"], event_limit=event_limit) for row in rows)
+        return self._diagnostic_views.diagnostics(limit=limit, event_limit=event_limit)
 
     @_serialize_repository_access
     def queue_summary(self, *, now: datetime) -> dict[str, Any]:
-        """Return aggregate queue health without exposing operation payloads."""
-
-        now_text = _utc(now)
-        state_rows = self._connection.execute(
-            "SELECT state, COUNT(*) AS count FROM operations GROUP BY state"
-        ).fetchall()
-        states = {str(row["state"]): int(row["count"]) for row in state_rows}
-        eligible = self._connection.execute(
-            """
-            SELECT COUNT(*) AS count,
-                   MIN(
-                       CASE WHEN state = 'running'
-                            THEN COALESCE(lease_expires_at, created_at)
-                            ELSE COALESCE(next_run_at, created_at)
-                       END
-                   ) AS oldest_eligible_at
-              FROM operations
-             WHERE cancel_requested = 0
-               AND (
-                    state = 'queued'
-                    OR (state IN ('retry_scheduled', 'waiting_rate_limit')
-                        AND next_run_at IS NOT NULL AND next_run_at <= ?)
-                    OR (state = 'running'
-                        AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
-               )
-            """,
-            (now_text, now_text),
-        ).fetchone()
-        expired_leases = self._connection.execute(
-            """
-            SELECT COUNT(*) AS count
-              FROM operations
-             WHERE state = 'running'
-               AND (lease_expires_at IS NULL OR lease_expires_at <= ?)
-            """,
-            (now_text,),
-        ).fetchone()
-        cancellation_recovery = self._connection.execute(
-            """
-            SELECT COUNT(*) AS count
-             FROM operations
-             WHERE cancel_requested = 1
-               AND (
-                    state = 'waiting_user'
-                    OR (state = 'running'
-                        AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
-               )
-            """,
-            (now_text,),
-        ).fetchone()
-        cancellation_rows = self._connection.execute(
-            "SELECT COUNT(*) AS count FROM operations WHERE cancel_requested = 1"
-        ).fetchone()
-        oldest_eligible_at = eligible["oldest_eligible_at"]
-        oldest_eligible_age_seconds = None
-        if oldest_eligible_at is not None:
-            oldest_eligible_age_seconds = max(
-                0,
-                int((now - _parse_utc(oldest_eligible_at)).total_seconds()),
-            )
-        return {
-            "total": sum(states.values()),
-            "states": states,
-            "eligible_count": int(eligible["count"]),
-            "expired_lease_count": int(expired_leases["count"]),
-            "oldest_eligible_at": oldest_eligible_at,
-            "oldest_eligible_age_seconds": oldest_eligible_age_seconds,
-            "cancellation_requested_count": int(cancellation_rows["count"]),
-            "cancellation_recovery_required_count": int(cancellation_recovery["count"]),
-        }
+        return self._diagnostic_views.queue_summary(now=now)
 
     @_serialize_repository_access
     def claim(
@@ -657,7 +496,7 @@ class OperationRepository:
                     worker_id=None,
                     payload={
                         "recovery_reason": "cancelled_worker_lease_expired",
-                        **self._checkpoint_summary(checkpoint),
+                        **_checkpoint_summary(checkpoint),
                     },
                     created_at=now_text,
                 )
@@ -843,7 +682,7 @@ class OperationRepository:
                 event_type="checkpointed",
                 state=effective_state,
                 worker_id=worker_id if effective_state == "running" else None,
-                payload=self._checkpoint_summary(checkpoint),
+                payload=_checkpoint_summary(checkpoint),
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
@@ -1109,7 +948,7 @@ class OperationRepository:
                     event_type="cancelled",
                     state="cancelled",
                     worker_id=None,
-                    payload=self._checkpoint_summary(checkpoint),
+                    payload=_checkpoint_summary(checkpoint),
                     created_at=now_text,
                 )
                 self._connection.execute("COMMIT")
@@ -1128,7 +967,7 @@ class OperationRepository:
                 event_type="retry_scheduled",
                 state="retry_scheduled",
                 worker_id=None,
-                payload={"next_run_at": next_run_text, **self._checkpoint_summary(checkpoint)},
+                payload={"next_run_at": next_run_text, **_checkpoint_summary(checkpoint)},
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
@@ -1191,7 +1030,7 @@ class OperationRepository:
                     event_type="cancelled",
                     state="cancelled",
                     worker_id=None,
-                    payload=self._checkpoint_summary(checkpoint),
+                    payload=_checkpoint_summary(checkpoint),
                     created_at=now_text,
                 )
                 self._connection.execute("COMMIT")
@@ -1210,7 +1049,7 @@ class OperationRepository:
                 event_type="rate_limit_wait",
                 state="waiting_rate_limit",
                 worker_id=None,
-                payload={"next_run_at": next_run_text, **self._checkpoint_summary(checkpoint)},
+                payload={"next_run_at": next_run_text, **_checkpoint_summary(checkpoint)},
                 created_at=now_text,
             )
             self._connection.execute("COMMIT")
@@ -1265,7 +1104,7 @@ class OperationRepository:
             worker_id=None,
             payload={
                 "recovery_reason": recovery_reason,
-                **self._checkpoint_summary(checkpoint),
+                **_checkpoint_summary(checkpoint),
             },
             created_at=now_text,
         )
@@ -1299,43 +1138,6 @@ class OperationRepository:
                 created_at,
             ),
         )
-
-    @staticmethod
-    def _checkpoint_summary(checkpoint: dict[str, Any]) -> dict[str, Any]:
-        """Keep audit data useful while excluding checkpoint values by default."""
-
-        checkpoint_keys, checkpoint_keys_truncated = OperationRepository._bounded_keys(checkpoint)
-        summary: dict[str, Any] = {
-            "checkpoint_keys": checkpoint_keys,
-            "checkpoint_keys_truncated": checkpoint_keys_truncated,
-            "unknown_step_present": checkpoint.get("unknown_step") is not None,
-        }
-        reconciliation_required = checkpoint.get("reconciliation_required")
-        if isinstance(reconciliation_required, bool):
-            summary["reconciliation_required"] = reconciliation_required
-        recovery_reason = checkpoint.get("recovery_reason")
-        if isinstance(recovery_reason, str) and recovery_reason in {
-            "cancelled_worker_lease_expired",
-            "cancelled_during_unknown_outcome",
-            "cancelled_while_unknown_outcome",
-        }:
-            summary["recovery_reason"] = recovery_reason
-        cancellation_resolution = checkpoint.get("cancellation_resolution")
-        if isinstance(cancellation_resolution, str) and cancellation_resolution in {
-            "no_effect",
-            "effect_confirmed",
-        }:
-            summary["cancellation_resolution"] = cancellation_resolution
-        for key in ("confirmed_occurrences", "issues"):
-            value = checkpoint.get(key)
-            if isinstance(value, (list, tuple, set)):
-                summary[f"{key}_count"] = len(value)
-        return summary
-
-    @staticmethod
-    def _bounded_keys(value: dict[str, Any]) -> tuple[list[str], bool]:
-        keys = heapq.nsmallest(_MAX_DIAGNOSTIC_KEYS + 1, (str(key) for key in value))
-        return keys[:_MAX_DIAGNOSTIC_KEYS], len(keys) > _MAX_DIAGNOSTIC_KEYS
 
     @staticmethod
     def _record(row: sqlite3.Row) -> OperationRecord:
