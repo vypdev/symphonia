@@ -38,7 +38,9 @@ and [domain-owned accepted-plan and operation records](../src/symphonia/domain/p
 The [SQLite adapter](../src/symphonia/infrastructure/sqlite_plans.py) retains
 its previous exported record name as a compatibility alias. The copy executor
 validates persisted progress in a pure application module before provider
-writes. The provider writer contract remains unchanged. This foundation work
+writes. Target creation/reconciliation and ordered entry writes use separate
+application stages with one explicit run context for durable checkpoints and
+leases. The provider writer contract remains unchanged. This foundation work
 does not resolve the product or provider-write blockers above.
 
 ## 3. Actors and authorization

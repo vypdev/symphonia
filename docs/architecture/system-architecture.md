@@ -86,7 +86,9 @@ to `sqlite_operation_diagnostics.py` and shared timestamp/audit encoding to
 `sqlite_operation_codec.py`. Its transaction and state transitions remain in
 `sqlite_operations.py`; further decomposition needs recovery characterization.
 Copy execution validates persisted progress in the pure
-`application/copy_checkpoint.py` module before any provider write.
+`application/copy_checkpoint.py` module before any provider write. A small
+application service starts the run; separate target and entry stages share an
+explicit `CopyRun` context for lease, checkpoint, and retry decisions.
 
 This follows the useful boundary pattern in `homeassistant-gateway` without carrying that project's language, frameworks, or non-music policies into Symphonia automatically.
 

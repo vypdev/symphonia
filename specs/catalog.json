@@ -506,7 +506,10 @@
           "src/symphonia/application/copy_workflow.py",
           "src/symphonia/infrastructure/sqlite_plans.py",
           "src/symphonia/application/copy_execution.py",
-          "src/symphonia/application/copy_checkpoint.py"
+          "src/symphonia/application/copy_checkpoint.py",
+          "src/symphonia/application/copy_execution_state.py",
+          "src/symphonia/application/copy_execution_target.py",
+          "src/symphonia/application/copy_execution_entries.py"
         ],
         "tests": [
           "tests/test_architecture_boundaries.py",
@@ -589,6 +592,9 @@
           "src/symphonia/application/operation_worker.py",
           "src/symphonia/application/copy_execution.py",
           "src/symphonia/application/copy_checkpoint.py",
+          "src/symphonia/application/copy_execution_state.py",
+          "src/symphonia/application/copy_execution_target.py",
+          "src/symphonia/application/copy_execution_entries.py",
           "src/symphonia/application/library_import_execution.py"
         ],
         "tests": [
