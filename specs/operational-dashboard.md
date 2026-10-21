@@ -19,6 +19,10 @@ The App opens to a live dashboard instead of a 404. It shows service health, que
 HA admin opens App -> Supervisor authenticates -> App validates proxy peer -> bounded diagnostic projection -> live cards and activity
 ```
 
+The existing production UI and isolated spike declare Node 24.x for their
+TypeScript tests and builds, matching the CI toolchain. This declaration does
+not change UI behavior, the numeric test budget or capability readiness.
+
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
@@ -38,7 +42,7 @@ The Python runtime serves `/health`, `/ready`, and `/version`; `RuntimeResources
 
 The skip-to-content destination now has an explicit visible focus ring using the existing accent token. A local isolated browser check activated the skip control with Tab/Enter and verified focus on main and a visible inset outline in the blocked state; this does not revalidate the full Home Assistant/browser matrix. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
 
-The production boundary guard now recursively checks all owned TypeScript sources, with browser I/O restricted to root main.ts. Four isolated production fixtures prove nested pure modules pass and nested browser I/O, outer imports and source symlinks are rejected; the parallel spike has four independent fixtures. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
+The production boundary guard now recursively checks all owned TypeScript sources, with browser I/O restricted to root main.ts. Eleven native Node fixtures per UI package cover nested pure modules, browser I/O, source symlinks, static/dynamic/template/computed/type imports and re-exports. The guard parses TypeScript using the already-pinned Rolldown parser; computed module sources fail closed. These fixtures now run in each Node CI lane rather than the Python suite. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
 
 ## 3. Actors, surfaces, and terminology
 
@@ -185,7 +189,7 @@ No schema or data change. The UI is built from a pinned lockfile and shipped as 
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **28 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 4 source-boundary checks, 9 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The thirteen production UI tests exercise empty, operation-only, retained-entry-only and unavailable-entry-only snapshots, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser. See the [PR #1 regression review](../docs/development/pr1-review-2026-10-21.md) for the three additional nonempty-state cases.
+Minimum **35 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 11 source-boundary checks, 9 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The thirteen client/model tests exercise empty, operation-only, retained-entry-only and unavailable-entry-only snapshots, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser. See the [PR #1 regression review](../docs/development/pr1-review-2026-10-21.md) for the three additional nonempty-state cases.
 
 ## 15. Documentation and discoverability
 
@@ -231,7 +235,7 @@ Minimum **28 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 4 s
 
 - [x] Root panel, relative assets and live API work through authenticated Ingress.
 - [x] Direct access is denied and DTO redaction tests pass.
-- [x] At least 28 distinct cases across projection, routing, source boundaries, client state, build, browser, and lab checks; the repository verification suite passes.
+- [x] At least 35 distinct cases across projection, routing, source boundaries, client state, build, browser, and lab checks; the repository verification suite passes.
 - [x] User/operator/contributor documentation and catalog evidence are current.
 - [x] Browser visual and keyboard review is recorded in the lab guide.
 - [x] GitHub Verify passed for the functional commit `557ceab` ([run](https://github.com/vypdev/symphonia/actions/runs/37224401052)); later refactors require their own green run.

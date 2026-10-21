@@ -7,6 +7,7 @@ import unittest
 
 from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
 from symphonia.domain import CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
+from symphonia.domain.operations import LeaseConflict
 from symphonia.infrastructure import CopyPlanRepository, OperationRepository
 from symphonia.providers import Capability, ProviderCapabilities, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
@@ -55,10 +56,11 @@ class FailingTargetWriter(FakeWriter):
 
 class CopyExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.clock_now = NOW
         self.plans = CopyPlanRepository()
         self.operations = OperationRepository()
         self.workflow = CopyWorkflowService(CopyPlanningService(), self.plans, self.operations)
-        self.executor = CopyExecutionService(self.plans, self.operations, retry_delay_seconds=30)
+        self.executor = CopyExecutionService(self.plans, self.operations, retry_delay_seconds=30, clock=lambda: self.clock_now)
         self.writer = FakeWriter()
 
     def tearDown(self) -> None:
@@ -122,8 +124,62 @@ class CopyExecutionTests(unittest.TestCase):
         )
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
 
+    def test_provider_latency_cannot_commit_or_schedule_with_an_expired_lease(self) -> None:
+        for stage, outcome in (("target", "confirmed"), ("target", "retry"),
+                               ("entry", "confirmed"), ("entry", "rate_limit")):
+            with self.subTest(stage=stage, outcome=outcome):
+                source, policy = self.snapshot()
+                stored = self.workflow.create_plan(
+                    source, target_provider="youtube", target_playlist_name=f"{stage}-{outcome}",
+                    target_visibility="private", policy=policy, now=NOW,
+                    target_capabilities=WRITE_CAPABILITIES,
+                )
+                digest = self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
+                owner = self
+
+                class SlowWriter(FakeWriter):
+                    def ensure_target_playlist(self, **kwargs):
+                        if stage == "target":
+                            owner.clock_now = NOW + timedelta(seconds=31)
+                            if outcome == "retry":
+                                raise ProviderWriteError(WriteOutcome.RETRYABLE, "retry")
+                        return self.target
+
+                    def add_entry(self, **kwargs):
+                        self.added.append((kwargs["idempotency_key"], kwargs["provider_track_id"]))
+                        owner.clock_now = NOW + timedelta(seconds=31)
+                        return WriteResult(WriteOutcome.RATE_LIMITED if outcome == "rate_limit" else WriteOutcome.CONFIRMED_SUCCESS)
+
+                self.clock_now = NOW
+                operation = self.workflow.enqueue_accepted_plan(digest, now=NOW)
+                writer = SlowWriter()
+                with self.assertRaises(LeaseConflict):
+                    self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+                retained = self.operations.get(operation.operation_id)
+                self.assertEqual(retained.state, "running")
+                self.assertEqual(retained.checkpoint["unknown_step"], "target" if stage == "target" else "occ-1")
+                self.assertIsNone(retained.next_run_at)
+                self.assertEqual(len(writer.added), 0 if stage == "target" else 1)
+
+    def test_expiry_before_first_mutation_cannot_be_revived_by_the_old_timestamp(self) -> None:
+        digest = self.accepted_digest()
+        self.clock_now = NOW + timedelta(seconds=31)
+        writer = FailingTargetWriter(AssertionError("provider must not be called"))
+        with self.assertRaises(LeaseConflict):
+            self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(writer.added, [])
+
+    def test_backwards_clock_stops_before_provider_io(self) -> None:
+        digest = self.accepted_digest()
+        self.clock_now = NOW - timedelta(seconds=1)
+        writer = FailingTargetWriter(AssertionError("provider must not be called"))
+        with self.assertRaises(LeaseConflict):
+            self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(writer.added, [])
+
     def test_success_checkpoints_entries_in_source_order(self) -> None:
         digest = self.accepted_digest()
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "succeeded")
         self.assertEqual([track for _, track in self.writer.added], ["target-1"])
@@ -151,6 +207,7 @@ class CopyExecutionTests(unittest.TestCase):
         )
         digest = self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
 
         self.assertEqual(operation.state, "succeeded")
@@ -179,6 +236,7 @@ class CopyExecutionTests(unittest.TestCase):
         with self.assertRaises(PlanAcceptanceError):
             self.workflow.enqueue_accepted_plan(digest, now=NOW)
         with self.assertRaises(PlanAcceptanceError):
+            self.clock_now = NOW
             self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         operation = self.operations.create(
             operation_type="copy_playlist", idempotency_key="legacy-best-effort",
@@ -186,6 +244,7 @@ class CopyExecutionTests(unittest.TestCase):
         )
         claimed = self.operations.claim(operation.operation_id, worker_id="worker-a", now=NOW)
         with self.assertRaises(PlanAcceptanceError):
+            self.clock_now = NOW
             self.executor.execute_claimed(claimed, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(self.writer.added, [])
 
@@ -203,6 +262,7 @@ class CopyExecutionTests(unittest.TestCase):
         with self.assertRaises(PlanAcceptanceError):
             self.workflow.enqueue_accepted_plan(digest, now=NOW)
         with self.assertRaises(PlanAcceptanceError):
+            self.clock_now = NOW
             self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
         operation = self.operations.create(
             operation_type="copy_playlist", idempotency_key="legacy-no-evidence",
@@ -210,16 +270,19 @@ class CopyExecutionTests(unittest.TestCase):
         )
         claimed = self.operations.claim(operation.operation_id, worker_id="worker-a", now=NOW)
         with self.assertRaises(PlanAcceptanceError):
+            self.clock_now = NOW
             self.executor.execute_claimed(claimed, writer=writer, worker_id="worker-a", now=NOW)
         self.assertEqual(writer.added, [])
 
     def test_target_rate_limits_have_a_bounded_retry_budget(self) -> None:
         digest = self.accepted_digest()
-        executor = CopyExecutionService(self.plans, self.operations, max_retry_attempts=1)
+        executor = CopyExecutionService(self.plans, self.operations, max_retry_attempts=1, clock=lambda: self.clock_now)
         writer = FailingTargetWriter(ProviderWriteError(WriteOutcome.RATE_LIMITED, "quota", retry_at=NOW + timedelta(minutes=3)))
+        self.clock_now = NOW
         first = executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
         self.assertEqual(first.state, "waiting_rate_limit")
         self.assertEqual(first.next_run_at, NOW + timedelta(minutes=3))
+        self.clock_now = first.next_run_at
         failed = executor.execute(digest, writer=writer, worker_id="worker-b", now=first.next_run_at)
         self.assertEqual(failed.state, "failed")
         self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
@@ -228,11 +291,13 @@ class CopyExecutionTests(unittest.TestCase):
 
     def test_entry_rate_limits_share_the_transient_retry_budget(self) -> None:
         digest = self.accepted_digest()
-        executor = CopyExecutionService(self.plans, self.operations, max_retry_attempts=1)
+        executor = CopyExecutionService(self.plans, self.operations, max_retry_attempts=1, clock=lambda: self.clock_now)
         key = f"{digest}:entry:occ-1"
         self.writer.results[key] = WriteResult(WriteOutcome.RETRYABLE)
+        self.clock_now = NOW
         first = executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.writer.results[key] = WriteResult(WriteOutcome.RATE_LIMITED)
+        self.clock_now = first.next_run_at
         failed = executor.execute(digest, writer=self.writer, worker_id="worker-b", now=first.next_run_at)
         self.assertEqual(failed.state, "failed")
         self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
@@ -245,6 +310,7 @@ class CopyExecutionTests(unittest.TestCase):
         self.writer.results[step_key] = WriteResult(WriteOutcome.UNKNOWN_OUTCOME, detail="timeout after request")
         self.writer.reconcile_results[step_key] = True
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "succeeded")
         self.assertEqual(self.writer.reconciled, [step_key])
@@ -269,6 +335,7 @@ class CopyExecutionTests(unittest.TestCase):
 
         digest = self.accepted_digest()
         writer = UnknownTargetWriter()
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "waiting_user")
         self.assertEqual(operation.checkpoint["unknown_step"], "target")
@@ -277,6 +344,7 @@ class CopyExecutionTests(unittest.TestCase):
         self.assertEqual(writer.added, [])
 
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
+        self.clock_now = NOW + timedelta(seconds=1)
         pending = self.executor.execute(digest, writer=writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
         self.assertEqual(pending.state, "waiting_user")
         self.assertEqual(writer.create_attempts, 1)
@@ -284,6 +352,7 @@ class CopyExecutionTests(unittest.TestCase):
 
         writer.reconciled_target = writer.target
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=2))
+        self.clock_now = NOW + timedelta(seconds=2)
         reconciled = self.executor.execute(digest, writer=writer, worker_id="worker-c", now=NOW + timedelta(seconds=2))
         self.assertEqual(reconciled.state, "succeeded")
         self.assertEqual(reconciled.checkpoint["target_playlist_id"], writer.target.provider_playlist_id)
@@ -294,6 +363,7 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         writer = FailingTargetWriter(ProviderWriteError(WriteOutcome.RETRYABLE, "temporary"))
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
 
         self.assertEqual(operation.state, "retry_scheduled")
@@ -308,6 +378,7 @@ class CopyExecutionTests(unittest.TestCase):
             ProviderWriteError(WriteOutcome.RATE_LIMITED, "quota", retry_at=deadline)
         )
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
 
         self.assertEqual(operation.state, "waiting_rate_limit")
@@ -321,6 +392,7 @@ class CopyExecutionTests(unittest.TestCase):
             ProviderWriteError(WriteOutcome.PERMANENT_FAILURE, "target denied", provider_code="403")
         )
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
 
         self.assertEqual(operation.state, "failed")
@@ -332,6 +404,7 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         writer = FailingTargetWriter(RuntimeError("response lost"))
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
 
         self.assertEqual(operation.state, "waiting_user")
@@ -344,6 +417,7 @@ class CopyExecutionTests(unittest.TestCase):
             digest, {"unknown_step": "target", "target_playlist_id": "different-target"},
         )
 
+        self.clock_now = NOW + timedelta(seconds=1)
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW + timedelta(seconds=1))
 
         self.assertEqual(operation.state, "waiting_user")
@@ -354,12 +428,14 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         step_key = f"{digest}:entry:occ-1"
         self.writer.results[step_key] = WriteResult(WriteOutcome.UNKNOWN_OUTCOME, detail="provider timeout")
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "waiting_user")
         self.assertEqual(operation.checkpoint["unknown_step"], "occ-1")
 
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
         self.writer.results[step_key] = WriteResult(WriteOutcome.CONFIRMED_SUCCESS)
+        self.clock_now = NOW + timedelta(seconds=1)
         resumed = self.executor.execute(
             digest,
             writer=self.writer,
@@ -373,6 +449,7 @@ class CopyExecutionTests(unittest.TestCase):
 
         self.writer.reconcile_results[step_key] = True
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=2))
+        self.clock_now = NOW + timedelta(seconds=2)
         reconciled = self.executor.execute(
             digest,
             writer=self.writer,
@@ -415,7 +492,8 @@ class CopyExecutionTests(unittest.TestCase):
                 queued = workflow.enqueue_accepted_plan(digest, now=NOW)
                 writer = CrashAfterEntry()
                 with self.assertRaises(SimulatedProcessLoss):
-                    CopyExecutionService(plans, operations).execute(
+                    self.clock_now = NOW
+                    CopyExecutionService(plans, operations, clock=lambda: self.clock_now).execute(
                         digest, writer=writer, worker_id="worker-before-crash", now=NOW
                     )
                 interrupted = operations.get(queued.operation_id)
@@ -430,7 +508,8 @@ class CopyExecutionTests(unittest.TestCase):
             try:
                 step_key = f"{digest}:entry:occ-1"
                 writer.reconcile_results[step_key] = True
-                resumed = CopyExecutionService(plans, operations).execute(
+                self.clock_now = NOW + timedelta(seconds=31)
+                resumed = CopyExecutionService(plans, operations, clock=lambda: self.clock_now).execute(
                     digest,
                     writer=writer,
                     worker_id="worker-after-restart",
@@ -467,9 +546,11 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         writer = CrashAfterTarget()
         with self.assertRaises(SimulatedProcessLoss):
+            self.clock_now = NOW
             self.executor.execute(digest, writer=writer, worker_id="worker-before-crash", now=NOW)
 
-        recovered = CopyExecutionService(self.plans, self.operations).execute(
+        self.clock_now = NOW + timedelta(seconds=31)
+        recovered = CopyExecutionService(self.plans, self.operations, clock=lambda: self.clock_now).execute(
             digest,
             writer=writer,
             worker_id="worker-after-restart",
@@ -487,18 +568,21 @@ class CopyExecutionTests(unittest.TestCase):
         self.writer.results[first_key] = WriteResult(WriteOutcome.PERMANENT_FAILURE, provider_code="unavailable")
         self.writer.results[second_key] = WriteResult(WriteOutcome.UNKNOWN_OUTCOME, detail="provider timeout")
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "waiting_user")
         self.assertEqual(operation.checkpoint["unknown_step"], "occ-2")
         self.assertEqual(self.writer.added, [(first_key, "target-1"), (second_key, "target-2")])
 
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
+        self.clock_now = NOW + timedelta(seconds=1)
         pending = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
         self.assertEqual(pending.state, "waiting_user")
         self.assertEqual(self.writer.added, [(first_key, "target-1"), (second_key, "target-2")])
 
         self.writer.reconcile_results[second_key] = True
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=2))
+        self.clock_now = NOW + timedelta(seconds=2)
         reconciled = self.executor.execute(digest, writer=self.writer, worker_id="worker-c", now=NOW + timedelta(seconds=2))
         self.assertEqual(reconciled.state, "partial")
         self.assertEqual(reconciled.checkpoint["confirmed_occurrences"], ["occ-2"])
@@ -512,6 +596,7 @@ class CopyExecutionTests(unittest.TestCase):
             {"target_playlist_id": "target-playlist-1", "confirmed_occurrences": ["occ-1", "occ-1"]},
         )
 
+        self.clock_now = NOW + timedelta(seconds=1)
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
 
         self.assertEqual(operation.state, "waiting_user")
@@ -529,6 +614,7 @@ class CopyExecutionTests(unittest.TestCase):
             },
         )
 
+        self.clock_now = NOW + timedelta(seconds=1)
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
 
         self.assertEqual(operation.state, "waiting_user")
@@ -542,6 +628,7 @@ class CopyExecutionTests(unittest.TestCase):
             {"target_playlist_id": "target-playlist-1", "confirmed_occurrences": ["occ-2", "occ-1"]},
         )
 
+        self.clock_now = NOW + timedelta(seconds=1)
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
 
         self.assertEqual(operation.state, "waiting_user")
@@ -555,6 +642,7 @@ class CopyExecutionTests(unittest.TestCase):
             {"target_playlist_id": "target-playlist-1", "confirmed_occurrences": ["occ-2"]},
         )
 
+        self.clock_now = NOW + timedelta(seconds=1)
         operation = self.executor.execute(
             digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1)
         )
@@ -567,6 +655,7 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         self.resume_with_checkpoint(digest, {"target_playlist_id": ["not", "an", "id"]})
 
+        self.clock_now = NOW + timedelta(seconds=1)
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=NOW + timedelta(seconds=1))
 
         self.assertEqual(operation.state, "waiting_user")
@@ -577,6 +666,7 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         step_key = f"{digest}:entry:occ-1"
         self.writer.results[step_key] = WriteResult(WriteOutcome.RETRYABLE, provider_code="429")
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "retry_scheduled")
         self.assertEqual(operation.next_run_at, NOW + timedelta(seconds=30))
@@ -585,8 +675,9 @@ class CopyExecutionTests(unittest.TestCase):
         digest = self.accepted_digest()
         step_key = f"{digest}:entry:occ-1"
         self.writer.results[step_key] = WriteResult(WriteOutcome.RETRYABLE, provider_code="temporary")
-        executor = CopyExecutionService(self.plans, self.operations, retry_delay_seconds=30, max_retry_attempts=0)
+        executor = CopyExecutionService(self.plans, self.operations, retry_delay_seconds=30, max_retry_attempts=0, clock=lambda: self.clock_now)
 
+        self.clock_now = NOW
         operation = executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
 
         self.assertEqual(operation.state, "failed")
@@ -620,6 +711,7 @@ class CopyExecutionTests(unittest.TestCase):
             retry_at=NOW + timedelta(minutes=2),
         )
 
+        self.clock_now = NOW
         operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(operation.state, "waiting_rate_limit")
         self.assertEqual(operation.next_run_at, NOW + timedelta(minutes=2))

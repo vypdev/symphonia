@@ -39,6 +39,12 @@ A missing lease expiry is treated as expired by renewal, checkpoints and wait sc
 
 Terminal cancellation clears a scheduled retry deadline. Explicit resolution of an uncertain cancelled outcome clears both the reconciliation-required marker and obsolete unknown step while retaining outcome/audit evidence. Import read guards check current ownership, cancellation and fresh expiry between pages; a cleanup failure cannot replace the cancellation/lease error. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
 
+The copy foundation reads an injected UTC clock before lease renewal and
+every checkpoint, wait or terminal mutation, including after provider latency.
+An expired lease or backwards clock stops the worker without another write;
+persisted in-flight evidence remains available to recovery. Offline tests use
+explicit clocks, not the original claim timestamp.
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

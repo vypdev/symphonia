@@ -22,6 +22,7 @@ from .contracts import (
     ProviderPlaylistPage,
 )
 from .errors import ProviderApiError, ProviderErrorCategory
+from .http_json import decode_json_object
 
 
 class AppleJsonClient(Protocol):
@@ -74,7 +75,7 @@ class UrllibAppleMusicClient:
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 body = response.read()
-                payload = json.loads(body.decode("utf-8")) if body else {}
+                payload = decode_json_object(body, provider_label="Apple Music")
                 return AppleJsonResponse(response.status, payload, dict(response.headers.items()))
         except HTTPError as error:
             body = error.read()
@@ -228,7 +229,7 @@ class AppleMusicAdapter(ProviderAdapter):
             except ValueError:
                 retry_at = None
         provider_code = str(response.status)
-        if isinstance(response.payload.get("errors"), list) and response.payload["errors"]:
+        if isinstance(response.payload, Mapping) and isinstance(response.payload.get("errors"), list) and response.payload["errors"]:
             first = response.payload["errors"][0]
             if isinstance(first, Mapping) and first.get("code"):
                 provider_code = str(first["code"])

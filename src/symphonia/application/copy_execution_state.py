@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -27,8 +28,16 @@ class CopyRun:
     max_retry_attempts: int
     checkpoint: dict[str, Any]
     progress: CopyProgress
+    clock: Callable[[], datetime]
+
+    def refresh_time(self) -> None:
+        observed = self.clock()
+        if observed < self.now:
+            raise LeaseConflict("copy worker clock moved backwards")
+        self.now = observed
 
     def checkpoint_running(self) -> OperationRecord:
+        self.refresh_time()
         self.operation = self.operations.checkpoint(
             self.operation.operation_id,
             worker_id=self.worker_id,
@@ -47,6 +56,7 @@ class CopyRun:
         return self.checkpoint_running()
 
     def renew_or_stop(self) -> OperationRecord | None:
+        self.refresh_time()
         try:
             self.operations.renew_lease(
                 self.operation.operation_id,
@@ -67,6 +77,7 @@ class CopyRun:
         return None
 
     def finish(self, state: str, *, checkpoint: dict[str, Any] | None = None) -> OperationRecord:
+        self.refresh_time()
         return self.operations.checkpoint(
             self.operation.operation_id,
             worker_id=self.worker_id,
@@ -79,6 +90,7 @@ class CopyRun:
         return self.finish("waiting_user")
 
     def schedule_retry(self) -> OperationRecord:
+        self.refresh_time()
         if self._retry_budget_exhausted():
             return self.finish("failed")
         return self.operations.schedule_retry(
@@ -98,6 +110,7 @@ class CopyRun:
         return False
 
     def schedule_rate_limit(self, retry_at: datetime | None) -> OperationRecord:
+        self.refresh_time()
         if self._retry_budget_exhausted():
             return self.finish("failed")
         next_run_at = (

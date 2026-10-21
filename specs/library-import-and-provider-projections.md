@@ -97,6 +97,12 @@ publication still prevents duplicate or conflicting publication. No provider
 writes or existing database rows are changed by this key-format update.
 Spotify read and append paths encode the opaque playlist ID as one URL segment.
 
+Shared Spotify/YouTube and Apple HTTP transports normalize malformed UTF-8,
+JSON and non-object successful bodies into sanitized provider-contract errors.
+Apple non-object error bodies retain their HTTP category/code. Empty successful
+bodies still represent an empty object. Offline transport fixtures cover these
+external boundaries without live accounts or provider calls.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

@@ -136,6 +136,14 @@ Classifications apply per occurrence, not just per recording, so duplicates rema
 
 The operation uses the durable job vocabulary defined by `durable-operations-and-recovery`: `queued`, `running`, `waiting_rate_limit`, `waiting_user`, `retry_scheduled`, `succeeded`, `partial`, `failed`, or `cancelled`.
 
+The SQLite foundation verifies the digest before inserting a plan, so invalid
+in-memory content cannot leave a row that poisons readiness. Copy execution
+refreshes lease time around provider steps and preserves in-flight recovery
+evidence when a call outlives its lease. Spotify’s read probe advertises only
+read capability: a local writer opt-in is not proof of effective authorization.
+The isolated writer remains for explicit offline/provider-proof composition;
+production write discovery and the full copy capability remain blocked.
+
 ### Accepted initial acceptance policy
 
 Foundation acceptance also requires both `create_playlist` and

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from collections.abc import Callable
+from datetime import datetime, timezone
 
 from symphonia.domain.models import PlanAcceptanceError
 from symphonia.domain.plans import CopyPlanRecord
-from symphonia.domain.operations import OperationRecord
+from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.providers.writing import PlaylistWriter
 
 from .copy_checkpoint import parse_copy_progress
@@ -17,12 +18,17 @@ from .copy_execution_target import ensure_target
 from .ports import CopyPlanPort, OperationPort
 
 
+def _current_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 @dataclass(frozen=True, slots=True)
 class CopyExecutionService:
     plans: CopyPlanPort
     operations: OperationPort
     retry_delay_seconds: int = 60
     max_retry_attempts: int = 5
+    clock: Callable[[], datetime] = _current_utc
 
     def __post_init__(self) -> None:
         if self.retry_delay_seconds <= 0:
@@ -106,6 +112,10 @@ class CopyExecutionService:
         lease_seconds: int,
     ) -> OperationRecord:
         checkpoint = dict(operation.checkpoint)
+        observed = self.clock()
+        if observed < now:
+            raise LeaseConflict("copy worker clock moved backwards")
+        now = observed
         if operation.cancel_requested:
             return self.operations.checkpoint(
                 operation.operation_id,
@@ -133,6 +143,7 @@ class CopyExecutionService:
             lease_seconds=lease_seconds,
             retry_delay_seconds=self.retry_delay_seconds,
             max_retry_attempts=self.max_retry_attempts,
+            clock=self.clock,
             checkpoint=checkpoint,
             progress=progress,
         )

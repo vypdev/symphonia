@@ -182,13 +182,13 @@ For reconciliation, adapters and application ports MUST distinguish an effect-co
 ## Adapter requirements
 
 - **SYM-PROV-001:** Domain and application code MUST depend on provider ports and normalized types, never provider SDK types.
-- **SYM-PROV-002:** An adapter MUST report effective connection capabilities before a workflow plan is accepted.
+- **SYM-PROV-002:** An adapter MUST report effective connection capabilities before a workflow plan is accepted. A successful read and local write opt-in do not establish write authorization. Spotify foundation discovery stays read-only until effective write evidence is wired.
 - **SYM-PROV-003:** Capability detection MUST combine static documented support, granted scopes, account/object restrictions, configuration, and safe runtime probes where needed.
 - **SYM-PROV-004:** An adapter MUST implement pagination without silently truncating results and MUST expose completeness/freshness.
 - **SYM-PROV-005:** An adapter MUST preserve provider IDs as opaque strings and MUST NOT infer identity from URL shape. IDs inserted into request paths are encoded as one path segment; reserved URL syntax must not change the endpoint or query. Spotify's read/append foundation has offline fixtures for slash, query, fragment, percent and Unicode IDs.
 - **SYM-PROV-006:** Unknown media types and unavailable items MUST survive import as explicit normalized states.
 - **SYM-PROV-007:** Adapter calls MUST have bounded connect/read/overall timeouts and cooperative cancellation.
-- **SYM-PROV-008:** Provider errors MUST map to the normalized error taxonomy while preserving a sanitized provider code and correlation ID.
+- **SYM-PROV-008:** Provider errors MUST map to the normalized error taxonomy while preserving a sanitized provider code and correlation ID. Malformed successful UTF-8/JSON/object bodies are provider-contract failures; non-object error bodies retain HTTP classification without echoing response content.
 - **SYM-PROV-009:** Adapter logging MUST NOT include tokens, authorization codes, client secrets, raw authentication headers, or unrestricted payloads.
 - **SYM-PROV-010:** Provider write methods MUST declare idempotency/reconciliation semantics; “retryable” is not a sufficient declaration.
 - **SYM-PROV-011:** Rate-limit handling MUST honor provider reset or `Retry-After` signals and share budget state across concurrent work for the connection/provider.

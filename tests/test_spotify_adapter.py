@@ -98,7 +98,7 @@ class SpotifyAdapterTests(unittest.TestCase):
         self.assertTrue(capabilities.supports(Capability.READ_PLAYLISTS))
         self.assertEqual(client.calls[0][1], "/me/playlists")
 
-    def test_write_capabilities_require_explicit_verified_composition_flag(self) -> None:
+    def test_local_write_opt_in_does_not_prove_effective_write_capabilities(self) -> None:
         client = FakeClient({"0": JsonResponse(200, {"items": []}, {})})
         adapter = SpotifyAdapter(
             client,
@@ -109,9 +109,9 @@ class SpotifyAdapterTests(unittest.TestCase):
 
         capabilities = adapter.capabilities("connection-1")
 
-        self.assertTrue(capabilities.supports(Capability.CREATE_PLAYLIST))
-        self.assertTrue(capabilities.supports(Capability.ADD_PLAYLIST_ENTRIES))
-        self.assertEqual(capabilities.evidence_version, "spotify-playlist-read-write-v1")
+        self.assertFalse(capabilities.supports(Capability.CREATE_PLAYLIST))
+        self.assertFalse(capabilities.supports(Capability.ADD_PLAYLIST_ENTRIES))
+        self.assertEqual(capabilities.evidence_version, "spotify-playlist-read-v1")
 
     def test_disabled_writer_cannot_send_post_even_when_called_directly(self) -> None:
         client = FakeClient({"capabilities": JsonResponse(201, {"id": "target-1"}, {})})

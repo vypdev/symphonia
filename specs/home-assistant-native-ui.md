@@ -22,6 +22,10 @@ Public HA/App context + browser fallback -> semantic compatibility tokens
 -> Ingress/standalone shell -> behavioral, accessibility, responsive and visual evidence
 ```
 
+The existing production UI and isolated spike declare Node 24.x for their
+TypeScript tests and builds, matching the CI toolchain. This declaration does
+not change UI behavior, the numeric test budget or capability readiness.
+
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
@@ -160,6 +164,11 @@ Feature states such as partial, waiting-user, failed, and completed remain owned
 | Safe-area handling | enum | supported host insets with zero fallback | host-managed or App-managed accepted profile | deployment/profile |
 | Visual reference manifest | versioned document | latest reviewed supported HA release/reference date | immutable historical entries plus current pointer | repository/release evidence |
 | Motion | media/user preference | system reduced-motion contract | normal or reduced | browser preference |
+
+Safe-area padding has one owner: host-managed profiles add no duplicate App
+padding; App-managed profiles apply validated insets once, with zero fallback.
+Profiles cannot be combined. This reconciles the horizontal UI specification;
+full host-context wiring remains within this capability’s existing review gates.
 
 Users cannot configure away visible focus, semantic errors, required confirmations, accessible names, secret redaction, or the Home Assistant-native component hierarchy. Feature code cannot override tokens with unreviewed hard-coded palettes.
 

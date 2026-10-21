@@ -138,13 +138,18 @@ Text equivalent: startup validates configuration, migrates, and recovers before 
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
 | --- | --- | --- | --- | --- |
-| `starting` | process and configuration initialization | Symphonia is not ready | `migrating`, `recovering`, `blocked`, `stopping` | automatic or operator fixes configuration |
-| `migrating` | schema change is required | Existing data is being upgraded; migration-controlled local writes only, no provider writes | `recovering`, `blocked`, `stopping` | restore/upgrade guidance on failure |
+| `starting` | process and configuration initialization | Symphonia is not ready | `migrating`, `recovering`, `ready`, `blocked`, `stopping` | automatic or operator fixes configuration |
+| `migrating` | schema change is required | Existing data is being upgraded; migration-controlled local writes only, no provider writes | `recovering`, `ready`, `blocked`, `stopping` | restore/upgrade guidance on failure |
 | `recovering` | leases/jobs/backup state need reconciliation | Durable state is being made safe | `ready`, `blocked`, `stopping` | automatic bounded recovery |
 | `ready` | local invariants pass | UI and eligible operations are available | `degraded`, `stopping` | none |
 | `degraded` | external/optional dependency unavailable | Local service works with named limitations | `ready`, `blocked`, `stopping` | retry or user action by cause |
 | `blocked` | local safety/configuration/migration failure | No provider writes; action required | `stopping` or restart after correction | administrator |
 | `stopping` | Supervisor stop/update | No new work; safe checkpointing | process exit | automatic bounded shutdown |
+
+An already-compatible, healthy installation can move directly from `starting`
+to `ready` when no migration or recovery work is needed and every local readiness
+invariant passes. A successful migration can also move to `ready` when no recovery
+work remains. Neither shortcut bypasses validation or permits writes while blocked.
 
 ## 7. Configuration contract
 

@@ -32,6 +32,24 @@ class JsonClient(Protocol):
     ) -> JsonResponse: ...
 
 
+def decode_json_object(body: bytes, *, provider_label: str) -> Mapping[str, Any]:
+    """Normalize untrusted successful bodies without exposing their contents."""
+
+    try:
+        payload = json.loads(body.decode("utf-8")) if body else {}
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise ProviderApiError(
+            ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+            f"{provider_label} response was not valid UTF-8 JSON",
+        ) from None
+    if not isinstance(payload, Mapping):
+        raise ProviderApiError(
+            ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+            f"{provider_label} response was not a JSON object",
+        )
+    return payload
+
+
 class UrllibJsonClient:
     """Bounded JSON transport; the default endpoint preserves Spotify callers."""
 
@@ -71,7 +89,7 @@ class UrllibJsonClient:
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 body = response.read()
-                payload = json.loads(body.decode("utf-8")) if body else {}
+                payload = decode_json_object(body, provider_label=self.provider_label)
                 return JsonResponse(response.status, payload, dict(response.headers.items()))
         except HTTPError as error:
             body = error.read()

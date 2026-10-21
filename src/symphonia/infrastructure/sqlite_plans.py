@@ -74,6 +74,8 @@ class CopyPlanRepository:
         )
 
     def save(self, plan: CopyPlan, *, now: datetime) -> StoredCopyPlan:
+        if plan.recompute_digest() != plan.digest:
+            raise ValueError("plan content does not match its digest")
         payload = _serialize(plan)
         plan_json = dump_json(payload)
         self._connection.execute(

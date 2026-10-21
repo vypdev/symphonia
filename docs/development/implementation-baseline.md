@@ -56,7 +56,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Lease durations passed to the durable operation repository must be positive integers; booleans and lossy/coercible values are rejected consistently with the worker boundary.
 - Shared SQLite JSON helpers apply deterministic serialization and reject non-standard numbers in capability and plan payloads as well as operation state.
 - Adapter-backed playlist import orchestration that preserves normalized pagination/completeness guarantees.
-- Copy plans bind target connection and effective write-capability evidence into their digest.
+- Copy plans bind target connection and effective write-capability evidence into their digest. Invalid digests are rejected before inserting any row; capability-free historical previews stay readable but cannot be accepted or executed.
 - Deterministic provider adapter registry with manifest discovery and duplicate-provider protection.
 - Concrete provider manifests expose upstream dependencies and a dated research review marker.
 - Offline-testable official Spotify playlist reader/writer with bounded pagination, explicit write-capability gating, and normalized error categories. The `allow_writes` composition flag must be a boolean and is enforced at each write call, so a read-only adapter cannot send a POST even if a caller bypasses capability discovery. Playlist traversal, item/offset mapping, and HTTP/write-error classification are separate provider modules behind the same adapter interface.
@@ -196,3 +196,10 @@ exits unsuccessfully below the minimum.
 - Application services orchestrate domain values and do not call provider SDKs directly.
 - SQLite is an adapter behind the operation repository; it is not exposed as a domain concept.
 - The initial Python choice is a reversible implementation baseline, not a final product-stack decision. Any external dependency or deployment commitment requires an SDD/ADR update and tests.
+
+The PR #1 final follow-up also refreshes copy lease time before persisted
+mutations and after provider calls, preserving in-flight evidence on expiry.
+Spotify’s read probe publishes read capability only; a local opt-in does not
+prove upstream write authorization. Both UI boundary guards parse all import
+forms with the pinned Rolldown parser and run eleven native fixtures per
+package in Node 24 CI. No Copilot or branch-protection configuration changes.

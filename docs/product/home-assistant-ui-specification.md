@@ -49,7 +49,7 @@ The Ingress panel must feel like one focused Home Assistant application, not a m
 - Primary navigation uses a Home Assistant-like flat tab, list/settings, or compact mobile navigation pattern chosen by information depth; it does not mix several competing navigation systems.
 - The current section is expressed textually and programmatically, not only by color or icon.
 - Deep links and browser history work under a non-root Ingress base path.
-- The shell reserves safe-area insets supplied by supported Home Assistant App iframe contracts and has a no-inset fallback.
+- Safe-area padding has one owner. In a validated host-managed profile the shell adds no inset already applied by Home Assistant; in an App-managed profile it applies validated supplied insets exactly once. Absent or malformed context uses zero insets. The two profiles cannot be combined.
 - A narrow viewport changes layout and action placement without removing essential status, evidence, or recovery actions.
 
 ## Required component families

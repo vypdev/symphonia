@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import unittest
+from dataclasses import replace
 
 from symphonia.domain import CopyPlanRecord, CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.domain.models import build_copy_plan
@@ -41,6 +42,16 @@ class CopyPlanRepositoryTests(unittest.TestCase):
         self.assertIs(StoredCopyPlan, CopyPlanRecord)
         self.assertEqual(stored.plan, plan)
         self.assertIsNone(stored.accepted_at)
+
+    def test_invalid_digests_never_poison_persisted_readiness(self) -> None:
+        valid = self.ready_plan()
+        for invalid in (replace(valid, digest="wrong"), replace(valid, target_playlist_name="Changed")):
+            with self.subTest(plan=invalid), self.assertRaises(ValueError):
+                self.repository.save(invalid, now=self.now)
+            self.assertEqual(self.repository._connection.execute("SELECT COUNT(*) FROM copy_plans").fetchone()[0], 0)
+            self.assertTrue(self.repository.healthcheck())
+        self.repository.save(valid, now=self.now)
+        self.assertEqual(self.repository.get(valid.digest).plan, valid)
 
     def test_plan_json_rejects_non_standard_numbers_on_read(self) -> None:
         plan = self.ready_plan()

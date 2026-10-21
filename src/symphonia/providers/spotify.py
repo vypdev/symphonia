@@ -69,13 +69,14 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         self._max_pages = max_pages
 
     def capabilities(self, connection_id: str) -> ProviderCapabilities:
-        response = self._request(connection_id, "GET", "/me/playlists", {"limit": "1", "offset": "0"})
+        self._request(connection_id, "GET", "/me/playlists", {"limit": "1", "offset": "0"})
         enabled = {Capability.READ_PLAYLISTS}
-        if self._allow_writes and self._connection_id == connection_id:
-            enabled.update({Capability.CREATE_PLAYLIST, Capability.ADD_PLAYLIST_ENTRIES})
+        # A read probe plus a local opt-in does not establish granted write
+        # authorization. Keep effective discovery read-only until that proof
+        # is wired; the isolated writer remains an explicitly enabled fixture.
         return ProviderCapabilities(
             enabled=frozenset(enabled),
-            evidence_version="spotify-playlist-read-write-v1" if len(enabled) > 1 else "spotify-playlist-read-v1",
+            evidence_version="spotify-playlist-read-v1",
             observed_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         )
 

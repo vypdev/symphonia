@@ -78,6 +78,13 @@ The PR #1 correction fences probe publication with the complete observation capt
 
 The isolated callback spike selects the IPv6 socket family for its already accepted ::1 loopback host. A real IPv6 HTTP callback regression proves the same route/state/secret boundary as IPv4. This remains research evidence and adds no reachable production authorization endpoint. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
 
+The Spotify foundation’s safe read probe reports read capability only. A
+local writer opt-in does not certify granted write authorization; effective
+write discovery remains unavailable until the required proof is wired.
+Malformed successful responses become sanitized provider-contract failures,
+and Apple non-object error bodies retain their HTTP category/code. These
+transport guards do not complete the Draft authorization capability.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
