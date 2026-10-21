@@ -27,8 +27,12 @@ def parse_copy_progress(plan: CopyPlan, checkpoint: dict[str, Any]) -> CopyProgr
     raw_issues = checkpoint.get("issues", [])
     target_id = checkpoint.get("target_playlist_id")
     unknown_step = checkpoint.get("unknown_step")
+    retry_attempts = checkpoint.get("retry_attempts", 0)
     if (
-        not isinstance(raw_confirmed, list)
+        isinstance(retry_attempts, bool)
+        or not isinstance(retry_attempts, int)
+        or retry_attempts < 0
+        or not isinstance(raw_confirmed, list)
         or not all(isinstance(item, str) for item in raw_confirmed)
         or not isinstance(raw_issues, list)
         or (target_id is not None and (not isinstance(target_id, str) or not target_id.strip()))

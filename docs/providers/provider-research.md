@@ -218,3 +218,11 @@ Likewise, an Ingress iframe does not automatically provide a stable importable H
 ## Current conclusion
 
 Spotify is a plausible personal/self-hosted MVP adapter, with meaningful 2026 access and reauthorization constraints. The official YouTube Data API is a plausible **YouTube playlist** adapter, but it is not sufficient evidence for the proposed full **YouTube Music** provider. That distinction is the highest-risk assumption in the current product scope. Apple Music has a promising official library/create/append surface for future scope, but its Home Assistant-compatible authorization flow and missing documented playlist removal/reorder remain open.
+
+## 2026-10-21 — Official response and Retry-After evidence
+
+- Google’s [playlistItems.list reference](https://developers.google.com/youtube/data/reference/rest/v3/playlistItems/list) defines the playlist-item-list resource, its item list, pagination tokens and result total. It does not establish that an arbitrary missing array means empty. The foundation therefore rejects missing items by default; its conservative compatibility inference permits an omitted array only for the correct resource kind, the initial page, explicit integer total zero, and no previous/next token. This is an adapter policy inferred from those fields, not a new live-provider guarantee. Representative completeness remains RG-001.
+- [RFC 9110, section 10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) defines Retry-After as delay-seconds or HTTP-date. The three foundation adapters share parsing for both forms, including UTC normalization and invalid/overflow fallback. Offline fixtures verify transport-to-error deadlines; this does not prove upstream rate-limit behavior.
+
+These are official documentation/standard observations checked on 2026-10-21.
+No community implementation evidence is used for these corrections.

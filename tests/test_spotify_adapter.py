@@ -25,6 +25,12 @@ class FakeClient:
 
 
 class SpotifyAdapterTests(unittest.TestCase):
+    def test_missing_items_is_not_a_complete_empty_playlist(self) -> None:
+        client = FakeClient({"0": JsonResponse(200, {}, {})})
+        with self.assertRaises(ProviderApiError) as raised:
+            SpotifyAdapter(client, lambda _: "fixture").read_playlist_pages("account", self.playlist())
+        self.assertEqual(raised.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
     def playlist(self) -> ProviderObjectRef:
         return ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
 

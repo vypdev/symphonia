@@ -63,6 +63,33 @@ class FakeClient:
 
 
 class YouTubeDataAdapterTests(unittest.TestCase):
+    def test_missing_items_requires_explicit_first_page_empty_evidence(self) -> None:
+        from types import SimpleNamespace
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist", "account")
+        kind = {"kind": "youtube#playlistItemListResponse"}
+        invalid = ({}, {"pageInfo": {"totalResults": 0}},
+                   {**kind, "pageInfo": {"totalResults": 1}}, {**kind, "pageInfo": {"totalResults": False}},
+                   {**kind, "pageInfo": {"totalResults": "0"}},
+                   {**kind, "pageInfo": {"totalResults": 0}, "nextPageToken": "next"},
+                   {**kind, "pageInfo": {"totalResults": 0}, "prevPageToken": "previous"},
+                   {**kind, "pageInfo": {"totalResults": 0}, "items": None},
+                   {**kind, "pageInfo": {"totalResults": 0}, "items": {}})
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                client = SimpleNamespace(request=lambda *args, **kwargs: JsonResponse(200, payload, {}))
+                with self.assertRaises(ProviderApiError) as raised:
+                    YouTubeDataAdapter(client, lambda _: "fixture").read_playlist_pages("account", playlist)
+                self.assertEqual(raised.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+        client = SimpleNamespace(request=lambda *args, **kwargs: JsonResponse(200, {
+            "kind": "youtube#playlistItemListResponse", "pageInfo": {"totalResults": 0},
+        }, {}))
+        adapter = YouTubeDataAdapter(client, lambda _: "fixture")
+        page = adapter.read_playlist_pages("account", playlist)[0]
+        self.assertTrue(page.complete)
+        self.assertEqual(page.entries, ())
+        with self.assertRaises(ProviderApiError):
+            adapter.read_playlist_pages("account", playlist, cursor="resumed")
+
     def test_default_transport_reports_youtube_network_failures_without_secrets(self) -> None:
         adapter = YouTubeDataAdapter(None, lambda connection_id: "token=private-value")
         for failure, category in (

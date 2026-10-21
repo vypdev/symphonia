@@ -57,6 +57,10 @@ Target and entry rate-limit outcomes share the existing bounded retry counter wi
 
 Read-side source snapshots now retain per-track namespace and media kind. This additive metadata does not alter accepted plan payloads or digest calculation. Existing compatibility, strict-acceptance and immutable-plan tests continue to pass. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
 
+Persisted retry_attempts must be a non-negative integer (not a boolean or
+coercible string). A malformed counter is quarantined before provider work as
+invalid_copy_checkpoint; the current finite retry ceiling remains unchanged.
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

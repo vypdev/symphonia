@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from .errors import ProviderApiError, ProviderErrorCategory
+from .retry_after import parse_retry_after
 from .http_json import JsonResponse
 from .writing import WriteOutcome
 
@@ -24,10 +25,7 @@ def classify_response(response: JsonResponse) -> ProviderApiError:
     retry_at = None
     retry_after = _header(response.headers, "retry-after")
     if category is ProviderErrorCategory.RATE_LIMITED and retry_after is not None:
-        try:
-            retry_at = datetime.now(timezone.utc) + timedelta(seconds=max(0, int(retry_after)))
-        except ValueError:
-            retry_at = None
+        retry_at = parse_retry_after(retry_after, now=datetime.now(timezone.utc))
     error_body = response.payload.get("error") if isinstance(response.payload, Mapping) else None
     provider_code = (
         str(error_body.get("status"))

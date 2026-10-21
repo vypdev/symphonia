@@ -103,6 +103,14 @@ Apple non-object error bodies retain their HTTP category/code. Empty successful
 bodies still represent an empty object. Offline transport fixtures cover these
 external boundaries without live accounts or provider calls.
 
+Missing playlist arrays do not mean a complete empty collection. Spotify and
+Apple require their array fields; YouTube allows an omitted items field only
+with the expected resource kind, initial page, explicit integer total zero and
+no pagination tokens. Otherwise a provider-contract error retains prior truth.
+All three adapters parse numeric and HTTP-date Retry-After values. The dated
+[official evidence](../docs/providers/provider-research.md) distinguishes these
+adapter policies from unproven live-provider guarantees.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

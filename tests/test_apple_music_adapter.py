@@ -49,6 +49,13 @@ class FakeAppleClient:
 
 
 class AppleMusicAdapterTests(unittest.TestCase):
+    def test_missing_data_is_not_a_complete_empty_playlist(self) -> None:
+        from types import SimpleNamespace
+        client = SimpleNamespace(request=lambda *args, **kwargs: AppleJsonResponse(200, {}, {}))
+        with self.assertRaises(ProviderApiError) as raised:
+            AppleMusicAdapter(client, lambda _: ("developer", "user")).read_playlist_pages("account", self.playlist())
+        self.assertEqual(raised.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+
     def playlist(self) -> ProviderObjectRef:
         return ProviderObjectRef("apple_music", "library-playlists", "playlist-1", "apple-connection-1")
 

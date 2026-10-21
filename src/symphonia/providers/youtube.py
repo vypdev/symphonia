@@ -7,7 +7,7 @@ manifest make the narrower video-playlist contract visible to planning/UI.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from .contracts import (
@@ -22,6 +22,7 @@ from .contracts import (
     ProviderPlaylistPage,
 )
 from .errors import ProviderApiError, ProviderErrorCategory
+from .retry_after import parse_retry_after
 from .http_json import JsonClient, UrllibJsonClient
 
 
@@ -113,7 +114,18 @@ class YouTubeDataAdapter(ProviderAdapter):
             if page_token is not None:
                 query["pageToken"] = page_token
             response = self._request(connection_id, "/playlistItems", query)
-            items = response.payload.get("items", [])
+            items = response.payload.get("items")
+            page_info = response.payload.get("pageInfo")
+            if (
+                "items" not in response.payload and page_token is None
+                and response.payload.get("kind") == "youtube#playlistItemListResponse"
+                and response.payload.get("nextPageToken") is None
+                and response.payload.get("prevPageToken") is None
+                and isinstance(page_info, Mapping)
+                and type(page_info.get("totalResults")) is int
+                and page_info["totalResults"] == 0
+            ):
+                items = []
             if not isinstance(items, list):
                 raise ProviderApiError(ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED, "YouTube playlist items were not a list")
             entries = tuple(
@@ -173,10 +185,7 @@ class YouTubeDataAdapter(ProviderAdapter):
         retry_at = None
         retry_after = next((value for key, value in response.headers.items() if key.lower() == "retry-after"), None)
         if category is ProviderErrorCategory.RATE_LIMITED and retry_after is not None:
-            try:
-                retry_at = datetime.now(timezone.utc) + timedelta(seconds=max(0, int(retry_after)))
-            except ValueError:
-                retry_at = None
+            retry_at = parse_retry_after(retry_after, now=datetime.now(timezone.utc))
         raise ProviderApiError(category, "YouTube Data API request was not accepted", provider_code=str(reason or response.status), retry_at=retry_at)
 
     @staticmethod

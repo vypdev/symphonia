@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import json
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
@@ -22,6 +22,7 @@ from .contracts import (
     ProviderPlaylistPage,
 )
 from .errors import ProviderApiError, ProviderErrorCategory
+from .retry_after import parse_retry_after
 from .http_json import decode_json_object
 
 
@@ -161,7 +162,7 @@ class AppleMusicAdapter(ProviderAdapter):
                 f"/me/library/playlists/{quote(playlist.object_id, safe='')}/tracks",
                 {"limit": str(self._page_size), "offset": str(offset)},
             )
-            items = response.payload.get("data", [])
+            items = response.payload.get("data")
             if not isinstance(items, list):
                 raise ProviderApiError(ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED, "Apple Music playlist data was not a list")
             entries = tuple(self._entry(playlist, item, offset + index) for index, item in enumerate(items))
@@ -224,10 +225,7 @@ class AppleMusicAdapter(ProviderAdapter):
         retry_at = None
         retry_after = next((value for key, value in response.headers.items() if key.lower() == "retry-after"), None)
         if category is ProviderErrorCategory.RATE_LIMITED and retry_after is not None:
-            try:
-                retry_at = datetime.now(timezone.utc) + timedelta(seconds=max(0, int(retry_after)))
-            except ValueError:
-                retry_at = None
+            retry_at = parse_retry_after(retry_after, now=datetime.now(timezone.utc))
         provider_code = str(response.status)
         if isinstance(response.payload, Mapping) and isinstance(response.payload.get("errors"), list) and response.payload["errors"]:
             first = response.payload["errors"][0]

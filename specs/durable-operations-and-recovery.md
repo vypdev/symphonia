@@ -45,6 +45,10 @@ An expired lease or backwards clock stops the worker without another write;
 persisted in-flight evidence remains available to recovery. Offline tests use
 explicit clocks, not the original claim timestamp.
 
+Copy retry counters are validated before provider access. Negative, boolean,
+string, fractional, null and container values are corrupt checkpoint evidence
+and enter waiting_user without another provider mutation.
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

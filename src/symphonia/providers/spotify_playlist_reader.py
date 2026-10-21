@@ -45,7 +45,7 @@ def iter_playlist_pages(
             f"/playlists/{quote(playlist.object_id, safe='')}/items",
             {"limit": str(page_size), "offset": str(offset)},
         )
-        items = response.payload.get("items", [])
+        items = response.payload.get("items")
         if not isinstance(items, list):
             raise ProviderApiError(
                 ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,

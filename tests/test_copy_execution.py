@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
 from symphonia.domain import CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
@@ -123,6 +124,25 @@ class CopyExecutionTests(unittest.TestCase):
             state="waiting_user",
         )
         self.operations.resume(operation.operation_id, now=NOW + timedelta(seconds=1))
+
+    def test_malformed_retry_counters_stop_before_provider_work(self) -> None:
+        for index, counter in enumerate((-100, -1, True, False, "1", 1.5, None, [], {})):
+            with self.subTest(counter=counter):
+                source, policy = self.snapshot()
+                stored = self.workflow.create_plan(
+                    source, target_provider="youtube", target_playlist_name=f"Corrupt-{index}",
+                    target_visibility="private", policy=policy, now=NOW,
+                    target_capabilities=WRITE_CAPABILITIES,
+                )
+                digest = self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
+                self.resume_with_checkpoint(digest, {"retry_attempts": counter})
+                self.clock_now = NOW + timedelta(seconds=1)
+                with patch.object(self.writer, "ensure_target_playlist") as create:
+                    result = self.executor.execute(digest, writer=self.writer, worker_id="worker-b", now=self.clock_now)
+                self.assertEqual(result.state, "waiting_user")
+                self.assertEqual(result.checkpoint["failure_code"], "invalid_copy_checkpoint")
+                create.assert_not_called()
+                self.assertEqual(self.writer.added, [])
 
     def test_provider_latency_cannot_commit_or_schedule_with_an_expired_lease(self) -> None:
         for stage, outcome in (("target", "confirmed"), ("target", "retry"),

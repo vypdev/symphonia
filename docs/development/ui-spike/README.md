@@ -23,3 +23,8 @@ The [host-context evidence](host-context-evidence.md) records what current offic
 ## Remaining gates
 
 `RG-006` still needs a real supported Home Assistant/browser matrix, verified public [host-context/Ingress contract](host-context-evidence.md), Lit/Vite build/compatibility evidence, and approved capture/update/reviewer procedure. This spike does not satisfy the SDD's 84-case production test budget or authorize production UI implementation.
+
+The static copy/activity copy follows the strict initial policy: every non-ready
+occurrence blocks confirmation and target writes; there is no omission override.
+Completed synthetic examples contain confirmed occurrences only. The fixture
+does not execute any provider operation.

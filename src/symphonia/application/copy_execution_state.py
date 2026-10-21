@@ -102,7 +102,7 @@ class CopyRun:
         )
 
     def _retry_budget_exhausted(self) -> bool:
-        retry_attempts = int(self.checkpoint.get("retry_attempts", 0)) + 1
+        retry_attempts = self.checkpoint.get("retry_attempts", 0) + 1
         self.checkpoint = {**self.checkpoint, "retry_attempts": retry_attempts}
         if retry_attempts > self.max_retry_attempts:
             self.checkpoint["failure_code"] = "retry_exhausted"

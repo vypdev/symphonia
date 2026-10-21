@@ -349,7 +349,8 @@
           "src/symphonia/application/ports.py",
           "src/symphonia/infrastructure/sqlite_authorization.py",
           "src/symphonia/infrastructure/sqlite_connections.py",
-          "tools/oauth_callback_spike.py"
+          "tools/oauth_callback_spike.py",
+          "src/symphonia/providers/retry_after.py"
         ],
         "tests": [
           "tests/test_authorization_service.py",
@@ -358,7 +359,8 @@
           "tests/test_provider_connections.py",
           "tests/test_sqlite_connections.py",
           "tests/test_oauth_callback_spike.py",
-          "tests/test_provider_http_json.py"
+          "tests/test_provider_http_json.py",
+          "tests/test_retry_after.py"
         ],
         "documentation": [
           "docs/development/oauth-callback-spike.md",
@@ -435,7 +437,8 @@
           "src/symphonia/providers/apple_music.py",
           "src/symphonia/infrastructure/sqlite_publication_guard.py",
           "src/symphonia/domain/operations.py",
-          "src/symphonia/application/operation_runner.py"
+          "src/symphonia/application/operation_runner.py",
+          "src/symphonia/providers/retry_after.py"
         ],
         "tests": [
           "tests/test_provider_import.py",
@@ -447,7 +450,8 @@
           "tests/test_sqlite_library.py",
           "tests/test_apple_music_adapter.py",
           "tests/test_operation_runner.py",
-          "tests/test_provider_http_json.py"
+          "tests/test_provider_http_json.py",
+          "tests/test_retry_after.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
