@@ -37,6 +37,8 @@ The PR #1 regression correction rejects retry/rate-limit transitions at or after
 
 A missing lease expiry is treated as expired by renewal, checkpoints and wait scheduling, consistently with takeover. Rejected mutations preserve both state and audit. Rate-limit responses consume the same persisted bounded retry-attempt budget as transient errors in import and copy execution; eligible waits still honor provider deadlines. Repository and executor regressions cover NULL leases, takeover, repeated rate limits and mixed transient/rate-limit errors. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
 
+Terminal cancellation clears a scheduled retry deadline. Explicit resolution of an uncertain cancelled outcome clears both the reconciliation-required marker and obsolete unknown step while retaining outcome/audit evidence. Import read guards check current ownership, cancellation and fresh expiry between pages; a cleanup failure cannot replace the cancellation/lease error. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

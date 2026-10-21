@@ -86,6 +86,8 @@ The PR #1 correction verifies every returned page against the complete requested
 
 The collector now requires an initial page, exact adjacent opaque cursor links and contiguous occurrence positions beginning at zero. A resumed suffix or a cursor/position gap remains incomplete and cannot replace a complete snapshot. Rate limits consume the existing bounded retry budget; the provider deadline remains authoritative while attempts remain. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
 
+Snapshot reads and pure conversion preserve per-entry track namespace and media kind rather than assuming the playlist namespace. All three built-in network adapters now expose lazy page iteration, with current cancellation/lease/time checks before each next read and interruption-safe cleanup. Existing tuple readers remain compatible; a legacy eager adapter cannot be interrupted inside its atomic read. No page staging, memory-bound or full-capability readiness claim is added. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

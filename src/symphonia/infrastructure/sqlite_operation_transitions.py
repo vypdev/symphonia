@@ -179,7 +179,7 @@ def cancel(context: OperationContext, operation_id: str, *, now: datetime) -> Op
             context.connection.execute(
                 """
                 UPDATE operations
-                   SET state = 'cancelled', worker_id = NULL, lease_expires_at = NULL,
+                   SET state = 'cancelled', worker_id = NULL, lease_expires_at = NULL, next_run_at = NULL,
                        cancel_requested = 0, updated_at = ?
                  WHERE operation_id = ?
                 """,
@@ -276,6 +276,8 @@ def resolve_cancelled_outcome(
         if checkpoint.get("reconciliation_required") is not True:
             raise LeaseConflict("operation is not awaiting cancellation reconciliation")
         checkpoint["cancellation_resolution"] = outcome
+        checkpoint["reconciliation_required"] = False
+        checkpoint.pop("unknown_step", None)
         checkpoint_json = json.dumps(
             checkpoint,
             ensure_ascii=False,

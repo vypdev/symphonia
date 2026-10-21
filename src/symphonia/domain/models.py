@@ -55,6 +55,8 @@ class SourcePlaylistEntry:
     provider_track_object_type: str = "track"
     provider_track_title: str | None = None
     source_added_at: str | None = None
+    provider_track_namespace: str | None = None
+    media_kind: str | None = None
 
     def __post_init__(self) -> None:
         if not self.occurrence_id.strip():
@@ -67,6 +69,9 @@ class SourcePlaylistEntry:
             raise ValueError("provider_track_object_type must not be empty")
         if self.provider_track_title is not None and not self.provider_track_title.strip():
             raise ValueError("provider_track_title must not be blank")
+        for value in (self.provider_track_namespace, self.media_kind):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError("optional source identity metadata must be nonblank text")
         if self.classification is EntryClassification.READY and not self.target_track_id:
             raise ValueError("ready entries require a target_track_id")
         if self.target_track_id is not None and not self.target_track_id.strip():

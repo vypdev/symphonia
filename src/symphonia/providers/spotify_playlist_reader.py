@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from .contracts import ProviderObjectRef, ProviderPlaylistPage
 from .errors import ProviderApiError, ProviderErrorCategory
 from .http_json import JsonResponse
@@ -12,7 +12,7 @@ from .spotify_playlist_mapping import next_offset, parse_cursor, playlist_entry
 ReadRequest = Callable[[str, str, str, dict[str, str]], JsonResponse]
 
 
-def read_playlist_pages(
+def iter_playlist_pages(
     request: ReadRequest,
     connection_id: str,
     playlist: ProviderObjectRef,
@@ -20,7 +20,7 @@ def read_playlist_pages(
     cursor: str | None,
     page_size: int,
     max_pages: int,
-) -> tuple[ProviderPlaylistPage, ...]:
+) -> Iterator[ProviderPlaylistPage]:
     if playlist.provider != "spotify" or playlist.object_type != "playlist":
         raise ValueError("Spotify adapter requires a Spotify playlist reference")
     offset = parse_cursor(cursor)
@@ -74,8 +74,18 @@ def read_playlist_pages(
                 else None,
             )
         )
+        yield pages[-1]
         if next_cursor is None:
-            return tuple(pages)
+            return
         if parsed_offset is None:
             raise AssertionError("Spotify pagination cursor was unexpectedly empty")
         offset = parsed_offset
+
+
+def read_playlist_pages(
+    request: ReadRequest, connection_id: str, playlist: ProviderObjectRef, *,
+    cursor: str | None, page_size: int, max_pages: int,
+) -> tuple[ProviderPlaylistPage, ...]:
+    return tuple(iter_playlist_pages(
+        request, connection_id, playlist, cursor=cursor, page_size=page_size, max_pages=max_pages,
+    ))

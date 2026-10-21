@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timedelta, timezone
 import json
 from typing import Any, Protocol
@@ -130,6 +130,14 @@ class AppleMusicAdapter(ProviderAdapter):
         playlist: ProviderObjectRef,
         cursor: str | None = None,
     ) -> tuple[ProviderPlaylistPage, ...]:
+        return tuple(self.iter_playlist_pages(connection_id, playlist, cursor))
+
+    def iter_playlist_pages(
+        self,
+        connection_id: str,
+        playlist: ProviderObjectRef,
+        cursor: str | None = None,
+    ) -> Iterator[ProviderPlaylistPage]:
         if playlist.provider != self.manifest.provider or playlist.object_type != "library-playlists":
             raise ValueError("Apple Music adapter requires an apple_music library-playlists reference")
         offset = self._parse_offset(cursor)
@@ -175,8 +183,9 @@ class AppleMusicAdapter(ProviderAdapter):
                     else None,
                 )
             )
+            yield pages[-1]
             if next_offset is None:
-                return tuple(pages)
+                return
             offset = next_offset
 
     def _request(self, connection_id: str, path: str, query: Mapping[str, str]) -> AppleJsonResponse:

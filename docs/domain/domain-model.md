@@ -116,13 +116,18 @@ Each entry records:
 
 - stable snapshot-local entry ID;
 - ordinal/position;
-- provider item ID and media kind;
+- provider object type, item ID, per-entry namespace and media kind;
 - occurrence-specific provider entry ID when exposed;
 - added-at/added-by metadata when exposed;
 - availability at observation time; and
 - eventual recording resolution state.
 
 An entry can be unavailable or deleted while its historical place in a snapshot remains meaningful.
+
+The foundation restores each stored track namespace and media kind independently
+of the playlist namespace, including in pure snapshot conversion. Legacy
+in-memory entries may omit this added metadata; imported snapshots retain it.
+Existing SQLite columns, accepted copy-plan payloads and digests are unchanged.
 
 ### Identity link and candidate
 

@@ -7,7 +7,7 @@ time, so no secret material enters this module's persistence or logs.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from typing import Any
 
@@ -23,7 +23,7 @@ from .contracts import (
 from .errors import ProviderApiError, ProviderErrorCategory
 from .http_json import JsonClient, JsonResponse, UrllibJsonClient
 from .spotify_error_mapping import classify_response, write_outcome
-from .spotify_playlist_reader import read_playlist_pages
+from .spotify_playlist_reader import iter_playlist_pages, read_playlist_pages
 from .writing import PlaylistWriter, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
 
@@ -85,6 +85,14 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         cursor: str | None = None,
     ) -> tuple[ProviderPlaylistPage, ...]:
         return read_playlist_pages(
+            self._request, connection_id, playlist, cursor=cursor,
+            page_size=self._page_size, max_pages=self._max_pages,
+        )
+
+    def iter_playlist_pages(
+        self, connection_id: str, playlist: ProviderObjectRef, cursor: str | None = None,
+    ) -> Iterator[ProviderPlaylistPage]:
+        return iter_playlist_pages(
             self._request, connection_id, playlist, cursor=cursor,
             page_size=self._page_size, max_pages=self._max_pages,
         )

@@ -6,7 +6,7 @@ manifest make the narrower video-playlist contract visible to planning/UI.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -77,6 +77,14 @@ class YouTubeDataAdapter(ProviderAdapter):
         playlist: ProviderObjectRef,
         cursor: str | None = None,
     ) -> tuple[ProviderPlaylistPage, ...]:
+        return tuple(self.iter_playlist_pages(connection_id, playlist, cursor))
+
+    def iter_playlist_pages(
+        self,
+        connection_id: str,
+        playlist: ProviderObjectRef,
+        cursor: str | None = None,
+    ) -> Iterator[ProviderPlaylistPage]:
         if playlist.provider != self.manifest.provider or playlist.object_type != "playlist":
             raise ValueError("YouTube Data adapter requires a youtube_data playlist reference")
         if cursor is not None and (not isinstance(cursor, str) or not cursor.strip()):
@@ -135,8 +143,9 @@ class YouTubeDataAdapter(ProviderAdapter):
                     else None,
                 )
             )
+            yield pages[-1]
             if not next_token:
-                return tuple(pages)
+                return
             page_token = str(next_token)
             position += len(entries)
 

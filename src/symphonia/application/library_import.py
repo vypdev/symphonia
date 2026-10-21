@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from datetime import datetime
 
 from symphonia.domain.operations import OperationPublicationGuard
@@ -50,12 +51,37 @@ class LibraryImportService:
         connection_id: str,
         playlist: ProviderObjectRef,
         cursor: str | None = None,
+        before_page: Callable[[], None] | None = None,
     ) -> CollectionImportResult:
         """Collect normalized pages without changing the current projection."""
 
         if adapter.manifest.provider != playlist.provider:
             raise ValueError("adapter provider does not match playlist provider")
-        pages = tuple(adapter.read_playlist_pages(connection_id, playlist, cursor))
+        if before_page is not None:
+            before_page()
+        reader = getattr(adapter, "iter_playlist_pages", adapter.read_playlist_pages)
+        stream = iter(reader(connection_id, playlist, cursor))
+        pages = []
+        failure: BaseException | None = None
+        try:
+            while True:
+                if before_page is not None:
+                    before_page()
+                try:
+                    pages.append(next(stream))
+                except StopIteration:
+                    break
+        except BaseException as error:
+            failure = error
+            raise
+        finally:
+            close = getattr(stream, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except BaseException:
+                    if failure is None:
+                        raise
         if any(page.playlist.external_key != playlist.external_key for page in pages):
             raise ProviderApiError(
                 ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,

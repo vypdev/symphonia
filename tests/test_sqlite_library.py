@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import sqlite3
 import tempfile
@@ -68,6 +69,15 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
 
         self.assertEqual(stored.snapshot.entries[0].provider_track_title, "Song title")
         self.assertEqual(stored.snapshot.entries[0].source_added_at, "2026-09-20T12:00:00Z")
+
+    def test_snapshot_round_trip_retains_entry_namespace_and_media_kind(self) -> None:
+        original = page()
+        changed = replace(original.entries[0], track=ProviderObjectRef("spotify", "track", "track-1", "catalog-other"), media_kind=MediaKind.VIDEO)
+        result = collect_playlist_pages([replace(original, entries=(changed,))])
+        self.repository.publish(result, snapshot_id="mixed-identity", published_at=NOW)
+        for stored in (self.repository.get("mixed-identity"), self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")):
+            self.assertEqual(stored.snapshot.entries[0].provider_track_namespace, "catalog-other")
+            self.assertEqual(stored.snapshot.entries[0].media_kind, "video")
 
     def test_summary_reports_import_freshness_without_playlist_content(self) -> None:
         self.repository.publish(

@@ -154,12 +154,19 @@
         "docs/development/ui-lit-spike/README.md",
         "docs/development/ui-lit-spike/gateway-reference.md",
         "docs/development/ui-lit-spike/browser-review.md",
-        "docs/development/ha-app-lab.md"
+        "docs/development/ha-app-lab.md",
+        "docs/development/pr1-review-2026-10-21.md"
       ],
       "implementationEvidence": {
-        "code": [],
-        "tests": [],
-        "documentation": []
+        "code": [
+          "docs/development/ui-lit-spike/scripts/check-boundary.mjs"
+        ],
+        "tests": [
+          "tests/test_ui_boundaries.py"
+        ],
+        "documentation": [
+          "docs/development/pr1-review-2026-10-21.md"
+        ]
       },
       "blockers": [
         "Supported Home Assistant and browser matrix",
@@ -206,7 +213,8 @@
           "ui/src/model.ts",
           "ui/src/views.ts",
           "ui/src/styles.ts",
-          "addon/config.yaml"
+          "addon/config.yaml",
+          "ui/scripts/check-boundary.mjs"
         ],
         "tests": [
           "tests/test_operational_dashboard.py",
@@ -215,7 +223,8 @@
           "ui/src/model.test.ts",
           "ui/scripts/check-boundary.mjs",
           "tests/test_architecture_boundaries.py",
-          "docs/development/ha-app-lab.md"
+          "docs/development/ha-app-lab.md",
+          "tests/test_ui_boundaries.py"
         ],
         "documentation": [
           "docs/development/operational-dashboard.md",

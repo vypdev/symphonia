@@ -128,6 +128,7 @@ PYTHONPATH=. python3 tools/validate_specs.py
 ```
 
 The validator checks that `catalog.json` parses, referenced files exist,
+capability IDs are unique across entries,
 catalog paths are repository-relative and cannot escape through traversal or
 symlinks, each SDD has one known catalog capability ID, catalog statuses and paths agree with
 `CATALOG.md`, requirement IDs are present in the horizontal specifications,
@@ -136,6 +137,9 @@ or `Implemented` catalog entry with remaining blockers, requires an implemented
 entry to list code, test, and documentation evidence, and requires exactly one
 SDD status declaration. These are structural guards, **not** a substitute for
 owner approval, threat review, live provider proof, or the readiness checklist.
+The JSON Schema is a structural shape check. Running the repository validator
+is required: schema-only validation does not enforce cross-entry ID uniqueness,
+repository-path containment or requirement/SDD consistency.
 Generated/vendor directories such as
 `node_modules`, `dist`, and virtual environments are excluded from Markdown
 scanning; owned documentation is still checked even when dependencies are

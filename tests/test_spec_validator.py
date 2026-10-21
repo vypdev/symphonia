@@ -151,6 +151,13 @@ class SpecValidatorTests(unittest.TestCase):
             _validate_sdds(root, [capability], errors)
             self.assertTrue(any("regular SDD file" in error for error in errors))
 
+    def test_required_validator_rejects_duplicate_ids_even_when_items_differ(self) -> None:
+        first = self._capability("draft", [])
+        second = {**first, "title": "Different object with the same ID"}
+        errors = []
+        _validate_catalog_shape(Path("/unused"), {"version": 1, "capabilities": [first, second]}, errors)
+        self.assertTrue(any("duplicate catalog capability id" in error for error in errors))
+
     def test_primary_sdd_must_declare_exactly_one_status(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

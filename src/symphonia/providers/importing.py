@@ -118,6 +118,8 @@ def to_playlist_snapshot(result: CollectionImportResult, snapshot_id: str) -> Pl
             provider_track_object_type=entry.track.object_type,
             provider_track_title=entry.title,
             source_added_at=entry.source_added_at,
+            provider_track_namespace=entry.track.namespace,
+            media_kind=entry.media_kind.value,
         )
         for entry in result.entries
     )

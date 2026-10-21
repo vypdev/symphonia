@@ -886,6 +886,8 @@ class OperationRepositoryTests(unittest.TestCase):
                 self.assertEqual(resolved.state, expected_state)
                 self.assertFalse(resolved.cancel_requested)
                 self.assertEqual(resolved.checkpoint["cancellation_resolution"], outcome)
+                self.assertFalse(resolved.checkpoint["reconciliation_required"])
+                self.assertNotIn("unknown_step", resolved.checkpoint)
                 self.assertEqual(
                     self.repository.events(operation.operation_id)[-1].event_type,
                     "cancellation_reconciled",
@@ -967,6 +969,17 @@ class OperationRepositoryTests(unittest.TestCase):
                 self.assertEqual(self.repository.events(created.operation_id), events)
                 replacement = self.repository.claim(created.operation_id, worker_id="new", now=self.now)
                 self.assertEqual(replacement.worker_id, "new")
+
+    def test_cancelling_scheduled_work_clears_the_future_retry_time(self) -> None:
+        for method in ("schedule_retry", "schedule_rate_limit"):
+            with self.subTest(method=method):
+                operation = self.repository.create(operation_type="copy", idempotency_key=f"cancel-time-{method}", payload={}, now=self.now)
+                self.repository.claim(operation.operation_id, worker_id="worker", now=self.now)
+                getattr(self.repository, method)(operation.operation_id, worker_id="worker", checkpoint={}, next_run_at=self.now + timedelta(minutes=1), now=self.now)
+                cancelled = self.repository.cancel(operation.operation_id, now=self.now)
+                self.assertEqual(cancelled.state, "cancelled")
+                self.assertIsNone(cancelled.next_run_at)
+                self.assertIsNone(self.repository.get(operation.operation_id).next_run_at)
 
     def test_cancelling_waiting_unknown_outcome_keeps_quarantine(self) -> None:
         operation = self.repository.create(

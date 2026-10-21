@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
-for (const file of readdirSync("src").filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))) {
-  const source = readFileSync(`src/${file}`, "utf8");
+function* sourceFiles(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    assert.ok(!entry.isSymbolicLink(), `${path} must not be a symlink`);
+    if (entry.isDirectory()) yield* sourceFiles(path);
+    else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts")) yield path;
+  }
+}
+
+for (const file of sourceFiles("src")) {
+  const source = readFileSync(file, "utf8");
   const imports = [...source.matchAll(/\b(?:import|export)\s+(?:[^;]*?\s+from\s+)?["']([^"']+)["']/g)]
     .map((match) => match[1]);
   for (const specifier of imports) {

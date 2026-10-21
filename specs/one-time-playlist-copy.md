@@ -55,6 +55,8 @@ The PR #1 persistence correction keeps a cancellation-requested unknown provider
 
 Target and entry rate-limit outcomes share the existing bounded retry counter with transient failures. Exhaustion records retry_exhausted without another scheduled attempt, while checkpoints retain confirmed progress and provider deadlines are honored within budget. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
 
+Read-side source snapshots now retain per-track namespace and media kind. This additive metadata does not alter accepted plan payloads or digest calculation. Existing compatibility, strict-acceptance and immutable-plan tests continue to pass. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

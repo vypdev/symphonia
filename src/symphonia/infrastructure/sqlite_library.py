@@ -290,6 +290,8 @@ class PlaylistProjectionRepository:
                 provider_track_object_type=row["provider_track_object_type"],
                 provider_track_title=row["provider_track_title"],
                 source_added_at=row["source_added_at"],
+                provider_track_namespace=row["provider_track_namespace"],
+                media_kind=row["media_kind"],
                 classification=EntryClassification.UNMATCHED if row["available"] else EntryClassification.UNAVAILABLE,
                 reason=None if row["available"] else "provider reported item unavailable",
             )

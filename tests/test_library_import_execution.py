@@ -17,6 +17,11 @@ from symphonia.providers import (
     ProviderPlaylistEntry,
     ProviderPlaylistPage,
     MediaKind,
+    AppleMusicAdapter,
+    SpotifyAdapter,
+    YouTubeDataAdapter,
+    AppleJsonResponse,
+    JsonResponse,
 )
 
 
@@ -257,6 +262,60 @@ class LibraryImportExecutionTests(unittest.TestCase):
         with self.assertRaises(LeaseConflict):
             self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
         self.assertIsNone(self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1"))
+
+    def test_real_adapters_stop_between_pages_on_cancellation_or_lease_expiry(self) -> None:
+        for provider in ("spotify", "apple_music", "youtube_data"):
+            for mode in ("cancel", "expire"):
+                with self.subTest(provider=provider, mode=mode):
+                    self.clock_now = NOW
+                    calls = []
+                    operations = self.operations
+                    test = self
+
+                    class Client:
+                        def request(self, method, path, **kwargs):
+                            calls.append(path)
+                            if mode == "cancel": operations.cancel(created.operation_id, now=NOW)
+                            else: test.clock_now = NOW + timedelta(seconds=31)
+                            if provider == "apple_music":
+                                return AppleJsonResponse(200, {"data": [{"id": "song", "type": "songs"}], "next": "https://api.music.apple.com/v1/me/library/playlists/id/tracks?offset=1"}, {})
+                            if provider == "spotify":
+                                return JsonResponse(200, {"items": [{"item": {"id": "track", "type": "track"}}], "next": "https://api.spotify.com/v1/playlists/id/items?offset=1"}, {})
+                            return JsonResponse(200, {"items": [{"id": "item", "contentDetails": {"videoId": "video"}, "snippet": {"title": "One"}}], "nextPageToken": "next"}, {})
+
+                    if provider == "apple_music": adapter = AppleMusicAdapter(Client(), lambda _: ("developer", "user"))
+                    elif provider == "spotify": adapter = SpotifyAdapter(Client(), lambda _: "fixture-token")
+                    else: adapter = YouTubeDataAdapter(Client(), lambda _: "fixture-token")
+                    playlist = ProviderObjectRef(provider, "library-playlists" if provider == "apple_music" else "playlist", "id", "connection-1")
+                    created = self.service.enqueue_playlist(adapter, connection_id="connection-1", playlist=playlist, snapshot_id=f"between-{provider}-{mode}", observed_at=NOW, now=NOW)
+                    claimed = self.operations.claim(created.operation_id, worker_id="worker", now=NOW)
+                    if mode == "cancel":
+                        stopped = self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker", now=NOW)
+                        self.assertEqual(stopped.state, "cancelled")
+                    else:
+                        with self.assertRaises(LeaseConflict):
+                            self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker", now=NOW)
+                        self.assertEqual(self.operations.get(created.operation_id).state, "running")
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(self.projections.summary()["snapshot_count"], 0)
+
+    def test_stream_cleanup_failure_does_not_mask_cancellation(self) -> None:
+        operations = self.operations
+
+        class ClosingAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                try:
+                    operations.cancel(created.operation_id, now=NOW)
+                    yield from super().read_playlist_pages(connection_id, playlist, cursor)
+                finally:
+                    raise RuntimeError("fixture stream close failure")
+
+        adapter = ClosingAdapter()
+        created = self.service.enqueue_playlist(adapter, connection_id="connection-1", playlist=self.playlist, snapshot_id="close-cancel", observed_at=NOW, now=NOW)
+        claimed = self.operations.claim(created.operation_id, worker_id="worker", now=NOW)
+        stopped = self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker", now=NOW)
+        self.assertEqual(stopped.state, "cancelled")
+        self.assertEqual(self.projections.summary()["snapshot_count"], 0)
 
     def test_cancellation_after_final_renewal_cannot_publish(self) -> None:
         self.service.imports.import_playlist(

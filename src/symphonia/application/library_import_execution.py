@@ -113,6 +113,7 @@ class LibraryImportExecutionService:
                 adapter,
                 connection_id=connection_id,
                 playlist=playlist,
+                before_page=lambda: self._check_read_ownership(operation.operation_id, worker_id),
             )
             run.now = self.clock()
             cancelled = run.cancel_if_requested()
@@ -141,5 +142,14 @@ class LibraryImportExecutionService:
 
         run.now = self.clock()
         return run.complete(publication)
+
+    def _check_read_ownership(self, operation_id: str, worker_id: str) -> None:
+        current = self.operations.get(operation_id)
+        if (
+            current.state != "running" or current.worker_id != worker_id
+            or current.cancel_requested or current.lease_expires_at is None
+            or current.lease_expires_at <= self.clock()
+        ):
+            raise LeaseConflict("playlist read no longer owns an uncancelled live lease")
 
 __all__ = ["LibraryImportExecutionService"]

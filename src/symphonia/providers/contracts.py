@@ -184,3 +184,10 @@ class ProviderAdapter(Protocol):
     def read_playlist_pages(
         self, connection_id: str, playlist: ProviderObjectRef, cursor: str | None = None
     ) -> Iterable[ProviderPlaylistPage]: ...
+
+
+    def iter_playlist_pages(
+        self, connection_id: str, playlist: ProviderObjectRef, cursor: str | None = None
+    ) -> Iterable[ProviderPlaylistPage]:
+        """Compatibility stream; concrete network adapters yield before each next read."""
+        yield from self.read_playlist_pages(connection_id, playlist, cursor)

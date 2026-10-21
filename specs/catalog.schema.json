@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://symphonia.local/specs/catalog.schema.json",
   "title": "Symphonia SDD capability catalog",
+  "description": "Structural shape only. Validation with tools/validate_specs.py is required for cross-entry capability-ID uniqueness, repository paths, requirements and SDD/catalog consistency; this schema alone does not establish catalog validity.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "capabilities"],

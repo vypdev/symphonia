@@ -48,6 +48,8 @@ The [operational dashboard](operational-dashboard.md) is a separately scoped, ow
 - Current [official-source review](../docs/development/ui-spike/host-context-evidence.md) finds `narrow`, `route`, and `safeAreaInsets` in the App properties message, but no theme, locale, direction, or timezone field. These cannot be assumed to follow Home Assistant user settings inside an iframe.
 - Unknowns: exact supported Home Assistant/browser versions; the public context actually available to an Ingress App at each supported version; Lit/Vite compatibility and bundle cost; long-term token mapping; reference capture automation and review ownership.
 
+The existing spike and operational UI source-boundary scripts now recurse through nested TypeScript modules and reject source symlinks. Eight isolated Node fixtures cover nested pure code, forbidden browser I/O, outer imports and symlinks. This is narrow architecture evidence; it does not complete the 92-case foundation or its browser/host-context gates. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

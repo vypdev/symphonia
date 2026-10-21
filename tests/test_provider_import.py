@@ -189,6 +189,13 @@ class ProviderContractTests(unittest.TestCase):
         self.assertIn(ImportIssue.CONFLICTING_OCCURRENCE, result.issues)
         self.assertIn(ImportIssue.REPEATED_CURSOR, result.issues)
 
+    def test_pure_snapshot_conversion_retains_entry_namespace_and_media_kind(self) -> None:
+        item = ProviderPlaylistEntry("video", 0, ProviderObjectRef("spotify", "video", "id", "another-catalog"), MediaKind.VIDEO)
+        result = collect_playlist_pages([ProviderPlaylistPage(playlist_ref(), (item,), None, None, True)])
+        snapshot = to_playlist_snapshot(result, "snapshot")
+        self.assertEqual(snapshot.entries[0].provider_track_namespace, "another-catalog")
+        self.assertEqual(snapshot.entries[0].media_kind, "video")
+
     def test_snapshot_keeps_unavailable_entries_visible(self) -> None:
         result = collect_playlist_pages(
             [ProviderPlaylistPage(playlist_ref(), (entry("occ-1", 0, "track-1", False),), None, None, True)]
