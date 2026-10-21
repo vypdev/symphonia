@@ -159,6 +159,11 @@ terminal/error handling. Publication reads that clock inside the write
 transaction, so a long read or lock wait cannot reuse the pre-read timestamp
 to authorize an expired lease. A lease conflict escapes the dispatcher without
 a backdated failure checkpoint and remains eligible for existing lease recovery.
+The polling worker catches that ownership-loss signal at its outer loop, waits
+through the interruptible polling interval, and continues with other eligible
+work. One fenced attempt does not stop the worker; unrelated exceptions still
+propagate. A deterministic takeover regression proves the previous owner leaves
+the new owner's running record untouched and completes later queued work.
 
 ### Idempotency
 

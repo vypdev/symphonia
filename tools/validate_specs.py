@@ -265,7 +265,7 @@ def _validate_markdown_links(root: Path, errors: list[str]) -> None:
         text = path.read_text(encoding="utf-8")
         for match in MARKDOWN_LINK_RE.finditer(text):
             target = match.group(1) or match.group(2)
-            if not target or target.startswith(("http://", "https://", "mailto:", "#", "codex://")):
+            if not target or target.startswith(("http://", "https://", "//", "mailto:", "#", "codex://")):
                 continue
             target_path = target.split("#", 1)[0].split("?", 1)[0]
             if not target_path:

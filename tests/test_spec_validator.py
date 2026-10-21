@@ -192,6 +192,14 @@ class SpecValidatorTests(unittest.TestCase):
             _validate_sdds(root, [self._capability("draft", [])], errors)
             self.assertEqual(errors, ["specs/example.md must declare exactly one status"])
 
+    def test_protocol_relative_links_are_external_but_single_slash_paths_are_contained(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "guide.md").write_text("[external](//example.com/page) [local](/outside.md)")
+            errors = []
+            _validate_markdown_links(root, errors)
+            self.assertEqual(errors, ["guide.md links outside repository: /outside.md"])
+
     def test_generated_dependency_markdown_is_not_treated_as_ours(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

@@ -62,6 +62,9 @@ reports the actual retained current snapshot separately from the stored result.
 This timestamp fence is foundation evidence, not the full plan/session-version
 fencing required by section 8. Apple Music normalization distinguishes songs,
 music videos, and unknown resource types while retaining identity and order.
+Unknown, missing, or malformed Apple resource types remain unavailable even
+when they have an ID; their retained occurrence cannot enter ordinary matching
+or copy planning as an available unmatched recording.
 See the [dated review and regressions](../docs/development/bugbot-review-2026-10-21.md).
 
 The official Spotify and YouTube Data foundation adapters use a shared JSON transport instead of importing one adapter through the other. Spotify's bounded playlist traversal, item normalization, and HTTP error classification are separate provider modules behind the same adapter contract. Offline tests confirm provider-specific, secret-safe timeout and network error classification; this does not establish the full provider import capability.

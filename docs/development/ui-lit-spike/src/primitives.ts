@@ -25,6 +25,6 @@ export function row(title: string, detail: string, state: TemplateResult): Templ
   return html`<div class="row"><div class="row-copy"><strong>${title}</strong><span>${detail}</span></div>${state}</div>`;
 }
 
-export function unavailableAction(label: string, reason: string): TemplateResult {
-  return html`<div class="action-wrap"><button type="button" class="primary" disabled aria-describedby="action-reason">${label}</button><small id="action-reason">${reason}</small></div>`;
+export function unavailableAction(label: string, reason: string, descriptionId: string): TemplateResult {
+  return html`<div class="action-wrap"><button type="button" class="primary" disabled aria-describedby=${descriptionId}>${label}</button><small id=${descriptionId}>${reason}</small></div>`;
 }

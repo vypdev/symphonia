@@ -133,7 +133,9 @@ malformed IDs and primary paths produce diagnostics rather than tracebacks,
 catalog paths are repository-relative and cannot escape through traversal or
 symlinks, each SDD has one known catalog capability ID, catalog statuses and paths agree with
 `CATALOG.md`, requirement IDs are present in the horizontal specifications,
-and local Markdown links resolve. It also rejects a `Ready for implementation`
+and local Markdown links resolve. Network-path links (`//host/path`) are external;
+single-slash filesystem paths remain subject to repository containment.
+It also rejects a `Ready for implementation`
 or `Implemented` catalog entry with remaining blockers, requires an implemented
 entry to list code, test, and documentation evidence, and requires exactly one
 SDD status declaration. These are structural guards, **not** a substitute for

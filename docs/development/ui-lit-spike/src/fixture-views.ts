@@ -42,7 +42,7 @@ function listening(scenario: Scenario): TemplateResult {
         ${fact("Source", "Spotify · sample account")}
         ${fact("Content", "Evening mix · playlist")}
         ${fact("Output", "Living room speaker · media_player.living_room")}
-      </dl>${unavailableAction("Start playback", disabledReason)}`)}
+      </dl>${unavailableAction("Start playback", disabledReason, "listening-action-reason")}`)}
       ${panel("Now playing", html`${row("No confirmed playback", "Last observation: 09:14 · source may be stale", status("Not confirmed", "caution"))}<p class="muted">Pause, skip, seek, and volume appear only when the selected output reports those capabilities. Commands need a confirmed response and refreshed observation.</p>`) }
     </div>`;
 }
@@ -55,7 +55,7 @@ function connections(scenario: Scenario): TemplateResult {
       ${row("Apple Music", "No account is configured in this review fixture.", status("Not connected", "neutral"))}
       ${row("YouTube Music", "Community-source capability requires a separate support decision.", status("Undecided", "caution"))}
       <p class="muted">A connection grants only the scopes and capabilities confirmed for that account. Provider type alone never proves playback or write access.</p>
-      ${unavailableAction("Connect a service", disabledReason)}
+      ${unavailableAction("Connect a service", disabledReason, "connection-action-reason")}
     `)}`;
 }
 
@@ -66,7 +66,7 @@ function library(scenario: Scenario): TemplateResult {
       ${fact("Last complete", "Today 09:14 · 12 playlists · 184 occurrences")}
       ${fact("Latest attempt", scenario === "partial" ? "Today 10:02 · incomplete; retained snapshot" : "Today 09:14 · complete")}
       ${fact("Source", "Spotify · sample account")}
-    </dl>${unavailableAction("Refresh library", disabledReason)}`)}
+    </dl>${unavailableAction("Refresh library", disabledReason, "library-action-reason")}`)}
     ${panel("Playlists", html`
       ${row("Evening mix", "24 occurrences · source order retained", status("Available", "positive"))}
       ${row("Sunday records", "16 occurrences · 2 unavailable at source", status("Partial", "caution"))}
@@ -82,7 +82,7 @@ function matches(scenario: Scenario): TemplateResult {
       ${row("07 · Heroes", "David Bowie · live and studio versions differ", status("Ambiguous", "caution"))}
       ${row("11 · Intro", "No stable recording evidence from the source", status("Unmatched", "negative"))}
       <p class="muted">Candidate evidence is scoped to each occurrence. An automatic link needs a conservative, versioned policy; unresolved entries remain explicit.</p>
-      ${unavailableAction("Save decision", disabledReason)}
+      ${unavailableAction("Save decision", disabledReason, "matching-action-reason")}
     `)}`;
 }
 
@@ -99,7 +99,7 @@ function copy(scenario: Scenario): TemplateResult {
       ${row("01 · So What", "Exact recording candidate · source position 1", status("Ready in example", "positive"))}
       ${row("02 · Blue in Green", "Two plausible recordings · source position 2", status("Decision needed", "caution"))}
       ${row("03 · Flamenco Sketches", "No candidate · source position 3", status("Would be omitted", "negative"))}
-      ${unavailableAction("Confirm copy", disabledReason)}
+      ${unavailableAction("Confirm copy", disabledReason, "copy-action-reason")}
     `)}`;
 }
 
@@ -111,7 +111,7 @@ function activity(scenario: Scenario): TemplateResult {
       ${row("Import · Spotify", "Today 10:02 · stopped after page 3; prior snapshot retained", status("Partial", "caution"))}
       ${row("Copy · sample plan", "Destination result unknown. Inspect the durable checkpoint before any retry.", status("Unknown outcome", "negative"))}
       <p class="muted">A browser response does not prove an external write. Recovery requires a durable operation record and provider reconciliation.</p>
-      ${unavailableAction("Retry operation", disabledReason)}
+      ${unavailableAction("Retry operation", disabledReason, "activity-action-reason")}
     `)}`;
 }
 

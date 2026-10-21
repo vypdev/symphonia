@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from symphonia.domain import EntryClassification
+from symphonia.providers.importing import collect_playlist_pages, to_playlist_snapshot
 
 from symphonia.providers import (
     AppleJsonResponse,
@@ -88,6 +90,23 @@ class AppleMusicAdapterTests(unittest.TestCase):
         self.assertEqual([entry.media_kind for entry in entries], [MediaKind.TRACK, MediaKind.TRACK, MediaKind.VIDEO, MediaKind.VIDEO, MediaKind.UNKNOWN])
         self.assertEqual([entry.track.object_type for entry in entries], kinds)
         self.assertEqual([entry.position for entry in entries], list(range(5)))
+        self.assertEqual([entry.available for entry in entries], [True, True, True, True, False])
+        self.assertEqual(entries[-1].track.object_id, "item-4")
+
+    def test_unknown_or_missing_type_retains_identity_but_cannot_enter_matching(self) -> None:
+        for raw_type in ("future-resource", None, "", {}, []):
+            with self.subTest(resource_type=raw_type):
+                class UnknownClient:
+                    def request(self, *args, **kwargs):
+                        return AppleJsonResponse(200, {"data": [{"id": "retained-id", "type": raw_type}]}, {})
+
+                pages = AppleMusicAdapter(UnknownClient(), lambda _: ("developer", "user")).read_playlist_pages("account", self.playlist())
+                entry = pages[0].entries[0]
+                self.assertEqual(entry.track.object_id, "retained-id")
+                self.assertEqual(entry.media_kind, MediaKind.UNKNOWN)
+                self.assertFalse(entry.available)
+                snapshot = to_playlist_snapshot(collect_playlist_pages(pages), "unknown-resource")
+                self.assertEqual(snapshot.entries[0].classification, EntryClassification.UNAVAILABLE)
 
     def test_capability_probe_uses_user_library_endpoint(self) -> None:
         client = FakeAppleClient()

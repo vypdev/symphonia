@@ -54,6 +54,12 @@ The [operational dashboard](operational-dashboard.md) is a separately scoped, ow
 
 The existing spike and operational UI source-boundary scripts now recurse through nested TypeScript modules and reject source symlinks. Eight isolated Node fixtures cover nested pure code, forbidden browser I/O, outer imports and symlinks. This is narrow architecture evidence; it does not complete the 92-case foundation or its browser/host-context gates. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
 
+The synthetic Lit spike supplies distinct stable description IDs at disabled
+action call sites so future composition does not alias accessibility targets.
+Current routing renders one section, with zero such actions in Overview and one
+in each other section. This helper correction does not establish browser or
+WCAG conformance for the full foundation.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

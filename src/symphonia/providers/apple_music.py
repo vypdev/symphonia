@@ -294,20 +294,22 @@ class AppleMusicAdapter(ProviderAdapter):
         if not isinstance(item, Mapping):
             item = {}
         object_id = item.get("id")
-        available = isinstance(object_id, str) and bool(object_id.strip())
-        object_id = object_id if available else f"unavailable:{position}"
-        object_type = str(item.get("type") or "songs")
+        has_id = isinstance(object_id, str) and bool(object_id.strip())
+        object_id = object_id if has_id else f"unavailable:{position}"
+        raw_type = item.get("type")
+        object_type = raw_type if isinstance(raw_type, str) and raw_type.strip() else "unknown"
         attributes = item.get("attributes") if isinstance(item.get("attributes"), Mapping) else {}
+        media_kind = {
+            "songs": MediaKind.TRACK,
+            "library-songs": MediaKind.TRACK,
+            "music-videos": MediaKind.VIDEO,
+            "library-music-videos": MediaKind.VIDEO,
+        }.get(object_type, MediaKind.UNKNOWN)
         return ProviderPlaylistEntry(
             occurrence_id=f"{playlist.object_id}:{position}",
             position=position,
             track=ProviderObjectRef("apple_music", object_type, object_id, playlist.namespace),
-            media_kind={
-                "songs": MediaKind.TRACK,
-                "library-songs": MediaKind.TRACK,
-                "music-videos": MediaKind.VIDEO,
-                "library-music-videos": MediaKind.VIDEO,
-            }.get(object_type, MediaKind.UNKNOWN),
+            media_kind=media_kind,
             title=attributes.get("name") if isinstance(attributes.get("name"), str) else None,
-            available=available,
+            available=has_id and media_kind is not MediaKind.UNKNOWN,
         )

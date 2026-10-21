@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import math
 import threading
 
-from symphonia.domain.operations import OperationRecord
+from symphonia.domain.operations import LeaseConflict, OperationRecord
 
 from .operation_runner import OperationRunner
 
@@ -68,7 +68,10 @@ class OperationWorker:
         """Poll until requested to stop; waiting remains interruptible."""
 
         while not stop_event.is_set():
-            operation = self.run_once()
+            try:
+                operation = self.run_once()
+            except LeaseConflict:
+                operation = None
             if operation is None:
                 stop_event.wait(self._poll_interval_seconds)
 

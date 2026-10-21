@@ -6,6 +6,12 @@ The [Gateway-informed review map](gateway-reference.md) records the pinned style
 
 The dated [browser review](browser-review.md) records the observed desktop/mobile render and the Lit reactivity defect it exposed and resolved.
 
+Each disabled-action call supplies its own stable description ID, keeping its
+explanation unambiguous if views are composed together. Current navigation
+renders one section at a time: Overview has no disabled action, and each of the
+other six sections has one. This is helper hardening, not evidence that the
+current Overview rendered duplicate descriptions.
+
 Use Node **24.x**, as declared in both UI packages and used by CI; the TypeScript test command requires Node’s type-stripping support. From this directory, run `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run check-boundary`, `npm run build`, and `npm run verify-output`. CI repeats these checks. The lockfile pins the evaluated dependencies; npm is used **for this spike**, not chosen as the final package-manager policy. `vite.config.ts` emits relative asset URLs (`base: './'`) and `verify-output` checks them. This does not prove server routing, Ingress authentication, browser behavior, or Home Assistant visual parity.
 
 The UI has one independently owned custom element, presentation helpers, semantic tokens, native controls, keyboard focus transfer on navigation, and explicit light/dark fixture control. `appearance.ts` and `fixture-state.ts` are pure decisions with deterministic tests. The shell owns only local fixture state; `fixture-views.ts` composes static review data through `primitives.ts`. There are no API clients, host-private imports, external writes, or credential inputs. Component-catalog breadth, WCAG/browser results, real base-path tests, HA context validation, and the **92-case** SDD budget remain open.

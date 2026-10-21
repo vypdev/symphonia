@@ -33,7 +33,7 @@ The first implementation increment is intentionally narrower than any provider o
 - Pure capability-layer intersection and requirement checks for adapter/connection/object/health constraints.
 - Durable operation runner that atomically claims eligible work and fails unwired operation types before side effects.
 - The operation runner validates handler result type and identity, then returns the current persisted record rather than trusting a potentially stale handler object.
-- Cooperative single-process operation worker with interruptible polling and injected clock support.
+- Cooperative single-process operation worker with interruptible polling and injected clock support. A lost-ownership `LeaseConflict` ends that attempt and waits through the same interruptible poll interval before claiming later work; unrelated failures still propagate. The former owner never writes a failure checkpoint over the new owner.
 - Copy executor can run as a claimed operation handler, preserving the same restart/checkpoint semantics under the runner.
 - Copy execution durably marks a target-create or entry-add step in-flight before the provider call; a resumed step is reconciled before any repeated mutation, and inconclusive evidence or reconciliation errors stay in `waiting_user`. The current boolean entry-reconciliation port treats `false` only as inconclusive and cannot represent proven no-effect; a richer provider contract and the full copy capability remain blocked in the Draft SDD.
 - Copy execution retains permanently failed occurrences as itemized issues across waits and restarts; resuming a later uncertain write does not repeat those failed writes.
