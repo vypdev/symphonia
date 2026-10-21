@@ -40,6 +40,16 @@ The foundation executor checks stored playlist identifier types and the operatio
 Collection and publication are separate application steps. After collecting
 pages, the durable wrapper checks cancellation and renews its lease before
 publishing; cancellation during a read retains the last complete projection.
+The publication transaction also verifies the operation is running, uncancelled,
+and owned by the supplied unexpired lease. Its SQLite write lock serializes
+publication with cancellation and worker takeover: a cancellation committed
+first prevents the snapshot write, while a publication started first retains
+its confirmed result. The durable wrapper requires operation and projection
+tables in the same database; isolated in-memory stores fail closed for guarded
+publication. The standalone import helper remains available without a durable
+operation guard. Regression cases cover cancellation and takeover after final
+lease renewal, expired/missing/wrong-owner/terminal operations, idempotent
+replay, competing cancellation, isolated storage, and interrupted transactions.
 Publication keeps every immutable complete observation but advances the current
 pointer only for a strictly newer UTC observation time. A late older observation
 or an equal-time observation cannot displace the current snapshot; the use case

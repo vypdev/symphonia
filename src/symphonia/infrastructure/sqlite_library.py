@@ -7,11 +7,13 @@ import sqlite3
 from typing import Any
 
 from symphonia.domain.models import EntryClassification, PlaylistSnapshot, SourcePlaylistEntry
+from symphonia.domain.operations import OperationPublicationGuard
 from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.contracts import ProviderPlaylistEntry
 from symphonia.providers.importing import CollectionImportResult
 
 from .sqlite_common import connect, initialize_with_cleanup
+from .sqlite_publication_guard import publication_transaction
 
 
 def _utc(value: datetime) -> str:
@@ -113,6 +115,7 @@ class PlaylistProjectionRepository:
         *,
         snapshot_id: str,
         published_at: datetime,
+        operation_guard: OperationPublicationGuard | None = None,
     ) -> StoredPlaylistSnapshot:
         """Publish a complete result atomically; reject incomplete results."""
 
@@ -122,18 +125,16 @@ class PlaylistProjectionRepository:
             raise ValueError("snapshot_id must not be empty")
         if not result.entries and result.playlist == "":
             raise ValueError("result must identify a playlist")
-        existing = self._connection.execute(
-            "SELECT * FROM playlist_snapshots WHERE snapshot_id = ?", (snapshot_id,)
-        ).fetchone()
-        if existing is not None:
-            if not self._matches_result(existing, result):
-                raise SnapshotConflictError("snapshot_id is already bound to different imported content")
-            # Publication is idempotent and must not move a newer current
-            # pointer backwards if a client retries an older response.
-            return self.get(snapshot_id)
         timestamp = _utc(published_at)
-        self._connection.execute("BEGIN IMMEDIATE")
-        try:
+        with publication_transaction(self._connection, operation_guard):
+            existing = self._connection.execute(
+                "SELECT * FROM playlist_snapshots WHERE snapshot_id = ?", (snapshot_id,)
+            ).fetchone()
+            if existing is not None:
+                if not self._matches_result(existing, result):
+                    raise SnapshotConflictError("snapshot_id is already bound to different imported content")
+                # Retrying an older observation must not move current backwards.
+                return self.get(snapshot_id)
             self._connection.execute(
                 """
                 INSERT INTO playlist_snapshots (
@@ -179,10 +180,6 @@ class PlaylistProjectionRepository:
                 """,
                 (result.provider, result.namespace, result.playlist, snapshot_id, timestamp),
             )
-            self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
-            raise
         return self.get(snapshot_id)
 
     def _matches_result(self, snapshot_row: sqlite3.Row, result: CollectionImportResult) -> bool:

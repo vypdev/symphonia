@@ -125,6 +125,13 @@ publication and checks cancellation/lease ownership again before that
 publication. A cancelled read does not advance library freshness or publish a
 new snapshot. This is covered with complete and incomplete read results and
 with worker takeover during a read in the [dated regression review](../docs/development/bugbot-review-2026-10-21.md).
+The local snapshot transaction repeats the operation ownership, expiry, state,
+and cancellation checks under SQLite's write lock in the shared database.
+Cancellation or takeover committed after lease renewal but before that
+transaction prevents publication; competing cancellation cannot commit during
+publication. Published complete steps remain confirmed when publication wins
+that ordering. This closes the foundation's local publication race without
+implementing the pending multi-collection/session or provider-write contracts.
 
 ### Idempotency
 

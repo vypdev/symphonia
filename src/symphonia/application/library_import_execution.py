@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from symphonia.domain.operations import LeaseConflict, OperationRecord
+from symphonia.domain.operations import LeaseConflict, OperationPublicationGuard, OperationRecord
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
 from symphonia.providers.errors import ProviderApiError
 
@@ -117,6 +117,7 @@ class LibraryImportExecutionService:
             )
             publication = self.imports.publish_playlist(
                 collected, snapshot_id=snapshot_id, observed_at=observed_at,
+                operation_guard=OperationPublicationGuard(operation.operation_id, worker_id, now),
             )
         except LeaseConflict:
             cancelled = run.cancel_if_requested()

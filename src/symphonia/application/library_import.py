@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from symphonia.domain.operations import OperationPublicationGuard
 from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
 from symphonia.providers.importing import CollectionImportResult, ImportIssue, collect_playlist_pages
@@ -62,6 +63,7 @@ class LibraryImportService:
         *,
         snapshot_id: str,
         observed_at: datetime,
+        operation_guard: OperationPublicationGuard | None = None,
     ) -> ImportPublication:
         """Publish complete data or retain the prior complete projection."""
 
@@ -72,7 +74,10 @@ class LibraryImportService:
                 playlist_id=result.playlist,
             )
             return ImportPublication("partial", None, retained, result.issues)
-        snapshot = self.projections.publish(result, snapshot_id=snapshot_id, published_at=observed_at)
+        snapshot = self.projections.publish(
+            result, snapshot_id=snapshot_id, published_at=observed_at,
+            operation_guard=operation_guard,
+        )
         current = self.projections.current(
             provider=result.provider, namespace=result.namespace, playlist_id=result.playlist,
         )

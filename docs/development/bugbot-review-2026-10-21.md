@@ -4,7 +4,7 @@
 **Baseline:** `0c466f975defafff1933fa2c4130baaa2dc20d1a`.
 **Tracking:** [issue 9](https://github.com/vypdev/symphonia/issues/9), [original review](https://github.com/vypdev/symphonia/pull/1#pullrequestreview-5596763042).
 
-The review confirms ten findings requiring corrections. Two describe deliberate
+The original review confirms ten findings requiring corrections. Two describe deliberate
 research/test boundaries rather than defects in the supported runtime. Their
 documentation is clarified below. No unfinished capability becomes implemented
 or ready. AGENTS.md and the installed Copilot assets remain unchanged; the
@@ -26,13 +26,17 @@ owner-authorized approval-policy adjustments are recorded below.
 | 10 | Catalog evidence escapes repository | Valid. Reject absolute, traversal and symlink escapes; do not read rejected SDDs or external Markdown files. | SDD standard repository-local evidence rule; [validator tests](../../tests/test_spec_validator.py) |
 | 11 | Lab acts on matching label alone | Valid. Require both pinned image and lab label before status, Ingress smoke or stop accesses the named container. | `SYM-TEST-012`; [guarded lab tests](../../tests/test_ha_app_lab.py), [operator guide](ha-app-lab.md) |
 | 12 | Dashboard read survives disconnect | Valid. Abort active/superseded requests and invalidate late completions; cleanup preserves the safe snapshot without inventing a read failure. | `SYM-UI-004`, `SYM-UI-009`; [client state tests](../../ui/src/model.test.ts), [dashboard SDD](../../specs/operational-dashboard.md) |
+| 13 | Follow-up PR review: cancellation after final renewal can still publish | Valid. Check operation state, ownership, lease expiry and cancellation inside the snapshot write transaction in the shared SQLite database. Serialize cancellation/takeover with publication and fail closed without shared operation state. | `SYM-JOB-004`, `SYM-LIB-004`; [after-renewal races](../../tests/test_library_import_execution.py), [transaction fence tests](../../tests/test_sqlite_library.py), [finding](https://github.com/vypdev/symphonia/pull/10#discussion_r4335451401) |
 
 ## Verification budget and acceptance
 
-Minimum **27 distinct regression cases**: 3 copy-policy/admission, 2 connection
+Minimum **38 distinct regression cases**: 3 copy-policy/admission, 2 connection
 probe/cleanup, 6 import cancellation/lease/publication ordering, 5 Apple media
 types, 4 catalog path boundaries, 4 lab command identities and 3 dashboard abort
-and late-result cases. Parameterized cases count only for distinct inputs or
+and late-result cases, plus 11 follow-up publication-fence cases: cancellation
+and takeover after renewal; cancelled, expired, missing, wrong-owner and
+terminal guards; competing cancellation; idempotent replay; isolated storage;
+and interrupted publication. Parameterized cases count only for distinct inputs or
 states. Existing runtime/callback tests verify the two scope dispositions.
 
 Acceptance requires the complete offline Python suite, production and fixture
@@ -46,6 +50,12 @@ Python 3.13, with **86% combined line/branch coverage** using coverage 7.16.1;
 **10 production UI tests and 7 fixture UI tests passed** on Node 24. Both UI
 type checks, presentation boundaries and builds passed, as did specification
 validation, whitespace and the playback-lab Compose configuration check.
+
+Follow-up finding 13 revalidation passes **317 Python tests without skips**
+and measures **87% combined line/branch coverage** with the enforced 85%
+minimum. Seven added test methods exercise the 11 distinct publication-fence
+cases listed above. The SDD validator and patch whitespace checks pass; no UI
+source, dependency, asset, or Copilot workflow changes for this follow-up.
 
 Copilot preservation is checked against the baseline for all 29 installed
 assets and AGENTS.md, plus the managed pointer/profile/guide/skill hashes in the
@@ -88,8 +98,10 @@ reviewed strict plan before further writes. Older complete import observations
 remain available as history; equal observation times retain the existing current
 snapshot. No database schema or migration is added. The timestamp guard does not
 implement the full import-session/version fencing still required by the Draft
-import SDD. Cancellation remains cooperative at step boundaries; it does not
-claim to roll back a publication that has already begun.
+import SDD. Cancellation remains cooperative at step boundaries;
+the final local publication boundary is enforced in one SQLite transaction.
+A cancellation committed first prevents publication; a publication transaction
+started first excludes cancellation until commit and retains its confirmed result.
 
 No new architectural decision is introduced: provider mapping remains in its
 adapter, collection/publication coordination stays in application, atomic

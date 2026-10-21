@@ -163,6 +163,14 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 The command must run without network access, provider accounts, Home Assistant, or a pre-existing database.
 
+The durable one-playlist import uses operation and projection tables in one
+SQLite database. Snapshot publication checks cancellation, state, ownership,
+and lease expiry inside its write transaction, serializing publication with
+cancellation and worker takeover. Isolated in-memory adapters remain useful
+for standalone tests; guarded durable publication fails closed without the
+shared operation table. A completed publication remains confirmed if a later
+cancellation request arrives.
+
 Run `make coverage COVERAGE_PYTHON=<quality-environment-python>` with the pinned
 `quality` dependency installed to measure combined line/branch coverage. The
 repository requires at least **85%** overall coverage through

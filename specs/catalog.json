@@ -410,7 +410,9 @@
           "src/symphonia/application/library_import_execution_state.py",
           "src/symphonia/application/library_import_payload.py",
           "src/symphonia/infrastructure/sqlite_library.py",
-          "src/symphonia/providers/apple_music.py"
+          "src/symphonia/providers/apple_music.py",
+          "src/symphonia/infrastructure/sqlite_publication_guard.py",
+          "src/symphonia/domain/operations.py"
         ],
         "tests": [
           "tests/test_provider_import.py",
@@ -629,7 +631,8 @@
           "src/symphonia/application/copy_execution_entries.py",
           "src/symphonia/application/library_import_execution.py",
           "src/symphonia/application/library_import_execution_state.py",
-          "src/symphonia/application/library_import_payload.py"
+          "src/symphonia/application/library_import_payload.py",
+          "src/symphonia/infrastructure/sqlite_publication_guard.py"
         ],
         "tests": [
           "tests/test_sqlite_operations.py",

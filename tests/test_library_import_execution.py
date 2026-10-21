@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from symphonia.application import LibraryImportExecutionService, LibraryImportService, OperationRunner
 from symphonia.domain.operations import LeaseConflict
@@ -47,8 +49,11 @@ class FakeAdapter:
 
 class LibraryImportExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.operations = OperationRepository()
-        self.projections = PlaylistProjectionRepository()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.database_path = f"{directory.name}/state.sqlite3"
+        self.operations = OperationRepository(self.database_path)
+        self.projections = PlaylistProjectionRepository(self.database_path)
         self.service = LibraryImportExecutionService(LibraryImportService(self.projections), self.operations)
         self.playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
 
@@ -222,6 +227,56 @@ class LibraryImportExecutionTests(unittest.TestCase):
         with self.assertRaises(LeaseConflict):
             self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
         self.assertIsNone(self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1"))
+
+    def test_cancellation_after_final_renewal_cannot_publish(self) -> None:
+        self.service.imports.import_playlist(
+            FakeAdapter(), connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="previous", observed_at=NOW - timedelta(minutes=1),
+        )
+        other = OperationRepository(self.database_path)
+        self.addCleanup(other.close)
+        renew = self.operations.renew_lease
+        renewals = 0
+
+        def cancel_after_renewal(operation_id, **kwargs):
+            nonlocal renewals
+            renewed = renew(operation_id, **kwargs)
+            renewals += 1
+            if renewals == 2:
+                other.cancel(operation_id, now=NOW)
+            return renewed
+
+        with patch.object(self.operations, "renew_lease", side_effect=cancel_after_renewal):
+            result = self.enqueue(FakeAdapter())
+
+        self.assertEqual(result.state, "cancelled")
+        self.assertEqual(renewals, 2)
+        self.assertEqual(self.projections.current(
+            provider="spotify", namespace="connection-1", playlist_id="playlist-1",
+        ).snapshot_id, "previous")
+        with self.assertRaises(KeyError):
+            self.projections.get("snapshot-1")
+
+    def test_worker_takeover_after_final_renewal_cannot_publish(self) -> None:
+        other = OperationRepository(self.database_path)
+        self.addCleanup(other.close)
+        renew = self.operations.renew_lease
+        renewals = 0
+
+        def take_over_after_renewal(operation_id, **kwargs):
+            nonlocal renewals
+            renewed = renew(operation_id, **kwargs)
+            renewals += 1
+            if renewals == 2:
+                other.claim(operation_id, worker_id="worker-b", now=NOW + timedelta(seconds=31))
+            return renewed
+
+        with patch.object(self.operations, "renew_lease", side_effect=take_over_after_renewal):
+            with self.assertRaises(LeaseConflict):
+                self.enqueue(FakeAdapter())
+        self.assertEqual(renewals, 2)
+        with self.assertRaises(KeyError):
+            self.projections.get("snapshot-1")
 
     def test_malformed_persisted_playlist_id_never_reaches_adapter(self) -> None:
         adapter = FakeAdapter()

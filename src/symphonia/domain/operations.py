@@ -12,6 +12,15 @@ class LeaseConflict(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
+class OperationPublicationGuard:
+    """Require live ownership and no cancellation at local publication."""
+
+    operation_id: str
+    worker_id: str
+    now: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class OperationRecord:
     operation_id: str
     operation_type: str
