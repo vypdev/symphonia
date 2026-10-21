@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
 
 class LeaseConflict(RuntimeError):
     """A caller no longer owns an eligible, live operation lease."""
+
+
+@dataclass(frozen=True, slots=True)
+class OperationPublicationGuard:
+    """Require live ownership and no cancellation at local publication."""
+
+    operation_id: str
+    worker_id: str
+    clock: Callable[[], datetime]
 
 
 @dataclass(frozen=True, slots=True)

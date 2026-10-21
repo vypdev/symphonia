@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
-from symphonia.domain import CopyPolicy, EntryClassification, PlaylistSnapshot, SourcePlaylistEntry
+from symphonia.domain import CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.infrastructure import CopyPlanRepository, OperationRepository
 from symphonia.providers import ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
@@ -157,11 +157,29 @@ class CopyExecutionTests(unittest.TestCase):
             ],
         )
 
-    def test_best_effort_omission_is_partial_not_success(self) -> None:
-        digest = self.accepted_digest(policy=CopyPolicy.BEST_EFFORT, include_unmatched=True)
-        operation = self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
-        self.assertEqual(operation.state, "partial")
-        self.assertEqual(operation.checkpoint["omitted_occurrences"], ["occ-2"])
+    def test_legacy_accepted_best_effort_plan_cannot_be_enqueued_or_executed(self) -> None:
+        source, policy = self.snapshot(policy=CopyPolicy.BEST_EFFORT, include_unmatched=True)
+        stored = self.workflow.create_plan(
+            source, target_provider="youtube", target_playlist_name="Rock",
+            target_visibility="private", policy=policy, now=NOW,
+        )
+        digest = stored.plan.digest
+        # Model a plan accepted by the older foundation, without changing its digest.
+        self.plans._connection.execute(
+            "UPDATE copy_plans SET accepted_at = ? WHERE digest = ?", (NOW.isoformat(), digest),
+        )
+        with self.assertRaises(PlanAcceptanceError):
+            self.workflow.enqueue_accepted_plan(digest, now=NOW)
+        with self.assertRaises(PlanAcceptanceError):
+            self.executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
+        operation = self.operations.create(
+            operation_type="copy_playlist", idempotency_key="legacy-best-effort",
+            payload={"plan_digest": digest}, now=NOW,
+        )
+        claimed = self.operations.claim(operation.operation_id, worker_id="worker-a", now=NOW)
+        with self.assertRaises(PlanAcceptanceError):
+            self.executor.execute_claimed(claimed, writer=self.writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(self.writer.added, [])
 
     def test_unknown_write_is_reconciled_before_success(self) -> None:
         digest = self.accepted_digest()

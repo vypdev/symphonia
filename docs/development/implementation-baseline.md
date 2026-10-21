@@ -124,6 +124,19 @@ The first implementation increment is intentionally narrower than any provider o
 - Idempotent snapshot publication that rejects reused IDs with different content and never rolls back a newer current pointer.
 - An application import use case that reports partial results without advancing freshness or replacing the last complete projection.
 
+## Review corrections (2026-10-21)
+
+The [twelve-finding review](bugbot-review-2026-10-21.md) records ten bounded
+corrections and two clarified test/research scope dispositions. Strict copy
+acceptance now applies to historical accepted plans at admission and execution.
+Disconnect fences stale probes; cancellation and lease ownership are rechecked
+between import collection and publication; older/equal observations cannot
+replace a newer current projection. Apple song/video/unknown resource types
+remain distinct. Catalog evidence cannot escape the repository, lab commands
+verify the pinned container image, and dashboard disconnect aborts its read.
+All Copilot assets and AGENTS.md instructions are preserved. These corrections
+do not close the Draft capability blockers.
+
 ## Local container profile
 
 `Dockerfile` packages the dependency-free runtime with persistent `/data`. Supervisor mounts that directory as root: the container entrypoint briefly adjusts only the directory and known SQLite files, then drops supplementary groups, GID, and UID before executing the service as `symphonia`. The first real [local Supervisor/App smoke](ha-app-lab.md) found and fixed this mount-ownership failure. The profile is not yet a published Home Assistant App artifact.
@@ -149,6 +162,25 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
 The command must run without network access, provider accounts, Home Assistant, or a pre-existing database.
+
+The durable one-playlist import uses operation and projection tables in one
+SQLite database. Snapshot publication checks cancellation, state, ownership,
+and lease expiry inside its write transaction, serializing publication with
+cancellation and worker takeover. Isolated in-memory adapters remain useful
+for standalone tests; guarded durable publication fails closed without the
+shared operation table. A completed publication remains confirmed if a later
+cancellation request arrives.
+The executor uses a fresh injected UTC clock after provider I/O, and the
+publication guard reads it after acquiring the database write lock. Expired
+leases stop publication and propagate for recovery; they are never turned into
+failure checkpoints using the old dispatch timestamp.
+
+Run `make coverage COVERAGE_PYTHON=<quality-environment-python>` with the pinned
+`quality` dependency installed to measure combined line/branch coverage. The
+repository requires at least **85%** overall coverage through
+`[tool.coverage.report].fail_under` in `pyproject.toml`. Both this target and
+the `Verify` workflow's `branch-coverage` job read that setting; the report
+exits unsuccessfully below the minimum.
 
 ## Boundary rules
 

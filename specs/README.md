@@ -127,8 +127,9 @@ git diff --check
 PYTHONPATH=. python3 tools/validate_specs.py
 ```
 
-The validator checks that `catalog.json` parses, referenced files exist, each
-SDD has one known catalog capability ID, catalog statuses and paths agree with
+The validator checks that `catalog.json` parses, referenced files exist,
+catalog paths are repository-relative and cannot escape through traversal or
+symlinks, each SDD has one known catalog capability ID, catalog statuses and paths agree with
 `CATALOG.md`, requirement IDs are present in the horizontal specifications,
 and local Markdown links resolve. It also rejects a `Ready for implementation`
 or `Implemented` catalog entry with remaining blockers, requires an implemented

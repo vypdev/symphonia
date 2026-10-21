@@ -120,6 +120,24 @@ After a crash, another worker waits for lease expiry, claims the operation, and 
 - `waiting_user` stores a redacted reason and a bounded set of permitted actions.
 - Cancellation is checked before claim, before every side effect, and between provider batches. The lease-renewal gate used before a new step refuses a cancellation-requested operation; while its lease remains valid, the handler checkpoints the cancellation without starting that step.
 
+The one-playlist foundation separates provider-page collection from local
+publication and checks cancellation/lease ownership again before that
+publication. A cancelled read does not advance library freshness or publish a
+new snapshot. This is covered with complete and incomplete read results and
+with worker takeover during a read in the [dated regression review](../docs/development/bugbot-review-2026-10-21.md).
+The local snapshot transaction repeats the operation ownership, expiry, state,
+and cancellation checks under SQLite's write lock in the shared database.
+Cancellation or takeover committed after lease renewal but before that
+transaction prevents publication; competing cancellation cannot commit during
+publication. Published complete steps remain confirmed when publication wins
+that ordering. This closes the foundation's local publication race without
+implementing the pending multi-collection/session or provider-write contracts.
+The import executor refreshes its injected clock after provider I/O and before
+terminal/error handling. Publication reads that clock inside the write
+transaction, so a long read or lock wait cannot reuse the pre-read timestamp
+to authorize an expired lease. A lease conflict escapes the dispatcher without
+a backdated failure checkpoint and remains eligible for existing lease recovery.
+
 ### Idempotency
 
 The operation request key deduplicates logically identical submissions within a defined scope. Each external mutation step has a stable key or reconciliation fingerprint derived from immutable intent—not from an attempt count. Where a provider lacks idempotency support, the adapter shall supply a deterministic reconciliation strategy or declare the write unsupported.

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from symphonia.application import LibraryImportExecutionService, LibraryImportService, OperationRunner
+from symphonia.domain.operations import LeaseConflict
 from symphonia.infrastructure import OperationRepository, PlaylistProjectionRepository
 from symphonia.providers import (
     AccessBasis,
@@ -46,9 +49,15 @@ class FakeAdapter:
 
 class LibraryImportExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.operations = OperationRepository()
-        self.projections = PlaylistProjectionRepository()
-        self.service = LibraryImportExecutionService(LibraryImportService(self.projections), self.operations)
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.database_path = f"{directory.name}/state.sqlite3"
+        self.operations = OperationRepository(self.database_path)
+        self.projections = PlaylistProjectionRepository(self.database_path)
+        self.clock_now = NOW
+        self.service = LibraryImportExecutionService(
+            LibraryImportService(self.projections), self.operations, clock=lambda: self.clock_now,
+        )
         self.playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
 
     def tearDown(self) -> None:
@@ -98,7 +107,8 @@ class LibraryImportExecutionTests(unittest.TestCase):
 
     def test_transient_import_failure_honors_retry_budget(self) -> None:
         service = LibraryImportExecutionService(
-            LibraryImportService(self.projections), self.operations, max_retry_attempts=0
+            LibraryImportService(self.projections), self.operations, max_retry_attempts=0,
+            clock=lambda: self.clock_now,
         )
         created = service.enqueue_playlist(
             FakeAdapter(error=ProviderApiError(ProviderErrorCategory.TIMEOUT, "temporary")),
@@ -176,6 +186,146 @@ class LibraryImportExecutionTests(unittest.TestCase):
         )
         self.assertEqual(result.state, "cancelled")
         self.assertEqual(adapter.read_calls, 0)
+
+    def test_cancellation_during_read_retains_the_previous_complete_projection(self) -> None:
+        self.service.imports.import_playlist(
+            FakeAdapter(), connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="previous", observed_at=NOW - timedelta(minutes=1),
+        )
+        for complete in (True, False):
+            with self.subTest(complete=complete):
+                operations = self.operations
+
+                class CancellingAdapter(FakeAdapter):
+                    def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                        operations.cancel(created.operation_id, now=NOW)
+                        return super().read_playlist_pages(connection_id, playlist, cursor)
+
+                adapter = CancellingAdapter(complete=complete)
+                created = self.service.enqueue_playlist(
+                    adapter, connection_id="connection-1", playlist=self.playlist,
+                    snapshot_id=f"cancelled-{complete}", observed_at=NOW, now=NOW,
+                )
+                claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+                result = self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+                self.assertEqual(result.state, "cancelled")
+                current = self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
+                self.assertEqual(current.snapshot_id, "previous")
+                with self.assertRaises(KeyError):
+                    self.projections.get(f"cancelled-{complete}")
+
+    def test_lease_loss_during_read_prevents_publication(self) -> None:
+        operations = self.operations
+
+        class LosingAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                operations.claim(created.operation_id, worker_id="other-worker", now=NOW + timedelta(seconds=31))
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        adapter = LosingAdapter()
+        created = self.service.enqueue_playlist(
+            adapter, connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="lost-lease", observed_at=NOW, now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+        with self.assertRaises(LeaseConflict):
+            self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+        self.assertIsNone(self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1"))
+
+    def test_cancellation_after_final_renewal_cannot_publish(self) -> None:
+        self.service.imports.import_playlist(
+            FakeAdapter(), connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="previous", observed_at=NOW - timedelta(minutes=1),
+        )
+        other = OperationRepository(self.database_path)
+        self.addCleanup(other.close)
+        renew = self.operations.renew_lease
+        renewals = 0
+
+        def cancel_after_renewal(operation_id, **kwargs):
+            nonlocal renewals
+            renewed = renew(operation_id, **kwargs)
+            renewals += 1
+            if renewals == 2:
+                other.cancel(operation_id, now=NOW)
+            return renewed
+
+        with patch.object(self.operations, "renew_lease", side_effect=cancel_after_renewal):
+            result = self.enqueue(FakeAdapter())
+
+        self.assertEqual(result.state, "cancelled")
+        self.assertEqual(renewals, 2)
+        self.assertEqual(self.projections.current(
+            provider="spotify", namespace="connection-1", playlist_id="playlist-1",
+        ).snapshot_id, "previous")
+        with self.assertRaises(KeyError):
+            self.projections.get("snapshot-1")
+
+    def test_worker_takeover_after_final_renewal_cannot_publish(self) -> None:
+        other = OperationRepository(self.database_path)
+        self.addCleanup(other.close)
+        renew = self.operations.renew_lease
+        renewals = 0
+
+        def take_over_after_renewal(operation_id, **kwargs):
+            nonlocal renewals
+            renewed = renew(operation_id, **kwargs)
+            renewals += 1
+            if renewals == 2:
+                other.claim(operation_id, worker_id="worker-b", now=NOW + timedelta(seconds=31))
+            return renewed
+
+        with patch.object(self.operations, "renew_lease", side_effect=take_over_after_renewal):
+            with self.assertRaises(LeaseConflict):
+                self.enqueue(FakeAdapter())
+        self.assertEqual(renewals, 2)
+        with self.assertRaises(KeyError):
+            self.projections.get("snapshot-1")
+
+    def test_read_outlasting_the_lease_cannot_publish(self) -> None:
+        test = self
+
+        class SlowAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                test.clock_now = NOW + timedelta(seconds=31)
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        adapter = SlowAdapter()
+        created = self.service.enqueue_playlist(
+            adapter, connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="snapshot-1", observed_at=NOW, now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+        with self.assertRaises(LeaseConflict):
+            self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+        with self.assertRaises(KeyError):
+            self.projections.get("snapshot-1")
+
+    def test_read_within_the_lease_uses_fresh_time_for_completion(self) -> None:
+        test = self
+
+        class SlowAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                test.clock_now = NOW + timedelta(seconds=20)
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        result = self.enqueue(SlowAdapter())
+        self.assertEqual(result.state, "succeeded")
+        self.assertEqual(result.updated_at, NOW + timedelta(seconds=20))
+
+    def test_slow_provider_failure_schedules_retry_from_current_time(self) -> None:
+        test = self
+
+        class SlowAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                test.clock_now = NOW + timedelta(seconds=20)
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        result = self.enqueue(SlowAdapter(error=ProviderApiError(
+            ProviderErrorCategory.NETWORK_ERROR, "offline",
+        )))
+        self.assertEqual(result.state, "retry_scheduled")
+        self.assertEqual(result.next_run_at, NOW + timedelta(seconds=80))
 
     def test_malformed_persisted_playlist_id_never_reaches_adapter(self) -> None:
         adapter = FakeAdapter()

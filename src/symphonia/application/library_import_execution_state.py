@@ -24,7 +24,7 @@ class ImportRun:
     max_retry_attempts: int
 
     def cancel_if_requested(self) -> OperationRecord | None:
-        """A lease renewal can lose a cancellation race before the first read."""
+        """Observe cancellation before the next read or publication step."""
 
         latest = self.operations.get(self.operation.operation_id)
         if (

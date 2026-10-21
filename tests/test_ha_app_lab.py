@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+
+from tools import ha_app_lab
 
 from tools.ha_app_lab import (
     CONTAINER,
@@ -15,6 +18,22 @@ from tools.ha_app_lab import (
 
 
 class HomeAssistantAppLabCommandTests(unittest.TestCase):
+    def test_commands_refuse_a_labelled_container_using_the_wrong_image(self) -> None:
+        for command in ("stop", "ingress-smoke", "status"):
+            with self.subTest(command=command), patch("sys.argv", ["ha_app_lab.py", command]), patch.object(
+                ha_app_lab, "_container_details", return_value={"image": "unrelated:latest", "label": "ha-app", "running": "true"},
+            ), patch.object(ha_app_lab, "_run") as run:
+                with self.assertRaises(SystemExit) as result:
+                    ha_app_lab.main()
+                self.assertEqual(result.exception.code, 1)
+                run.assert_not_called()
+
+    def test_stop_accepts_the_exact_pinned_lab_container(self) -> None:
+        with patch("sys.argv", ["ha_app_lab.py", "stop"]), patch.object(
+            ha_app_lab, "_container_details", return_value={"image": DEVCONTAINER_IMAGE, "label": "ha-app", "running": "true"},
+        ), patch.object(ha_app_lab, "_run") as run:
+            self.assertEqual(ha_app_lab.main(), 0)
+            run.assert_called_once_with("docker", "stop", CONTAINER)
     def test_container_has_isolated_storage_and_loopback_ports(self) -> None:
         command = container_command(Path("/tmp/example-project"))
 

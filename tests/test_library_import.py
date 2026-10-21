@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import unittest
 
 from symphonia.application import LibraryImportService
@@ -40,6 +40,14 @@ class LibraryImportServiceTests(unittest.TestCase):
         self.assertEqual(publication.state, "succeeded")
         self.assertEqual(publication.snapshot.snapshot_id, "snapshot-1")
         self.assertEqual(publication.retained_current.snapshot_id, "snapshot-1")
+
+    def test_older_import_reports_the_actual_retained_current_snapshot(self) -> None:
+        self.service.publish_playlist(result(True), snapshot_id="newer", observed_at=NOW)
+        publication = self.service.publish_playlist(
+            result(True), snapshot_id="older", observed_at=NOW - timedelta(seconds=1),
+        )
+        self.assertEqual(publication.snapshot.snapshot_id, "older")
+        self.assertEqual(publication.retained_current.snapshot_id, "newer")
 
     def test_partial_import_retains_last_complete_snapshot(self) -> None:
         self.service.publish_playlist(result(True), snapshot_id="snapshot-1", observed_at=NOW)

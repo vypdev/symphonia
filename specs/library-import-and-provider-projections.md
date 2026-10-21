@@ -37,6 +37,33 @@ The durable wrapper persists import intent before provider reads and records ter
 
 The foundation executor checks stored playlist identifier types and the operation/playlist provider binding before invoking an adapter; malformed persisted intent fails without a provider read. Intent parsing and durable outcome policy live in focused application modules. A malformed persisted retry count also fails before a provider read; deterministic tests cover cancellation before reading, transient retries, rate-limit deadlines, and permanent errors.
 
+Collection and publication are separate application steps. After collecting
+pages, the durable wrapper checks cancellation and renews its lease before
+publishing; cancellation during a read retains the last complete projection.
+The publication transaction also verifies the operation is running, uncancelled,
+and owned by the supplied unexpired lease. Its SQLite write lock serializes
+publication with cancellation and worker takeover: a cancellation committed
+first prevents the snapshot write, while a publication started first retains
+its confirmed result. The durable wrapper requires operation and projection
+tables in the same database; isolated in-memory stores fail closed for guarded
+publication. The standalone import helper remains available without a durable
+operation guard. Regression cases cover cancellation and takeover after final
+lease renewal, expired/missing/wrong-owner/terminal operations, idempotent
+replay, competing cancellation, isolated storage, and interrupted transactions.
+An injected UTC clock supplies fresh time after provider reads and is evaluated
+again inside the publication transaction after its write lock is acquired.
+A read or lock wait that outlasts the lease cannot publish or revive that lease;
+completion and retry timing also use refreshed time. Lease conflicts propagate
+without a failure checkpoint backdated to dispatch, preserving normal recovery.
+Publication keeps every immutable complete observation but advances the current
+pointer only for a strictly newer UTC observation time. A late older observation
+or an equal-time observation cannot displace the current snapshot; the use case
+reports the actual retained current snapshot separately from the stored result.
+This timestamp fence is foundation evidence, not the full plan/session-version
+fencing required by section 8. Apple Music normalization distinguishes songs,
+music videos, and unknown resource types while retaining identity and order.
+See the [dated review and regressions](../docs/development/bugbot-review-2026-10-21.md).
+
 The official Spotify and YouTube Data foundation adapters use a shared JSON transport instead of importing one adapter through the other. Spotify's bounded playlist traversal, item normalization, and HTTP error classification are separate provider modules behind the same adapter contract. Offline tests confirm provider-specific, secret-safe timeout and network error classification; this does not establish the full provider import capability.
 
 The one-playlist use case now depends on an application-owned projection port
@@ -304,6 +331,7 @@ The eight feature-specific UI cases supplement the UI-foundation budget and inhe
 9. Given hostile provider IDs/URLs/names/cursors, no path/egress/render/log injection or secret disclosure occurs.
 10. Given a completed import, only changed/new provider tracks are scheduled for separate resolution with no identity decision made by import.
 11. Given empty, importing, rate-limited, stale, partial, failed, and complete fixtures with long provider text and dense ordered entries, the shared Home Assistant-native components preserve textual completeness/freshness, keyboard access, bounded scrolling, and essential actions at narrow and wide widths.
+12. Given cancellation or loss of the worker lease during the foundation's playlist read, no new snapshot is published. Given late older or equal-time observations, history remains readable and the current pointer does not move backward.
 
 ## 17. Requirements traceability
 

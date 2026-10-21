@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 
-from symphonia.domain.operations import OperationRecord
+from symphonia.domain.operations import LeaseConflict, OperationRecord
 
 from .ports import OperationPort
 
@@ -51,6 +51,10 @@ class OperationRunner:
             if result.operation_id != operation.operation_id:
                 raise ValueError("operation handler returned a different operation")
             return self.operations.get(operation.operation_id)
+        except LeaseConflict:
+            # Ownership has expired or changed; let durable lease recovery
+            # proceed instead of checkpointing failure with the dispatch time.
+            raise
         except Exception as error:
             # A handler must never strand a claimed operation in ``running``.
             # Persist only a stable exception class marker: provider details

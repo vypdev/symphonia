@@ -51,7 +51,8 @@
         "docs/architecture/system-architecture.md",
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md",
-        "docs/development/ha-app-lab.md"
+        "docs/development/ha-app-lab.md",
+        "docs/development/bugbot-review-2026-10-21.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -95,7 +96,8 @@
           "docs/development/implementation-baseline.md",
           "docs/development/ha-app-lab.md",
           "docs/development/playback-lab/README.md",
-          "specs/home-assistant-app-runtime-and-ingress.md"
+          "specs/home-assistant-app-runtime-and-ingress.md",
+          "docs/development/bugbot-review-2026-10-21.md"
         ]
       },
       "blockers": [
@@ -187,7 +189,8 @@
         "docs/development/ha-app-lab.md",
         "docs/development/ui-lit-spike/gateway-reference.md",
         "docs/decisions/0004-home-assistant-native-ui.md",
-        "docs/decisions/0005-lit-typescript-vite-ui.md"
+        "docs/decisions/0005-lit-typescript-vite-ui.md",
+        "docs/development/bugbot-review-2026-10-21.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -214,7 +217,8 @@
         "documentation": [
           "docs/development/operational-dashboard.md",
           "docs/development/ha-app-lab.md",
-          "specs/operational-dashboard.md"
+          "specs/operational-dashboard.md",
+          "docs/development/bugbot-review-2026-10-21.md"
         ]
       },
       "blockers": []
@@ -314,7 +318,8 @@
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/architecture/system-architecture.md",
         "docs/development/oauth-callback-spike.md",
-        "docs/development/implementation-baseline.md"
+        "docs/development/implementation-baseline.md",
+        "docs/development/bugbot-review-2026-10-21.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -338,7 +343,8 @@
         "documentation": [
           "docs/development/oauth-callback-spike.md",
           "docs/development/implementation-baseline.md",
-          "specs/provider-connections-and-authorization.md"
+          "specs/provider-connections-and-authorization.md",
+          "docs/development/bugbot-review-2026-10-21.md"
         ]
       },
       "blockers": [
@@ -386,7 +392,8 @@
         "docs/providers/provider-specification.md",
         "docs/providers/provider-research.md",
         "docs/open-questions.md",
-        "docs/development/implementation-baseline.md"
+        "docs/development/implementation-baseline.md",
+        "docs/development/bugbot-review-2026-10-21.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -402,7 +409,11 @@
           "src/symphonia/application/library_import_execution.py",
           "src/symphonia/application/library_import_execution_state.py",
           "src/symphonia/application/library_import_payload.py",
-          "src/symphonia/infrastructure/sqlite_library.py"
+          "src/symphonia/infrastructure/sqlite_library.py",
+          "src/symphonia/providers/apple_music.py",
+          "src/symphonia/infrastructure/sqlite_publication_guard.py",
+          "src/symphonia/domain/operations.py",
+          "src/symphonia/application/operation_runner.py"
         ],
         "tests": [
           "tests/test_provider_import.py",
@@ -411,11 +422,14 @@
           "tests/test_library_import.py",
           "tests/test_architecture_boundaries.py",
           "tests/test_library_import_execution.py",
-          "tests/test_sqlite_library.py"
+          "tests/test_sqlite_library.py",
+          "tests/test_apple_music_adapter.py",
+          "tests/test_operation_runner.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
-          "specs/library-import-and-provider-projections.md"
+          "specs/library-import-and-provider-projections.md",
+          "docs/development/bugbot-review-2026-10-21.md"
         ]
       },
       "blockers": [
@@ -505,7 +519,8 @@
         "docs/providers/provider-research.md",
         "docs/providers/provider-specification.md",
         "docs/development/implementation-baseline.md",
-        "docs/open-questions.md"
+        "docs/open-questions.md",
+        "docs/development/bugbot-review-2026-10-21.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -519,7 +534,8 @@
           "src/symphonia/application/copy_execution_target.py",
           "src/symphonia/application/copy_execution_entries.py",
           "src/symphonia/providers/spotify.py",
-          "src/symphonia/providers/spotify_error_mapping.py"
+          "src/symphonia/providers/spotify_error_mapping.py",
+          "src/symphonia/domain/models.py"
         ],
         "tests": [
           "tests/test_architecture_boundaries.py",
@@ -527,11 +543,13 @@
           "tests/test_sqlite_plans.py",
           "tests/test_copy_execution.py",
           "tests/test_copy_checkpoint.py",
-          "tests/test_spotify_adapter.py"
+          "tests/test_spotify_adapter.py",
+          "tests/test_copy_planning.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
-          "specs/one-time-playlist-copy.md"
+          "specs/one-time-playlist-copy.md",
+          "docs/development/bugbot-review-2026-10-21.md"
         ]
       },
       "blockers": [
@@ -581,7 +599,8 @@
         "docs/development/development-specification.md",
         "docs/development/storage-recovery-spike.md",
         "docs/open-questions.md",
-        "docs/providers/home-assistant-ecosystem-review.md"
+        "docs/providers/home-assistant-ecosystem-review.md",
+        "docs/development/bugbot-review-2026-10-21.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -614,7 +633,8 @@
           "src/symphonia/application/copy_execution_entries.py",
           "src/symphonia/application/library_import_execution.py",
           "src/symphonia/application/library_import_execution_state.py",
-          "src/symphonia/application/library_import_payload.py"
+          "src/symphonia/application/library_import_payload.py",
+          "src/symphonia/infrastructure/sqlite_publication_guard.py"
         ],
         "tests": [
           "tests/test_sqlite_operations.py",
@@ -632,7 +652,8 @@
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
-          "specs/durable-operations-and-recovery.md"
+          "specs/durable-operations-and-recovery.md",
+          "docs/development/bugbot-review-2026-10-21.md"
         ]
       },
       "blockers": [

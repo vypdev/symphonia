@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from symphonia.domain.models import CopyPlan
-from symphonia.domain.operations import OperationRecord
+from symphonia.domain.operations import OperationPublicationGuard, OperationRecord
 from symphonia.domain.plans import CopyPlanRecord
 from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.authorization import AuthorizationAttempt
@@ -71,6 +71,7 @@ class PlaylistProjectionPort(Protocol):
         *,
         snapshot_id: str,
         published_at: datetime,
+        operation_guard: OperationPublicationGuard | None = None,
     ) -> PublishedPlaylistSnapshot: ...
 
     def current(

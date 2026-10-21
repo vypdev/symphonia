@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from dataclasses import replace
 import unittest
 
 from symphonia.application import OperationRunner
-from symphonia.domain.operations import OperationRecord
+from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.infrastructure import OperationRepository
 
 
@@ -129,6 +129,23 @@ class OperationRunnerTests(unittest.TestCase):
         self.assertEqual(result.state, "succeeded")
         self.assertEqual(port.claim_args["worker_id"], "worker-a")
         self.assertEqual(port.read_id, "operation-1")
+
+    def test_expired_handler_lease_is_not_failed_with_the_old_dispatch_time(self) -> None:
+        operation = self.repository.create(
+            operation_type="fixture", idempotency_key="expired-handler", payload={}, now=NOW,
+        )
+        later = NOW + timedelta(seconds=31)
+
+        def handler(claimed, worker_id, now):
+            self.repository.renew_lease(claimed.operation_id, worker_id=worker_id, now=later)
+
+        with self.assertRaises(LeaseConflict):
+            OperationRunner(self.repository, {"fixture": handler}).run_once(worker_id="worker-a", now=NOW)
+        retained = self.repository.get(operation.operation_id)
+        self.assertEqual(retained.state, "running")
+        self.assertEqual(retained.checkpoint, {})
+        recovered = self.repository.claim(operation.operation_id, worker_id="worker-b", now=later)
+        self.assertEqual(recovered.worker_id, "worker-b")
 
 
 if __name__ == "__main__":

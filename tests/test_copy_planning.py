@@ -62,7 +62,7 @@ class CopyPlanningTests(unittest.TestCase):
         with self.assertRaises(PlanAcceptanceError):
             plan.accept(plan.digest)
 
-    def test_best_effort_retains_classification_and_explicitly_omits(self) -> None:
+    def test_best_effort_preview_retains_classification_but_cannot_be_accepted(self) -> None:
         plan = self.service.plan(
             snapshot(
                 SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1"),
@@ -73,10 +73,19 @@ class CopyPlanningTests(unittest.TestCase):
             policy=CopyPolicy.BEST_EFFORT,
         )
 
-        accepted = plan.accept(plan.digest)
-        self.assertEqual(accepted.accepted_digest, plan.digest)
+        self.assertTrue(plan.blocked)
+        with self.assertRaises(PlanAcceptanceError):
+            plan.accept(plan.digest)
         self.assertEqual(plan.omitted_entries[0].classification, EntryClassification.UNMATCHED)
         self.assertEqual(plan.omitted_entries[0].disposition, "omit")
+
+    def test_non_strict_policy_is_not_an_acceptance_override_even_when_all_ready(self) -> None:
+        plan = self.service.plan(
+            snapshot(SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1")),
+            target_provider="youtube", target_playlist_name="Rock", policy=CopyPolicy.BEST_EFFORT,
+        )
+        with self.assertRaises(PlanAcceptanceError):
+            plan.accept(plan.digest)
 
     def test_acceptance_rejects_a_changed_digest(self) -> None:
         plan = self.service.plan(

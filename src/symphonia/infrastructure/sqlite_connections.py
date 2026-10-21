@@ -184,13 +184,15 @@ class ProviderConnectionRepository:
         """Atomically publish the latest safe capability/health observation."""
 
         current = self.get(connection_id)
-        if state is not ConnectionState.DISCONNECTED and not current.secret_ref:
+        if state is ConnectionState.DISCONNECTED:
+            raise ConnectionConflict("use disconnect to remove a connection's secret reference")
+        if not current.secret_ref:
             raise ConnectionConflict("cannot activate a connection without its secret reference")
-        self._connection.execute(
+        updated = self._connection.execute(
             """
             UPDATE provider_connections
                SET state = ?, capabilities_json = ?, expires_at = ?, health_code = ?, updated_at = ?
-             WHERE connection_id = ?
+             WHERE connection_id = ? AND secret_ref = ? AND state != 'disconnected'
             """,
             (
                 state.value,
@@ -199,8 +201,11 @@ class ProviderConnectionRepository:
                 health_code,
                 _utc(now),
                 connection_id,
+                current.secret_ref,
             ),
         )
+        if updated.rowcount != 1:
+            raise ConnectionConflict("connection changed while recording its probe")
         return self.get(connection_id)
 
     def disconnect(self, connection_id: str, *, now: datetime) -> ProviderConnection:

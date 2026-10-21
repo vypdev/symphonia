@@ -17,11 +17,15 @@ integration is not required for the MVP authorization path.
   host binding by default; and
 - the response never reflects authorization codes or provider error descriptions.
 
-The transient authorization code is returned only to the in-process exchange
-owner and is marked non-representational in the prototype result. A future
-provider adapter must exchange it immediately, keep the resulting grant behind
-the secret boundary, and never place either value in logs, URLs, diagnostics,
-ordinary operation payloads, or backups.
+The pure `handle_callback` function returns the transient authorization code
+as non-representational handoff data. The loopback HTTP harness deliberately
+discards that data after testing state consumption; no exchange owner is wired
+into this research server, and a successful response does not mean an account
+was connected. Do not use the harness to authorize a real provider account.
+A future provider adapter must define the handoff and exchange it immediately,
+keep the grant behind the secret boundary, and never place either value in
+logs, URLs, diagnostics, ordinary operation payloads, or backups. See the
+[dated review](bugbot-review-2026-10-21.md) for this scope disposition.
 
 ## Still required before production
 

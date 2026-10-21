@@ -137,7 +137,7 @@ Text equivalent: startup validates configuration, migrates, and recovers before 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
 | --- | --- | --- | --- | --- |
 | `starting` | process and configuration initialization | Symphonia is not ready | `migrating`, `recovering`, `blocked`, `stopping` | automatic or operator fixes configuration |
-| `migrating` | schema change is required | Existing data is being upgraded; no writes | `recovering`, `blocked`, `stopping` | restore/upgrade guidance on failure |
+| `migrating` | schema change is required | Existing data is being upgraded; migration-controlled local writes only, no provider writes | `recovering`, `blocked`, `stopping` | restore/upgrade guidance on failure |
 | `recovering` | leases/jobs/backup state need reconciliation | Durable state is being made safe | `ready`, `blocked`, `stopping` | automatic bounded recovery |
 | `ready` | local invariants pass | UI and eligible operations are available | `degraded`, `stopping` | none |
 | `degraded` | external/optional dependency unavailable | Local service works with named limitations | `ready`, `blocked`, `stopping` | retry or user action by cause |
@@ -157,6 +157,13 @@ No final App option names are accepted yet. The first implementation RFC should 
 Invalid or unknown values fail closed before workers start. Authentication, non-root execution, secret redaction, audit history, and mount/network restrictions are not configurable.
 
 The current foundation profile applies this boundary before opening stores or creating a server: host and database values reject Unicode C0/C1 control characters (before host whitespace normalization), ports must be integral and within the valid TCP range, and the Ingress base path must be a normalized path without query, fragment, control, or traversal segments. Runtime configuration and direct resource opening share database-path normalization, including expansion of a leading home-directory marker so SQLite and backup path checks identify the same file. These checks are implementation evidence only; final App option names and supported deployment values remain open.
+
+The file-backed runtime shares one SQLite file across its adapters. Explicit
+`:memory:` composition is an ephemeral test profile with separate per-adapter
+databases; it does not promise cross-store SQL joins, persistence, or backup.
+Backup explicitly refuses that profile. The process configuration defaults to
+a file-backed database. The [dated review](../docs/development/bugbot-review-2026-10-21.md)
+records the existing persistence and backup tests that enforce this boundary.
 
 ## 8. Clean Architecture design
 
@@ -225,7 +232,7 @@ Status is textual and announced when it changes; focus remains stable during pol
 | Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |
 | --- | --- | --- | --- | --- | --- |
 | Invalid App option | no readiness | durable data untouched | no | correct option | none |
-| Migration interruption | no writes | prior DB plus migration evidence | bounded resume only if proven safe | restore/upgrade if blocked | never create fresh DB silently |
+| Migration interruption | no provider writes; readiness blocked | prior DB plus migration evidence | bounded resume only if proven safe | restore/upgrade if blocked | never create fresh DB silently |
 | Stale worker lease | delayed operation | job/checkpoint/audit | after lease expiry | none unless repeated | recovered worker records takeover |
 | Backup cannot quiesce | backup not declared valid | operations remain authoritative | bounded retry | retry later | no partial backup claim |
 | Ingress unavailable | UI unavailable | service/jobs remain durable | platform recovery | inspect HA | no provider rollback |

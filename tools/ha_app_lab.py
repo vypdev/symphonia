@@ -103,11 +103,15 @@ def _start_container() -> None:
     if details is None:
         print("Creating isolated Supervisor devcontainer", flush=True)
         _run(*container_command())
-    elif details["image"] != DEVCONTAINER_IMAGE or details["label"] != "ha-app":
+    elif not _is_lab_container(details):
         raise RuntimeError(f"Refusing to reuse an unrelated container named {CONTAINER}")
     elif details["running"] != "true":
         print("Starting existing Supervisor devcontainer", flush=True)
         _run("docker", "start", CONTAINER)
+
+
+def _is_lab_container(details: dict[str, str]) -> bool:
+    return details["image"] == DEVCONTAINER_IMAGE and details["label"] == "ha-app"
 
 
 def _stage() -> None:
@@ -188,12 +192,14 @@ def main() -> int:
             _stage()
         elif args.command == "status":
             details = _container_details()
+            if details is not None and not _is_lab_container(details):
+                raise RuntimeError(f"Refusing to inspect an unrelated container named {CONTAINER}")
             print("Lab container: absent" if details is None else f"Lab container: {'running' if details['running'] == 'true' else 'stopped'}")
             if details and details["running"] == "true":
                 print(f"Supervisor API ready: {_supervisor_ready()}")
         elif args.command == "ingress-smoke":
             details = _container_details()
-            if details is None or details["label"] != "ha-app" or details["running"] != "true":
+            if details is None or not _is_lab_container(details) or details["running"] != "true":
                 raise RuntimeError("Symphonia App lab is not running")
             script = INGRESS_PROBE.read_text(encoding="utf-8")
             result = _run(
@@ -203,7 +209,7 @@ def main() -> int:
             print(result.stdout.strip())
         else:
             details = _container_details()
-            if details is not None and details["label"] != "ha-app":
+            if details is not None and not _is_lab_container(details):
                 raise RuntimeError(f"Refusing to stop an unrelated container named {CONTAINER}")
             if details is not None:
                 _run("docker", "stop", CONTAINER)
