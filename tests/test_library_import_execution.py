@@ -91,6 +91,32 @@ class LibraryImportExecutionTests(unittest.TestCase):
         )
         return runner.run_once(worker_id="worker-a", now=NOW)
 
+    def test_import_idempotency_binds_complete_identity_without_delimiter_collisions(self) -> None:
+        # Each tuple differs in one identity boundary, or repartitions ':' text.
+        intents = [
+            ("connection", "spotify", "account", "id", "snapshot"),
+            ("connection", "spotify", "other-account", "id", "snapshot"),
+            ("connection", "apple_music", "account", "id", "snapshot"),
+            ("other-connection", "spotify", "account", "id", "snapshot"),
+            ("connection", "spotify", "account", "other-id", "snapshot"),
+            ("connection", "spotify", "account", "id", "other-snapshot"),
+            ("connection", "spotify", "account", "id:part", "snapshot"),
+            ("connection", "spotify", "account", "id", "part:snapshot"),
+        ]
+        operation_ids = set()
+        for connection, provider, namespace, identifier, snapshot_id in intents:
+            with self.subTest(intent=(connection, provider, namespace, identifier, snapshot_id)):
+                adapter = FakeAdapter()
+                adapter.manifest = ProviderManifest(provider, provider, AccessBasis.OFFICIAL, "beta", "read")
+                kwargs = dict(connection_id=connection,
+                              playlist=ProviderObjectRef(provider, "playlist", identifier, namespace),
+                              snapshot_id=snapshot_id, observed_at=NOW, now=NOW)
+                first = self.service.enqueue_playlist(adapter, **kwargs)
+                duplicate = self.service.enqueue_playlist(adapter, **kwargs)
+                self.assertEqual(first.operation_id, duplicate.operation_id)
+                operation_ids.add(first.operation_id)
+        self.assertEqual(len(operation_ids), len(intents))
+
     def test_import_is_published_as_a_succeeded_operation(self) -> None:
         result = self.enqueue(FakeAdapter())
         self.assertEqual(result.state, "succeeded")

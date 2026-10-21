@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Callable
 from datetime import datetime, timezone
+import hashlib
+import json
 
 from symphonia.domain.operations import LeaseConflict, OperationPublicationGuard, OperationRecord
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
@@ -64,9 +66,11 @@ class LibraryImportExecutionService:
             "snapshot_id": snapshot_id,
             "observed_at": observed_at.astimezone(timezone.utc).isoformat(timespec="microseconds"),
         }
-        idempotency_key = (
-            f"import:{connection_id}:{playlist.object_type}:{playlist.object_id}:{snapshot_id}"
+        identity = json.dumps(
+            [connection_id, *playlist.external_key, snapshot_id],
+            ensure_ascii=False, separators=(",", ":"),
         )
+        idempotency_key = "import:v2:" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
         return self.operations.create(
             operation_type="import_playlist",
             idempotency_key=idempotency_key,

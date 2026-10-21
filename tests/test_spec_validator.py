@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 from tempfile import TemporaryDirectory
 import unittest
 
@@ -157,6 +158,27 @@ class SpecValidatorTests(unittest.TestCase):
         errors = []
         _validate_catalog_shape(Path("/unused"), {"version": 1, "capabilities": [first, second]}, errors)
         self.assertTrue(any("duplicate catalog capability id" in error for error in errors))
+
+    def test_full_validation_reports_malformed_ids_without_a_traceback(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            (root / "specs/CATALOG.md").write_text("")
+            for invalid_id in ([], {}, None, 17):
+                with self.subTest(invalid_id=invalid_id):
+                    capability = {**self._capability("draft", []), "id": invalid_id}
+                    (root / "specs/catalog.json").write_text(json.dumps({"version": 1, "capabilities": [capability]}))
+                    errors = validate(root)
+                    self.assertIn("catalog capability 0 has an invalid id", errors)
+
+    def test_malformed_primary_path_with_a_known_catalog_row_remains_a_diagnostic(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            (root / "specs/CATALOG.md").write_text("| `example` | Draft | [Example](example.md) |\n")
+            capability = {**self._capability("draft", []), "specification": {}}
+            (root / "specs/catalog.json").write_text(json.dumps({"version": 1, "capabilities": [capability]}))
+            self.assertIn("catalog capability 0 has an invalid specification path", validate(root))
 
     def test_primary_sdd_must_declare_exactly_one_status(self) -> None:
         with TemporaryDirectory() as directory:

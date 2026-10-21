@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 
 from .contracts import (
     AccessBasis,
@@ -152,7 +153,7 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
             self._request(
                 connection_id,
                 "POST",
-                f"/playlists/{target_playlist_id}/items",
+                f"/playlists/{quote(target_playlist_id, safe='')}/items",
                 {},
                 body={"uris": [f"spotify:track:{provider_track_id}"]},
             )

@@ -9,6 +9,12 @@ from symphonia.infrastructure import CopyPlanRepository, OperationRepository
 from symphonia.providers import Capability, ProviderCapabilities
 
 
+WRITE_CAPABILITIES = ProviderCapabilities(
+    enabled=frozenset({Capability.CREATE_PLAYLIST, Capability.ADD_PLAYLIST_ENTRIES}),
+    evidence_version="fixture-probe-1", observed_at="2026-09-20T12:00:00Z",
+)
+
+
 class CopyWorkflowTests(unittest.TestCase):
     now = datetime(2026, 9, 20, 12, 0, tzinfo=timezone.utc)
 
@@ -45,6 +51,7 @@ class CopyWorkflowTests(unittest.TestCase):
             target_visibility="private",
             policy=CopyPolicy.STRICT,
             now=self.now,
+            target_capabilities=WRITE_CAPABILITIES,
         )
         with self.assertRaises(PlanAcceptanceError):
             self.workflow.enqueue_accepted_plan(stored.plan.digest, now=self.now)
@@ -57,6 +64,7 @@ class CopyWorkflowTests(unittest.TestCase):
             target_visibility="private",
             policy=CopyPolicy.STRICT,
             now=self.now,
+            target_capabilities=WRITE_CAPABILITIES,
         )
         accepted = self.workflow.accept_plan(stored.plan.digest, now=self.now)
         operation = self.workflow.enqueue_accepted_plan(accepted.plan.digest, now=self.now)
@@ -73,6 +81,7 @@ class CopyWorkflowTests(unittest.TestCase):
             target_visibility="private",
             policy=CopyPolicy.STRICT,
             now=self.now,
+            target_capabilities=WRITE_CAPABILITIES,
         )
         with self.assertRaises(PlanAcceptanceError):
             self.workflow.accept_plan(stored.plan.digest, now=self.now)
@@ -118,6 +127,19 @@ class CopyWorkflowTests(unittest.TestCase):
                 ),
                 now=self.now,
             )
+
+    def test_missing_evidence_preview_is_readable_but_cannot_be_accepted(self) -> None:
+        stored = self.workflow.create_plan(
+            self.snapshot(), target_provider="youtube", target_playlist_name="Preview",
+            target_visibility="private", policy=CopyPolicy.STRICT, now=self.now,
+        )
+        self.assertEqual(self.plans.get(stored.plan.digest).plan, stored.plan)
+        self.assertTrue(stored.plan.blocked)
+        with self.assertRaises(PlanAcceptanceError):
+            self.workflow.accept_plan(stored.plan.digest, now=self.now)
+        self.assertIsNone(self.plans.get(stored.plan.digest).accepted_at)
+        with self.assertRaises(PlanAcceptanceError):
+            self.workflow.enqueue_accepted_plan(stored.plan.digest, now=self.now)
 
 
 if __name__ == "__main__":

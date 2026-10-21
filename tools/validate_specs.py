@@ -179,7 +179,10 @@ def _validate_paths(root: Path, capabilities: list[dict[str, Any]], errors: list
 
 
 def _validate_sdds(root: Path, capabilities: list[dict[str, Any]], errors: list[str]) -> None:
-    by_id = {capability.get("id"): capability for capability in capabilities}
+    by_id = {
+        capability["id"]: capability for capability in capabilities
+        if isinstance(capability.get("id"), str)
+    }
     for capability in capabilities:
         capability_id = capability.get("id")
         specification = capability.get("specification")
@@ -239,7 +242,10 @@ def _validate_catalog_markdown(root: Path, capabilities: list[dict[str, Any]], e
         _add(errors, "specs/CATALOG.md is missing")
         return
     rows = {match.group(1): (match.group(2).strip(), match.group(3)) for match in CATALOG_ROW_RE.finditer(path.read_text(encoding="utf-8"))}
-    expected = {capability.get("id"): capability for capability in capabilities}
+    expected = {
+        capability["id"]: capability for capability in capabilities
+        if isinstance(capability.get("id"), str)
+    }
     if set(rows) != set(expected):
         _add(errors, "specs/CATALOG.md capability rows disagree with catalog.json")
     for capability_id, capability in expected.items():
@@ -248,7 +254,8 @@ def _validate_catalog_markdown(root: Path, capabilities: list[dict[str, Any]], e
             continue
         status = capability.get("status")
         expected_status = CATALOG_STATUSES.get(status) if isinstance(status, str) else None
-        expected_path = Path(capability.get("specification", "")).name
+        specification = capability.get("specification")
+        expected_path = Path(specification).name if isinstance(specification, str) else None
         if row != (expected_status, expected_path):
             _add(errors, f"specs/CATALOG.md row for {capability_id} disagrees with catalog.json")
 

@@ -449,7 +449,8 @@
           "docs/development/implementation-baseline.md",
           "specs/library-import-and-provider-projections.md",
           "docs/development/bugbot-review-2026-10-21.md",
-          "docs/development/pr1-review-2026-10-21.md"
+          "docs/development/pr1-review-2026-10-21.md",
+          "docs/providers/provider-specification.md"
         ]
       },
       "blockers": [
@@ -578,7 +579,8 @@
           "docs/development/implementation-baseline.md",
           "specs/one-time-playlist-copy.md",
           "docs/development/bugbot-review-2026-10-21.md",
-          "docs/development/pr1-review-2026-10-21.md"
+          "docs/development/pr1-review-2026-10-21.md",
+          "docs/providers/provider-specification.md"
         ]
       },
       "blockers": [

@@ -8,8 +8,13 @@ import unittest
 from symphonia.application import CopyExecutionService, CopyPlanningService, CopyWorkflowService, OperationRunner
 from symphonia.domain import CopyPolicy, EntryClassification, PlanAcceptanceError, PlaylistSnapshot, SourcePlaylistEntry
 from symphonia.infrastructure import CopyPlanRepository, OperationRepository
-from symphonia.providers import ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
+from symphonia.providers import Capability, ProviderCapabilities, ProviderWriteError, TargetPlaylist, WriteOutcome, WriteResult
 
+
+WRITE_CAPABILITIES = ProviderCapabilities(
+    enabled=frozenset({Capability.CREATE_PLAYLIST, Capability.ADD_PLAYLIST_ENTRIES}),
+    evidence_version="fixture-probe-1", observed_at="2026-09-20T12:00:00Z",
+)
 
 NOW = datetime(2026, 9, 20, 12, 0, tzinfo=timezone.utc)
 
@@ -96,6 +101,7 @@ class CopyExecutionTests(unittest.TestCase):
             target_visibility="private",
             policy=policy,
             now=NOW,
+            target_capabilities=WRITE_CAPABILITIES,
         )
         return self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
 
@@ -141,6 +147,7 @@ class CopyExecutionTests(unittest.TestCase):
             target_visibility="private",
             policy=CopyPolicy.STRICT,
             now=NOW,
+            target_capabilities=WRITE_CAPABILITIES,
         )
         digest = self.workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
 
@@ -162,6 +169,7 @@ class CopyExecutionTests(unittest.TestCase):
         stored = self.workflow.create_plan(
             source, target_provider="youtube", target_playlist_name="Rock",
             target_visibility="private", policy=policy, now=NOW,
+            target_capabilities=WRITE_CAPABILITIES,
         )
         digest = stored.plan.digest
         # Model a plan accepted by the older foundation, without changing its digest.
@@ -180,6 +188,30 @@ class CopyExecutionTests(unittest.TestCase):
         with self.assertRaises(PlanAcceptanceError):
             self.executor.execute_claimed(claimed, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(self.writer.added, [])
+
+    def test_legacy_acceptance_without_capability_evidence_cannot_start_writes(self) -> None:
+        source, policy = self.snapshot()
+        stored = self.workflow.create_plan(
+            source, target_provider="youtube", target_playlist_name="Legacy",
+            target_visibility="private", policy=policy, now=NOW,
+        )
+        digest = stored.plan.digest
+        self.plans._connection.execute(
+            "UPDATE copy_plans SET accepted_at = ? WHERE digest = ?", (NOW.isoformat(), digest),
+        )
+        writer = FailingTargetWriter(AssertionError("provider must not be called"))
+        with self.assertRaises(PlanAcceptanceError):
+            self.workflow.enqueue_accepted_plan(digest, now=NOW)
+        with self.assertRaises(PlanAcceptanceError):
+            self.executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+        operation = self.operations.create(
+            operation_type="copy_playlist", idempotency_key="legacy-no-evidence",
+            payload={"plan_digest": digest}, now=NOW,
+        )
+        claimed = self.operations.claim(operation.operation_id, worker_id="worker-a", now=NOW)
+        with self.assertRaises(PlanAcceptanceError):
+            self.executor.execute_claimed(claimed, writer=writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(writer.added, [])
 
     def test_target_rate_limits_have_a_bounded_retry_budget(self) -> None:
         digest = self.accepted_digest()
@@ -377,6 +409,7 @@ class CopyExecutionTests(unittest.TestCase):
                     target_visibility="private",
                     policy=policy,
                     now=NOW,
+                    target_capabilities=WRITE_CAPABILITIES,
                 )
                 digest = workflow.accept_plan(stored.plan.digest, now=NOW).plan.digest
                 queued = workflow.enqueue_accepted_plan(digest, now=NOW)

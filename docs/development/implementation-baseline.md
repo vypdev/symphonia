@@ -137,6 +137,14 @@ verify the pinned container image, and dashboard disconnect aborts its read.
 All Copilot assets and AGENTS.md instructions are preserved. These corrections
 do not close the Draft capability blockers.
 
+The [PR #1 follow-ups](pr1-review-2026-10-21.md) also block capability-free copy
+plans at acceptance/admission/execution, encode Spotify playlist request paths,
+and distinguish complete import identities in new versioned idempotency keys.
+Existing import rows retain their original keys and can resume; re-enqueueing
+an old-format intent may perform another read, while immutable snapshot
+publication remains idempotent. The specification validator retains normal
+diagnostics for malformed IDs and primary paths.
+
 ## Local container profile
 
 `Dockerfile` packages the dependency-free runtime with persistent `/data`. Supervisor mounts that directory as root: the container entrypoint briefly adjusts only the directory and known SQLite files, then drops supplementary groups, GID, and UID before executing the service as `symphonia`. The first real [local Supervisor/App smoke](ha-app-lab.md) found and fixed this mount-ownership failure. The profile is not yet a published Home Assistant App artifact.

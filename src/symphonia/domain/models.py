@@ -163,7 +163,12 @@ class CopyPlan:
     def blocked(self) -> bool:
         # Non-strict plans remain readable for historical/research callers,
         # but the accepted product policy permits no omission override.
-        return self.policy is not CopyPolicy.STRICT or any(
+        return (
+            self.policy is not CopyPolicy.STRICT
+            or not {"create_playlist", "add_playlist_entries"}.issubset(self.target_capabilities)
+            or not isinstance(self.target_capability_evidence_version, str)
+            or not self.target_capability_evidence_version.strip()
+        ) or any(
             entry.classification is not EntryClassification.READY
             or entry.disposition != "write"
             for entry in self.entries
@@ -217,7 +222,7 @@ class CopyPlan:
         if self.recompute_digest() != self.digest:
             raise PlanAcceptanceError("plan content does not match its digest")
         if self.blocked:
-            raise PlanAcceptanceError("plan contains blocked entries")
+            raise PlanAcceptanceError("plan has blocked entries, policy, or target capability evidence")
         return AcceptedCopyPlan(plan=self, accepted_digest=self.digest)
 
 

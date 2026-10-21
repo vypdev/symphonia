@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from urllib.parse import quote
 from .contracts import ProviderObjectRef, ProviderPlaylistPage
 from .errors import ProviderApiError, ProviderErrorCategory
 from .http_json import JsonResponse
@@ -41,7 +42,7 @@ def iter_playlist_pages(
         response = request(
             connection_id,
             "GET",
-            f"/playlists/{playlist.object_id}/items",
+            f"/playlists/{quote(playlist.object_id, safe='')}/items",
             {"limit": str(page_size), "offset": str(offset)},
         )
         items = response.payload.get("items", [])

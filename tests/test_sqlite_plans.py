@@ -29,6 +29,8 @@ class CopyPlanRepositoryTests(unittest.TestCase):
             target_provider="youtube",
             target_playlist_name="Rock",
             policy=CopyPolicy.STRICT,
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
 
     def test_save_and_reload_preserves_immutable_plan_and_digest(self) -> None:
@@ -94,6 +96,8 @@ class CopyPlanRepositoryTests(unittest.TestCase):
             target_provider="youtube",
             target_playlist_name="Rock",
             policy=CopyPolicy.STRICT,
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
         self.repository.save(plan, now=self.now)
         with self.assertRaises(PlanAcceptanceError):

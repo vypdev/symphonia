@@ -88,6 +88,15 @@ The collector now requires an initial page, exact adjacent opaque cursor links a
 
 Snapshot reads and pure conversion preserve per-entry track namespace and media kind rather than assuming the playlist namespace. All three built-in network adapters now expose lazy page iteration, with current cancellation/lease/time checks before each next read and interruption-safe cleanup. Existing tuple readers remain compatible; a legacy eager adapter cannot be interrupted inside its atomic read. No page staging, memory-bound or full-capability readiness claim is added. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
 
+New foundation import intents use a versioned SHA-256 key over a canonical JSON
+array containing the connection, complete playlist external identity and snapshot
+ID. Namespace changes and delimiter-bearing IDs cannot collide. Existing stored
+intents keep their original keys and remain resumable; re-enqueueing an old-format
+intent after upgrade can create a separate read operation. Immutable snapshot
+publication still prevents duplicate or conflicting publication. No provider
+writes or existing database rows are changed by this key-format update.
+Spotify read and append paths encode the opaque playlist ID as one URL segment.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

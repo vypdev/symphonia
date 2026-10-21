@@ -129,6 +129,7 @@ PYTHONPATH=. python3 tools/validate_specs.py
 
 The validator checks that `catalog.json` parses, referenced files exist,
 capability IDs are unique across entries,
+malformed IDs and primary paths produce diagnostics rather than tracebacks,
 catalog paths are repository-relative and cannot escape through traversal or
 symlinks, each SDD has one known catalog capability ID, catalog statuses and paths agree with
 `CATALOG.md`, requirement IDs are present in the horizontal specifications,

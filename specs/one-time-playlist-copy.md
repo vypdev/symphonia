@@ -138,6 +138,14 @@ The operation uses the durable job vocabulary defined by `durable-operations-and
 
 ### Accepted initial acceptance policy
 
+Foundation acceptance also requires both `create_playlist` and
+`add_playlist_entries`, with a nonblank capability-evidence version bound into
+the digest. A missing-evidence preview remains readable but blocked; even a
+historical acceptance timestamp cannot admit or execute it. Regenerate such a
+plan with verified target evidence. This guard does not claim the complete
+capability-drift discovery/wiring or live provider-write proof required by this
+Draft capability; those release gates remain in force.
+
 The owner confirmed the strict initial policy on 2026-10-04: a plan cannot be accepted while any occurrence is not `ready`, and no target write can begin. The initial UI has no best-effort or omission override. A future itemized omission mode requires a new product decision and contract revision.
 
 The foundation enforces this policy at domain acceptance, operation admission,

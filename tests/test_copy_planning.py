@@ -25,6 +25,21 @@ class CopyPlanningTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = CopyPlanningService()
 
+    def test_acceptance_requires_both_write_capabilities_and_nonblank_evidence(self) -> None:
+        required = ("add_playlist_entries", "create_playlist")
+        for capabilities, version in (((), "probe"), (("create_playlist",), "probe"),
+                                      (("add_playlist_entries",), "probe"),
+                                      (required, None), (required, ""), (required, "  ")):
+            with self.subTest(capabilities=capabilities, version=version):
+                plan = self.service.plan(
+                    snapshot(SourcePlaylistEntry("occ", 0, "source", EntryClassification.READY, "target")),
+                    target_provider="youtube", target_playlist_name="Copy",
+                    target_capabilities=capabilities, target_capability_evidence_version=version,
+                )
+                self.assertTrue(plan.blocked)
+                with self.assertRaises(PlanAcceptanceError):
+                    plan.accept(plan.digest)
+
     def test_strict_plan_preserves_order_and_duplicate_occurrences(self) -> None:
         plan = self.service.plan(
             snapshot(
@@ -33,6 +48,8 @@ class CopyPlanningTests(unittest.TestCase):
             ),
             target_provider="youtube",
             target_playlist_name="Rock",
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
 
         self.assertFalse(plan.blocked)
@@ -55,6 +72,8 @@ class CopyPlanningTests(unittest.TestCase):
             ),
             target_provider="youtube",
             target_playlist_name="Rock",
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
 
         self.assertTrue(plan.blocked)
@@ -71,6 +90,8 @@ class CopyPlanningTests(unittest.TestCase):
             target_provider="youtube",
             target_playlist_name="Rock",
             policy=CopyPolicy.BEST_EFFORT,
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
 
         self.assertTrue(plan.blocked)
@@ -83,6 +104,8 @@ class CopyPlanningTests(unittest.TestCase):
         plan = self.service.plan(
             snapshot(SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1")),
             target_provider="youtube", target_playlist_name="Rock", policy=CopyPolicy.BEST_EFFORT,
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
         with self.assertRaises(PlanAcceptanceError):
             plan.accept(plan.digest)
@@ -92,6 +115,8 @@ class CopyPlanningTests(unittest.TestCase):
             snapshot(SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1")),
             target_provider="youtube",
             target_playlist_name="Rock",
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
         with self.assertRaises(PlanAcceptanceError):
             plan.accept("not-the-plan")
@@ -101,6 +126,8 @@ class CopyPlanningTests(unittest.TestCase):
             snapshot(SourcePlaylistEntry("occ-1", 0, "sp-1", EntryClassification.READY, "yt-1")),
             target_provider="youtube",
             target_playlist_name="Rock",
+            target_capabilities=("add_playlist_entries", "create_playlist"),
+            target_capability_evidence_version="fixture-probe-1",
         )
         tampered = type(plan)(
             source_snapshot_id=plan.source_snapshot_id,

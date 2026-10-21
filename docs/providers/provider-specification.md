@@ -185,7 +185,7 @@ For reconciliation, adapters and application ports MUST distinguish an effect-co
 - **SYM-PROV-002:** An adapter MUST report effective connection capabilities before a workflow plan is accepted.
 - **SYM-PROV-003:** Capability detection MUST combine static documented support, granted scopes, account/object restrictions, configuration, and safe runtime probes where needed.
 - **SYM-PROV-004:** An adapter MUST implement pagination without silently truncating results and MUST expose completeness/freshness.
-- **SYM-PROV-005:** An adapter MUST preserve provider IDs as opaque strings and MUST NOT infer identity from URL shape.
+- **SYM-PROV-005:** An adapter MUST preserve provider IDs as opaque strings and MUST NOT infer identity from URL shape. IDs inserted into request paths are encoded as one path segment; reserved URL syntax must not change the endpoint or query. Spotify's read/append foundation has offline fixtures for slash, query, fragment, percent and Unicode IDs.
 - **SYM-PROV-006:** Unknown media types and unavailable items MUST survive import as explicit normalized states.
 - **SYM-PROV-007:** Adapter calls MUST have bounded connect/read/overall timeouts and cooperative cancellation.
 - **SYM-PROV-008:** Provider errors MUST map to the normalized error taxonomy while preserving a sanitized provider code and correlation ID.

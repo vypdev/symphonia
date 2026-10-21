@@ -28,6 +28,20 @@ class SpotifyAdapterTests(unittest.TestCase):
     def playlist(self) -> ProviderObjectRef:
         return ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
 
+    def test_playlist_identifiers_cannot_change_read_or_write_paths(self) -> None:
+        for identifier, encoded in (("a/b", "a%2Fb"), ("a?b", "a%3Fb"), ("a#b", "a%23b"),
+                                    ("a%b", "a%25b"), ("música", "m%C3%BAsica")):
+            with self.subTest(identifier=identifier):
+                client = FakeClient({"0": JsonResponse(200, {"items": [], "next": None}, {}),
+                                     "capabilities": JsonResponse(201, {}, {})})
+                adapter = SpotifyAdapter(client, lambda _: "fixture-token", connection_id="connection-1", allow_writes=True)
+                pages = adapter.read_playlist_pages("connection-1", ProviderObjectRef("spotify", "playlist", identifier, "account"))
+                self.assertEqual(pages[0].playlist.object_id, identifier)
+                self.assertEqual(client.calls[-1][1], f"/playlists/{encoded}/items")
+                result = adapter.add_entry(target_playlist_id=identifier, provider_track_id="track", idempotency_key="entry")
+                self.assertEqual(result.outcome, WriteOutcome.CONFIRMED_SUCCESS)
+                self.assertEqual(client.calls[-1][1], f"/playlists/{encoded}/items")
+
     def test_playlist_pages_preserve_positions_duplicates_and_unavailable_items(self) -> None:
         client = FakeClient(
             {
