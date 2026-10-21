@@ -53,6 +53,8 @@ Import page boundaries renew a live lease with the fresh clock and configured du
 
 Credential/credentials aliases are rejected recursively in operation payloads and checkpoints, including snake/kebab/camel/uppercase forms. Existing unsafe rows fail reads/readiness without exposing values; no row is silently erased or replaced. The guarded issue-step parser already rejects non-string values before set membership, with explicit regression evidence.
 
+A healthy lease renewal retains the later of its current expiry and the newly requested expiry; shortening a requested duration cannot release ownership early. Renewal still refuses expired, missing, cancelled or foreign ownership, and audit evidence records the effective expiry.
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

@@ -65,6 +65,8 @@ The horizontal product journey and all UI examples now consistently follow the o
 
 Redirected POSTs and successful writes with malformed target metadata retain an unknown outcome and in-flight reconciliation evidence. Refusing an authenticated redirect does not prove that the original write had no effect; no blind repeated create/add call is admitted.
 
+Spotify append confirmation requires HTTP 201 and a nonblank string snapshot_id; creation likewise requires HTTP 201 and a usable new playlist ID. Empty or malformed acknowledgement metadata remains an unknown write outcome, preserving in-flight reconciliation instead of assuming the add succeeded.
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

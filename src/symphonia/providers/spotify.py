@@ -123,10 +123,10 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
                 body={"name": name, "public": visibility == "public"},
             )
             playlist_id = response.payload.get("id")
-            if not isinstance(playlist_id, str) or not playlist_id.strip():
+            if response.status != 201 or not isinstance(playlist_id, str) or not playlist_id.strip():
                 raise ProviderApiError(
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
-                    "Spotify create-playlist response did not contain an id",
+                    "Spotify create response did not confirm a new playlist identity",
                 )
             return TargetPlaylist(playlist_id)
         except ProviderApiError as error:
@@ -151,13 +151,19 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         except ProviderWriteError as error:
             return WriteResult(error.outcome, provider_code=error.provider_code, detail=error.detail)
         try:
-            self._request(
+            response = self._request(
                 connection_id,
                 "POST",
                 f"/playlists/{quote(target_playlist_id, safe='')}/items",
                 {},
                 body={"uris": [f"spotify:track:{provider_track_id}"]},
             )
+            snapshot_id = response.payload.get("snapshot_id")
+            if response.status != 201 or not isinstance(snapshot_id, str) or not snapshot_id.strip():
+                raise ProviderApiError(
+                    ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                    "Spotify add response did not confirm a new snapshot",
+                )
             return WriteResult(WriteOutcome.CONFIRMED_SUCCESS)
         except ProviderApiError as error:
             return WriteResult(

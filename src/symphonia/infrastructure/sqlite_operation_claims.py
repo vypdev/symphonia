@@ -8,7 +8,7 @@ from typing import Any
 
 from symphonia.domain.operations import LeaseConflict, OperationRecord
 
-from .sqlite_operation_codec import _checkpoint_summary, _load_json_object, _require_text, _utc
+from .sqlite_operation_codec import _checkpoint_summary, _load_json_object, _parse_utc, _require_text, _utc
 from .sqlite_operation_context import OperationContext
 from .sqlite_operation_rules import OperationNotFound, _require_positive_int
 from .sqlite_operation_transactions import _rollback_after_error
@@ -238,8 +238,10 @@ def renew_lease(
             raise LeaseConflict("worker does not own a running operation")
         if row["cancel_requested"]:
             raise LeaseConflict("operation cancellation has been requested")
-        if row["lease_expires_at"] is None or row["lease_expires_at"] <= now_text:
+        current_expiry = _parse_utc(row["lease_expires_at"]) if row["lease_expires_at"] is not None else None
+        if current_expiry is None or current_expiry <= now:
             raise LeaseConflict("operation lease has expired")
+        expires_text = max(expires_text, _utc(current_expiry))
         context.connection.execute(
             "UPDATE operations SET lease_expires_at = ?, updated_at = ? WHERE operation_id = ?",
             (expires_text, now_text, operation_id),

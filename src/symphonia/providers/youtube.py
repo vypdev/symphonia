@@ -128,6 +128,15 @@ class YouTubeDataAdapter(ProviderAdapter):
                 items = []
             if not isinstance(items, list):
                 raise ProviderApiError(ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED, "YouTube playlist items were not a list")
+            if cursor is not None and not pages and items:
+                first = items[0].get("snippet") if isinstance(items[0], Mapping) else None
+                absolute = first.get("position") if isinstance(first, Mapping) else None
+                if type(absolute) is not int or absolute < 0:
+                    raise ProviderApiError(
+                        ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                        "YouTube resumed page has no trustworthy absolute position",
+                    )
+                position = absolute
             entries = tuple(
                 self._entry(playlist, item, position=position + index)
                 for index, item in enumerate(items)
@@ -201,6 +210,11 @@ class YouTubeDataAdapter(ProviderAdapter):
         content = item.get("contentDetails") if isinstance(item, Mapping) else None
         snippet = snippet if isinstance(snippet, Mapping) else {}
         content = content if isinstance(content, Mapping) else {}
+        if "position" in snippet and (type(snippet["position"]) is not int or snippet["position"] != position):
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "YouTube playlist entry position contradicts page order",
+            )
         resource = snippet.get("resourceId")
         resource = resource if isinstance(resource, Mapping) else {}
         video_id = resource.get("videoId") or content.get("videoId")

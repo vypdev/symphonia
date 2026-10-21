@@ -807,6 +807,19 @@ class OperationRepositoryTests(unittest.TestCase):
             ["created", "claimed", "cancellation_requested", "cancelled"],
         )
 
+    def test_renewal_preserves_the_later_expiry_and_cannot_allow_early_takeover(self) -> None:
+        operation = self.repository.create(operation_type="copy", idempotency_key="renew-max", payload={}, now=self.now)
+        self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now, lease_seconds=30)
+        early = self.repository.renew_lease(operation.operation_id, worker_id="worker-a", now=self.now + timedelta(seconds=1), lease_seconds=1)
+        self.assertEqual(early.lease_expires_at, self.now + timedelta(seconds=30))
+        self.assertIsNone(self.repository.claim_next(worker_id="worker-b", now=self.now + timedelta(seconds=2)))
+        later = self.repository.renew_lease(operation.operation_id, worker_id="worker-a", now=self.now + timedelta(seconds=10), lease_seconds=60)
+        self.assertEqual(later.lease_expires_at, self.now + timedelta(seconds=70))
+        self.assertIsNone(self.repository.claim_next(worker_id="worker-b", now=self.now + timedelta(seconds=31)))
+        with self.assertRaises(LeaseConflict):
+            self.repository.renew_lease(operation.operation_id, worker_id="worker-a", now=self.now + timedelta(seconds=70), lease_seconds=60)
+        self.assertEqual(self.repository.get(operation.operation_id), later)
+
     def test_healthy_worker_can_renew_lease(self) -> None:
         operation = self.repository.create(
             operation_type="copy",

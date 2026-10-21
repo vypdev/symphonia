@@ -26,7 +26,19 @@ class FakeClient:
 
 class SpotifyAdapterTests(unittest.TestCase):
     def test_redirects_and_invalid_target_metadata_preserve_unknown_write_outcomes(self) -> None:
-        for response in (JsonResponse(302, {}, {}), JsonResponse(201, {}, {}), JsonResponse(201, [], {})):
+        cases = ((JsonResponse(302, {}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(201, {}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(201, [], {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(201, {"snapshot_id": "revision"}, {}), WriteOutcome.CONFIRMED_SUCCESS),
+                 (JsonResponse(201, {"snapshot_id": ""}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(201, {"snapshot_id": "  "}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(201, {"snapshot_id": None}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(201, {"snapshot_id": 7}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(200, {"snapshot_id": "revision"}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(202, {"snapshot_id": "revision"}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(200, {"id": "target"}, {}), WriteOutcome.UNKNOWN_OUTCOME),
+                 (JsonResponse(202, {"id": "target"}, {}), WriteOutcome.UNKNOWN_OUTCOME))
+        for response, expected in cases:
             with self.subTest(response=response):
                 adapter = SpotifyAdapter(FakeClient({"capabilities": response}), lambda _: "fixture",
                                          connection_id="account", allow_writes=True)
@@ -34,7 +46,6 @@ class SpotifyAdapterTests(unittest.TestCase):
                     adapter.ensure_target_playlist(provider="spotify", name="Copy", visibility="private", idempotency_key="target")
                 self.assertEqual(raised.exception.outcome, WriteOutcome.UNKNOWN_OUTCOME)
                 result = adapter.add_entry(target_playlist_id="target", provider_track_id="track", idempotency_key="entry")
-                expected = WriteOutcome.CONFIRMED_SUCCESS if response.status == 201 and isinstance(response.payload, dict) else WriteOutcome.UNKNOWN_OUTCOME
                 self.assertEqual(result.outcome, expected)
 
     def test_missing_items_is_not_a_complete_empty_playlist(self) -> None:
@@ -51,7 +62,7 @@ class SpotifyAdapterTests(unittest.TestCase):
                                     ("a%b", "a%25b"), ("música", "m%C3%BAsica")):
             with self.subTest(identifier=identifier):
                 client = FakeClient({"0": JsonResponse(200, {"items": [], "next": None}, {}),
-                                     "capabilities": JsonResponse(201, {}, {})})
+                                     "capabilities": JsonResponse(201, {"snapshot_id": "revision"}, {})})
                 adapter = SpotifyAdapter(client, lambda _: "fixture-token", connection_id="connection-1", allow_writes=True)
                 pages = adapter.read_playlist_pages("connection-1", ProviderObjectRef("spotify", "playlist", identifier, "account"))
                 self.assertEqual(pages[0].playlist.object_id, identifier)

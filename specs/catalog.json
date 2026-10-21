@@ -466,7 +466,8 @@
           "specs/library-import-and-provider-projections.md",
           "docs/development/bugbot-review-2026-10-21.md",
           "docs/development/pr1-review-2026-10-21.md",
-          "docs/providers/provider-specification.md"
+          "docs/providers/provider-specification.md",
+          "docs/providers/provider-research.md"
         ]
       },
       "blockers": [
@@ -599,7 +600,8 @@
           "docs/development/bugbot-review-2026-10-21.md",
           "docs/development/pr1-review-2026-10-21.md",
           "docs/providers/provider-specification.md",
-          "docs/product/product-specification.md"
+          "docs/product/product-specification.md",
+          "docs/providers/provider-research.md"
         ]
       },
       "blockers": [

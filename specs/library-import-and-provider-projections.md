@@ -115,6 +115,8 @@ The foundation renews its still-live lease at every page boundary while checking
 
 YouTube HTTP 403 quotaExceeded, dailyLimitExceeded, userRateLimitExceeded, rateLimitExceeded and servingLimitExceeded reasons use the existing rate-limit wait/retry policy, preserving Retry-After. Ordinary permission failures remain distinct. Authenticated API redirects are refused rather than following an untrusted Location.
 
+A standalone YouTube continuation initializes its absolute offset from the first item’s documented snippet.position; missing/invalid initial positions and contradictory supplied positions fail closed. Subsequent pages retain that absolute order. A resumed suffix is still incomplete for full-snapshot publication; no durable page staging is added.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

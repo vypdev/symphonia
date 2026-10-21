@@ -63,6 +63,43 @@ class FakeClient:
 
 
 class YouTubeDataAdapterTests(unittest.TestCase):
+    def test_standalone_continuation_preserves_absolute_provider_positions(self) -> None:
+        from symphonia.providers.importing import collect_playlist_pages
+
+        class ContinuationClient:
+            def __init__(self):
+                self.tokens = []
+
+            def request(self, method, path, *, token, query, body=None):
+                self.tokens.append(query["pageToken"])
+                first = query["pageToken"] == "opaque-a"
+                positions = (50, 51) if first else (52,)
+                return JsonResponse(200, {"items": [{"id": f"occ-{p}", "snippet": {
+                    "position": p, "resourceId": {"videoId": f"video-{p}"}}} for p in positions],
+                    **({"nextPageToken": "opaque-b"} if first else {})}, {})
+
+        client = ContinuationClient()
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist", "account")
+        pages = YouTubeDataAdapter(client, lambda _: "fixture").read_playlist_pages("account", playlist, cursor="opaque-a")
+        self.assertEqual(client.tokens, ["opaque-a", "opaque-b"])
+        self.assertEqual([e.position for p in pages for e in p.entries], [50, 51, 52])
+        self.assertFalse(collect_playlist_pages(pages).complete)
+
+    def test_resumed_pages_with_missing_or_inconsistent_positions_fail_closed(self) -> None:
+        from types import SimpleNamespace
+        playlist = ProviderObjectRef("youtube_data", "playlist", "playlist", "account")
+        snippets = [{}] + [{"position": value} for value in (None, False, -1, "50", [], {})]
+        for snippet in snippets:
+            with self.subTest(snippet=snippet):
+                client = SimpleNamespace(request=lambda *args, **kwargs: JsonResponse(200, {
+                    "items": [{"snippet": snippet}]}, {}))
+                with self.assertRaises(ProviderApiError):
+                    YouTubeDataAdapter(client, lambda _: "fixture").read_playlist_pages("account", playlist, cursor="opaque")
+        client = SimpleNamespace(request=lambda *args, **kwargs: JsonResponse(200, {
+            "items": [{"snippet": {"position": 50}}, {"snippet": {"position": 52}}]}, {}))
+        with self.assertRaises(ProviderApiError):
+            YouTubeDataAdapter(client, lambda _: "fixture").read_playlist_pages("account", playlist, cursor="opaque")
+
     def test_quota_403_reasons_are_rate_limits_but_permissions_remain_distinct(self) -> None:
         from types import SimpleNamespace
         for reason in ("quotaExceeded", "dailyLimitExceeded", "userRateLimitExceeded", "rateLimitExceeded", "servingLimitExceeded",
