@@ -49,7 +49,7 @@ class ProviderConnectionRepository:
                 return False
             for row in self._connection.execute("SELECT * FROM provider_connections").fetchall():
                 self._record(row)
-        except (sqlite3.Error, TypeError, ValueError):
+        except (sqlite3.Error, KeyError, TypeError, ValueError):
             return False
         return True
 
@@ -180,6 +180,7 @@ class ProviderConnectionRepository:
         health_code: str | None,
         expires_at: datetime | None,
         now: datetime,
+        expected_connection: ProviderConnection | None = None,
     ) -> ProviderConnection:
         """Atomically publish the latest safe capability/health observation."""
 
@@ -188,11 +189,16 @@ class ProviderConnectionRepository:
             raise ConnectionConflict("use disconnect to remove a connection's secret reference")
         if not current.secret_ref:
             raise ConnectionConflict("cannot activate a connection without its secret reference")
+        expected = current if expected_connection is None else expected_connection
+        if expected.connection_id != connection_id:
+            raise ConnectionConflict("probe observation belongs to another connection")
         updated = self._connection.execute(
             """
             UPDATE provider_connections
                SET state = ?, capabilities_json = ?, expires_at = ?, health_code = ?, updated_at = ?
-             WHERE connection_id = ? AND secret_ref = ? AND state != 'disconnected'
+             WHERE connection_id = ? AND secret_ref = ? AND state = ?
+               AND capabilities_json IS ? AND health_code IS ? AND expires_at IS ?
+               AND updated_at = ? AND updated_at <= ?
             """,
             (
                 state.value,
@@ -201,7 +207,13 @@ class ProviderConnectionRepository:
                 health_code,
                 _utc(now),
                 connection_id,
-                current.secret_ref,
+                expected.secret_ref,
+                expected.state.value,
+                _serialize_capabilities(expected.capabilities),
+                expected.health_code,
+                None if expected.expires_at is None else _utc(expected.expires_at),
+                _utc(expected.updated_at),
+                _utc(now),
             ),
         )
         if updated.rowcount != 1:

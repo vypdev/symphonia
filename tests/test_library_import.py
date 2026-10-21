@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import unittest
 
@@ -13,6 +14,8 @@ from symphonia.providers import (
     ProviderObjectRef,
     ProviderPlaylistEntry,
     ProviderPlaylistPage,
+    ProviderApiError,
+    ProviderErrorCategory,
     collect_playlist_pages,
 )
 
@@ -106,6 +109,29 @@ class LibraryImportServiceTests(unittest.TestCase):
         )
         self.assertEqual(publication.state, "succeeded")
         self.assertEqual(publication.snapshot.snapshot_id, "snapshot-adapter")
+
+    def test_adapter_pages_must_match_every_part_of_the_requested_identity(self) -> None:
+        requested = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
+        self.service.publish_playlist(result(True), snapshot_id="existing", observed_at=NOW)
+        before = self.repository.summary()
+        for field, value in (("provider", "youtube"), ("object_type", "library-playlists"),
+                             ("object_id", "another-playlist"), ("namespace", "another-account")):
+            with self.subTest(field=field):
+                wrong = replace(requested, **{field: value})
+
+                class WrongIdentityAdapter:
+                    manifest = ProviderManifest("spotify", "Spotify", AccessBasis.OFFICIAL, "beta", "read")
+
+                    def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                        return (ProviderPlaylistPage(wrong, (), None, None, True),)
+
+                with self.assertRaises(ProviderApiError) as context:
+                    self.service.import_playlist(
+                        WrongIdentityAdapter(), connection_id="connection-1", playlist=requested,
+                        snapshot_id="wrong", observed_at=NOW,
+                    )
+                self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+                self.assertEqual(self.repository.summary(), before)
 
     def test_import_playlist_rejects_another_provider_adapter(self) -> None:
         playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")

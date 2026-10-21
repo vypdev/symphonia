@@ -124,6 +124,29 @@ class AppleMusicAdapterTests(unittest.TestCase):
             ).read_playlist_pages("apple-connection-1", self.playlist())
         self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
 
+    def test_forward_pagination_gap_is_rejected_before_a_second_read(self) -> None:
+        class GapClient(FakeAppleClient):
+            def request(self, *args, **kwargs):
+                response = super().request(*args, **kwargs)
+                response.payload["next"] = "https://api.music.apple.com/v1/me/library/playlists/playlist-1/tracks?offset=3"
+                return response
+
+        client = GapClient()
+        with self.assertRaises(ProviderApiError) as context:
+            AppleMusicAdapter(client, lambda _: ("developer", "user")).read_playlist_pages(
+                "apple-connection-1", self.playlist(),
+            )
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+        self.assertEqual(len(client.calls), 1)
+
+    def test_playlist_identifier_is_encoded_as_one_opaque_path_segment(self) -> None:
+        client = FakeAppleClient()
+        playlist = ProviderObjectRef("apple_music", "library-playlists", "a/b?c#d%", "apple-connection-1")
+        AppleMusicAdapter(client, lambda _: ("developer", "user")).read_playlist_pages(
+            "apple-connection-1", playlist, cursor="2",
+        )
+        self.assertEqual(client.calls[0][1], "/me/library/playlists/a%2Fb%3Fc%23d%25/tracks")
+
     def test_repeated_offset_is_a_provider_contract_failure(self) -> None:
         class LoopingClient(FakeAppleClient):
             def request(self, method, path, *, developer_token, user_token, query):

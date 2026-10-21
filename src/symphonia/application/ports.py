@@ -59,6 +59,7 @@ class ProviderConnectionPort(Protocol):
         health_code: str | None,
         expires_at: datetime | None,
         now: datetime,
+        expected_connection: ProviderConnection | None = None,
     ) -> ProviderConnection: ...
 
     def disconnect(self, connection_id: str, *, now: datetime) -> ProviderConnection: ...

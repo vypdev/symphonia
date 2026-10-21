@@ -40,6 +40,8 @@ No resolver exists. The provider-independent recording decision is accepted, but
 - Comparative evidence: Music Assistant uses provider mappings and automatic search/matching, but Symphonia requires stronger evidence/audit; [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md#provider-mappings-validate-the-representation-graph).
 - Unknowns: candidate recall by provider, labeled corpus licensing, acceptable false-positive rate, confidence boundaries, manual-review scale.
 
+The existing normalization foundation now rejects non-ASCII decimal digits in ISRCs while preserving the original metadata and returning no normalized identity. Arabic-Indic, Persian and full-width digit fixtures cover this correction. It adds no resolver, scoring policy or automatic identity decision. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

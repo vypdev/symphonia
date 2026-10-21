@@ -82,6 +82,8 @@ not import completeness, staging, retention, or release readiness.
 - Existing deterministic evidence for this foundation slice: [provider import contracts](../tests/test_provider_import.py), [import use case](../tests/test_library_import.py), [durable import outcomes](../tests/test_library_import_execution.py), [snapshot persistence](../tests/test_sqlite_library.py), and [architecture boundaries](../tests/test_architecture_boundaries.py). Listing these files is not a statement that the complete SDD test budget has passed.
 - Unknowns: provider collection parity, target sizes, refresh cadence, raw payload retention, incremental cursor reliability.
 
+The PR #1 correction verifies every returned page against the complete requested playlist identity before publication, including object type and account namespace. Apple Music and Spotify reject forward and backward offset gaps; Apple playlist IDs are encoded as one opaque path segment. Regression fixtures prove no mismatched snapshot publication or second gap request. The existing single-playlist foundation remains the only implemented evidence. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

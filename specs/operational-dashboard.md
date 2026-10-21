@@ -88,6 +88,7 @@ The UI requests `./api/dashboard` with same-origin credentials. The API checks t
 - If refresh fails after a successful read, the last snapshot remains visible and both its message and heading status explicitly mark it stale.
 - Unknown tabs select overview. Overlapping requests are fenced by a generation counter.
 - Disconnect aborts the active fetch and fences late success/error completions. A superseding refresh aborts the previous request. Reconnecting starts a fresh read; cleanup does not mark the retained snapshot stale or blocked.
+- Any recent operation, retained library entry, or unavailable entry makes a valid snapshot nonempty, even if all other aggregate counts are zero. These cases show `ready`, preserving the actual activity/library facts rather than claiming no stored data.
 
 ### 6.3 States
 
@@ -180,7 +181,7 @@ No schema or data change. The UI is built from a pinned lockfile and shipped as 
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **21 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 6 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The ten production UI tests exercise empty, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser.
+Minimum **24 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 9 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The thirteen production UI tests exercise empty, operation-only, retained-entry-only and unavailable-entry-only snapshots, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser. See the [PR #1 regression review](../docs/development/pr1-review-2026-10-21.md) for the three additional nonempty-state cases.
 
 ## 15. Documentation and discoverability
 
@@ -203,6 +204,7 @@ Minimum **21 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 6 c
 8. Given keyboard, narrow viewport, dark or forced colors, status and refresh remain usable.
 9. Given a secret-bearing diagnostic payload, no secret reaches the DTO or rendered UI.
 10. Given disconnect during a read, its signal is aborted and neither a late response nor an abort rejection updates the detached view; reconnecting can load a fresh snapshot.
+11. Given a valid snapshot containing only recent operations, retained entries, or unavailable entries, the dashboard is `ready` and retains those facts; only a snapshot with no stored facts is `empty`.
 
 ## 17. Requirements traceability
 
@@ -225,7 +227,7 @@ Minimum **21 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 6 c
 
 - [x] Root panel, relative assets and live API work through authenticated Ingress.
 - [x] Direct access is denied and DTO redaction tests pass.
-- [x] At least 18 distinct cases across projection, routing, client state, build, browser, and lab checks; the repository verification suite passes.
+- [x] At least 24 distinct cases across projection, routing, client state, build, browser, and lab checks; the repository verification suite passes.
 - [x] User/operator/contributor documentation and catalog evidence are current.
 - [x] Browser visual and keyboard review is recorded in the lab guide.
 - [x] GitHub Verify passed for the functional commit `557ceab` ([run](https://github.com/vypdev/symphonia/actions/runs/37224401052)); later refactors require their own green run.

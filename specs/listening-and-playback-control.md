@@ -45,6 +45,8 @@ No Symphonia listening route, playback port, companion playback broker, player d
 - The dated [integration source review](../docs/providers/playback-integration-source-review.md) identifies specific stock-HA constraints: Spotify's idle/restricted state removes `PLAY_MEDIA` and WebSocket browse; device selection is name-based and can be ambiguous; MA's active source is not always an MA queue, its broad feature flags do not prove effect, its name fallback is unsafe for exact playback, and its per-user behavior depends on the HA caller context. These findings narrow the `RG-007` live probes; none is a release guarantee on unpinned versions.
 - Accepted authority boundary: the companion broker, not the broad Supervisor Core proxy, under ADR 0006. Unknowns: broker transport/pairing/version/caller contract and threat review; how HA entity identity/account is verified; exact imported-playlist-to-source mapping; target/source behavior across Spotify, Music Assistant and community players; private/session metadata behavior; timing, action error, and coexistence with other HA clients on target hardware.
 
+The PR #1 documentation correction aligns the README with this proposed listening scope and ADR 0003 with the required narrow playback broker in ADR 0006. Listening remains unimplemented, Draft and blocked by all existing source, transport, security and owner-approval gates. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

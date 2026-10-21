@@ -52,7 +52,7 @@ def checkpoint(
         if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
             raise LeaseConflict("operation lease has expired")
         effective_state = state
-        if row["cancel_requested"] and state in {"running", "cancelled", "waiting_user"}:
+        if row["cancel_requested"]:
             if _checkpoint_requires_reconciliation(checkpoint):
                 effective_state = "waiting_user"
                 checkpoint = {
@@ -60,7 +60,7 @@ def checkpoint(
                     "reconciliation_required": True,
                     "recovery_reason": "cancelled_during_unknown_outcome",
                 }
-            else:
+            elif state in {"running", "cancelled", "waiting_user"}:
                 effective_state = "cancelled"
         checkpoint_json = json.dumps(
             checkpoint,

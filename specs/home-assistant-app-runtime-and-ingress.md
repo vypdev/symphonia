@@ -46,6 +46,8 @@ The current foundation is intentionally limited to reversible composition, persi
 - Security evidence: a direct unauthenticated service port can bypass Ingress, as recorded in the ecosystem review.
 - Unknowns: exact image/toolchain, supported architectures, encryption key source, online backup primitive, and first standalone release.
 
+The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
@@ -277,7 +279,7 @@ Minimum **58 distinct cases**:
 
 All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. A maintained Home Assistant Apps devcontainer profile is prepared at [the playback lab setup](../docs/development/playback-lab/README.md#supervisor-app-and-ingress-smoke-lane) for disposable Supervisor/App/Ingress smoke. Its first install/start/Ingress pass is still pending; it does not replace the required backup/restore/upgrade evidence on the supported deployment matrix. Manual evidence covers desktop/mobile and light/dark startup/error views.
 
-The eight feature-specific UI cases above supplement rather than replace the 84-case UI-foundation budget. The runtime release also inherits component-catalog, arbitrary-base-path, host-context fallback, safe-area, accessibility, responsive-geometry, hostile-content, and dated visual-reference gates from that SDD.
+The eight feature-specific UI cases above supplement rather than replace the 92-case UI-foundation budget. The runtime release also inherits component-catalog, arbitrary-base-path, host-context fallback, safe-area, accessibility, responsive-geometry, hostile-content, and dated visual-reference gates from that SDD.
 
 ## 15. Documentation and discoverability
 

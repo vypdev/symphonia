@@ -71,7 +71,9 @@ export function isDashboard(value: unknown): value is Dashboard {
 
 export function hasStoredData(snapshot: Dashboard): boolean {
   return snapshot.queue.total > 0 || snapshot.connections.total > 0 ||
-    snapshot.library.current_playlists > 0 || snapshot.resolutions.total > 0;
+    snapshot.library.current_playlists > 0 || snapshot.library.entries > 0 ||
+    snapshot.library.unavailable_entries > 0 || snapshot.resolutions.total > 0 ||
+    snapshot.operations.length > 0;
 }
 
 export class DashboardStore {

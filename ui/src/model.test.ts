@@ -26,6 +26,24 @@ test("a valid empty response is distinguished from a failed read", async () => {
   assert.equal(hasStoredData({ ...empty, queue: { ...empty.queue, total: 1 } }), true);
 });
 
+test("recent operations keep the dashboard ready even with zero aggregate counts", async () => {
+  const store = new DashboardStore(() => {});
+  await store.refresh(async () => ({ ...empty, operations: [{ id: "op-1", type: "copy", state: "failed", updated_at: null }] }));
+  assert.equal(store.state, "ready");
+});
+
+test("retained library entries keep the dashboard ready without a current playlist", async () => {
+  const store = new DashboardStore(() => {});
+  await store.refresh(async () => ({ ...empty, library: { ...empty.library, entries: 1 } }));
+  assert.equal(store.state, "ready");
+});
+
+test("unavailable library entries are stored data rather than an empty dashboard", async () => {
+  const store = new DashboardStore(() => {});
+  await store.refresh(async () => ({ ...empty, library: { ...empty.library, unavailable_entries: 1 } }));
+  assert.equal(store.state, "ready");
+});
+
 test("initial failure is blocked and a later failure retains a stale snapshot", async () => {
   const store = new DashboardStore(() => {});
   await store.refresh(async () => { throw new Error("secret failure"); });

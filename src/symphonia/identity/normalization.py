@@ -14,7 +14,7 @@ import unicodedata
 
 _WHITESPACE = re.compile(r"\s+")
 _PUNCTUATION = re.compile(r"[^\w]+", re.UNICODE)
-_ISRC = re.compile(r"^[A-Z]{2}[A-Z0-9]{3}\d{7}$")
+_ISRC = re.compile(r"^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$")
 _VERSION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("live", re.compile(r"\blive\b", re.IGNORECASE)),
     ("acoustic", re.compile(r"\bacoustic\b", re.IGNORECASE)),

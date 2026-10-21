@@ -8,6 +8,7 @@ from datetime import datetime
 from symphonia.domain.operations import OperationPublicationGuard
 from symphonia.domain.projections import PublishedPlaylistSnapshot
 from symphonia.providers.contracts import ProviderAdapter, ProviderObjectRef
+from symphonia.providers.errors import ProviderApiError, ProviderErrorCategory
 from symphonia.providers.importing import CollectionImportResult, ImportIssue, collect_playlist_pages
 
 from .ports import PlaylistProjectionPort
@@ -55,6 +56,11 @@ class LibraryImportService:
         if adapter.manifest.provider != playlist.provider:
             raise ValueError("adapter provider does not match playlist provider")
         pages = tuple(adapter.read_playlist_pages(connection_id, playlist, cursor))
+        if any(page.playlist.external_key != playlist.external_key for page in pages):
+            raise ProviderApiError(
+                ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
+                "Provider pages do not match the requested playlist identity",
+            )
         return collect_playlist_pages(pages)
 
     def publish_playlist(

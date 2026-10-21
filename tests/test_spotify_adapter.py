@@ -66,6 +66,17 @@ class SpotifyAdapterTests(unittest.TestCase):
         self.assertTrue(pages[1].complete)
         self.assertEqual(client.calls[0][2], "access-token")
 
+    def test_forward_pagination_gap_is_rejected_before_a_second_read(self) -> None:
+        client = FakeClient({
+            "0": JsonResponse(200, {"items": [{"item": {"id": "one", "type": "track"}}],
+                                      "next": "https://api.spotify.com/v1/playlists/playlist-1/items?offset=2"}, {}),
+            "2": JsonResponse(200, {"items": [], "next": None}, {}),
+        })
+        with self.assertRaises(ProviderApiError) as context:
+            SpotifyAdapter(client, lambda _: "token").read_playlist_pages("connection-1", self.playlist())
+        self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+        self.assertEqual(len(client.calls), 1)
+
     def test_capability_probe_uses_safe_read_endpoint(self) -> None:
         client = FakeClient({"0": JsonResponse(200, {"items": []}, {})})
         adapter = SpotifyAdapter(client, lambda connection_id: "access-token", connection_id="connection-1")

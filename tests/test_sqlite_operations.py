@@ -896,6 +896,54 @@ class OperationRepositoryTests(unittest.TestCase):
                         now=self.now + timedelta(seconds=5),
                     )
 
+    def test_cancellation_keeps_unknown_outcomes_nonterminal_for_every_checkpoint_state(self) -> None:
+        for state in ("running", "waiting_user", "cancelled", "failed", "partial", "succeeded"):
+            with self.subTest(state=state):
+                operation = self.repository.create(
+                    operation_type="copy", idempotency_key=f"unknown-terminal-{state}",
+                    payload={}, now=self.now,
+                )
+                self.repository.claim(operation.operation_id, worker_id="worker-a", now=self.now)
+                self.repository.cancel(operation.operation_id, now=self.now)
+                waiting = self.repository.checkpoint(
+                    operation.operation_id, worker_id="worker-a",
+                    checkpoint={"unknown_step": "target-create"}, now=self.now, state=state,
+                )
+                self.assertEqual(waiting.state, "waiting_user")
+                self.assertTrue(waiting.cancel_requested)
+                self.assertTrue(waiting.checkpoint["reconciliation_required"])
+                self.assertIsNone(waiting.worker_id)
+                with self.assertRaises(LeaseConflict):
+                    self.repository.resume(operation.operation_id, now=self.now)
+
+    def test_expired_leases_cannot_schedule_or_acknowledge_cancellation(self) -> None:
+        for method in ("schedule_retry", "schedule_rate_limit"):
+            for cancelled in (False, True):
+                for elapsed in (1, 2):
+                    with self.subTest(method=method, cancelled=cancelled, elapsed=elapsed):
+                        operation = self.repository.create(
+                            operation_type="import_playlist",
+                            idempotency_key=f"expired-{method}-{cancelled}-{elapsed}",
+                            payload={}, now=self.now,
+                        )
+                        self.repository.claim(
+                            operation.operation_id, worker_id="worker-a", now=self.now,
+                            lease_seconds=1,
+                        )
+                        if cancelled:
+                            self.repository.cancel(operation.operation_id, now=self.now)
+                        before = self.repository.get(operation.operation_id)
+                        events = self.repository.events(operation.operation_id)
+                        with self.assertRaises(LeaseConflict):
+                            getattr(self.repository, method)(
+                                operation.operation_id, worker_id="worker-a",
+                                next_run_at=self.now + timedelta(minutes=1),
+                                checkpoint={"retry_attempts": 1},
+                                now=self.now + timedelta(seconds=elapsed),
+                            )
+                        self.assertEqual(self.repository.get(operation.operation_id), before)
+                        self.assertEqual(self.repository.events(operation.operation_id), events)
+
     def test_cancelling_waiting_unknown_outcome_keeps_quarantine(self) -> None:
         operation = self.repository.create(
             operation_type="copy", idempotency_key="cancel-waiting-unknown",

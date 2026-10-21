@@ -68,6 +68,7 @@ class ProviderConnectionService:
                 health_code=error.category.value,
                 expires_at=current.expires_at,
                 now=now,
+                expected_connection=current,
             )
         return self.connections.record_probe(
             connection_id,
@@ -76,6 +77,7 @@ class ProviderConnectionService:
             health_code=None,
             expires_at=current.expires_at,
             now=now,
+            expected_connection=current,
         )
 
     def disconnect(self, connection_id: str, *, now: datetime) -> ProviderConnection:

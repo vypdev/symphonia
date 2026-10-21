@@ -4,7 +4,7 @@ Symphonia is a self-hosted, provider-independent music library hub, distributed 
 
 > Your music library belongs to you. Providers are places where representations of that music happen to exist.
 
-Symphonia is a library-management and interoperability project, not a new music player. Playback, recommendations, social features, transcoding, and multi-room audio are outside the initial scope. Its domain and application core remain independent of Home Assistant so the service can also run and be tested standalone; the deployment and integration pattern follows `vypdev/homeassistant-gateway`.
+Symphonia combines library management and interoperability with a proposed listening and playback-control surface. The proposed listening surface will control configured external players through the narrow Home Assistant broker selected by [ADR 0006](docs/decisions/0006-narrow-home-assistant-playback-broker.md); it does not stream or decode audio. Listening remains unimplemented and gated by the [Draft listening SDD](specs/listening-and-playback-control.md), its provider/security evidence, and explicit owner approval. Recommendations, social features, transcoding, and Symphonia-owned multi-room audio remain outside the MVP. Its domain and application core remain independent of Home Assistant so the service can also run and be tested standalone; the deployment and integration pattern follows `vypdev/homeassistant-gateway`.
 
 ## Project status
 

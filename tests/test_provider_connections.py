@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import unittest
+from unittest.mock import patch
 
 from symphonia.application import ProviderConnectionService
-from symphonia.infrastructure import ProviderConnectionRepository
+from symphonia.infrastructure import ConnectionConflict, ProviderConnectionRepository
 from symphonia.providers import (
     AccessBasis,
     Capability,
+    ConnectionState,
     ProviderApiError,
     ProviderCapabilities,
     ProviderErrorCategory,
@@ -101,6 +103,28 @@ class ProviderConnectionServiceTests(unittest.TestCase):
         degraded = self.service.probe("spotify-1", now=NOW)
         self.assertEqual(degraded.state.value, "degraded")
         self.assertEqual(degraded.health_code, "provider_unavailable")
+
+    def test_inflight_probe_cannot_replace_a_newer_observation(self) -> None:
+        for fails, newer_seconds in ((False, 0), (True, 0), (False, 2), (True, 2)):
+            with self.subTest(fails=fails, newer_seconds=newer_seconds):
+                self.connections._connection.execute("DELETE FROM provider_connections")
+                self.register()
+                original = self.adapter.capabilities
+
+                def concurrent_probe(identifier):
+                    self.connections.record_probe(
+                        identifier, state=ConnectionState.ACTION_REQUIRED,
+                        capabilities=None, health_code="newer-observation", expires_at=None,
+                        now=NOW + timedelta(seconds=newer_seconds),
+                    )
+                    if fails:
+                        raise ProviderApiError(ProviderErrorCategory.PROVIDER_UNAVAILABLE, "outage")
+                    return original(identifier)
+
+                with patch.object(self.adapter, "capabilities", side_effect=concurrent_probe):
+                    with self.assertRaises(ConnectionConflict):
+                        self.service.probe("spotify-1", now=NOW + timedelta(seconds=3))
+                self.assertEqual(self.connections.get("spotify-1").health_code, "newer-observation")
 
 
 if __name__ == "__main__":

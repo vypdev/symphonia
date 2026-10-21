@@ -38,6 +38,15 @@ class IdentityResolutionTests(unittest.TestCase):
         self.assertEqual(normalize_text("  Café\u00a0del\u00a0Mar  "), "café del mar")
         self.assertEqual(version_tokens("Song (Acoustic Remix)"), ("acoustic", "remix"))
 
+    def test_isrc_rejects_unicode_digits_without_rewriting_the_original(self) -> None:
+        for digits in ("١٢٣٤٥٦٧", "۱۲۳۴۵۶۷", "１２３４５６７"):
+            with self.subTest(digits=digits):
+                value = "USAAA" + digits
+                metadata = normalize_recording_metadata(title="One", artists=("Artist",), isrc=value)
+                self.assertEqual(metadata.original_isrc, value)
+                self.assertIsNone(metadata.normalized_isrc)
+        self.assertEqual(normalize_isrc("US-AAA-12-34567"), "USAAA1234567")
+
     def test_unmatched_assessment_has_no_candidate(self) -> None:
         from symphonia.identity.models import CandidateAssessment
 

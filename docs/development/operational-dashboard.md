@@ -15,6 +15,10 @@ Leaving the panel aborts its active read and ignores late completions. Returning
 starts a new read. A superseding refresh also aborts the prior request; cleanup
 does not report a provider or storage failure.
 
+Recent operation records and retained or unavailable library entries keep the
+dashboard nonempty even when queue, connection, and current-playlist counts are
+zero. Activity and library facts remain visible with the normal ready status.
+
 ## Implementation and verification
 
 The server projects an allowlisted, redacted response at `./api/dashboard`; it never returns operation payloads, event bodies, account identifiers, database paths, credentials, or Ingress tokens. Static assets and the dashboard API are available only from the verified Supervisor peer. Supervisor authenticates the Ingress session and the App panel is administrator-only. The browser uses relative asset/API URLs so arbitrary Ingress prefixes work.

@@ -51,6 +51,8 @@ retryable, rate-limited, permanent, and ambiguous creation failures plus a
 conflicting reconciliation result without subsequent entry writes. This foundation work
 does not resolve the product or provider-write blockers above.
 
+The PR #1 persistence correction keeps a cancellation-requested unknown provider outcome in waiting_user even if a caller requests failed, partial or succeeded. Explicit reconciliation remains necessary; six requested checkpoint states prove the boundary without enabling provider writes or completing this Draft capability. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

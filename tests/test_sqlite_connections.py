@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -126,6 +127,59 @@ class ProviderConnectionRepositoryTests(unittest.TestCase):
             finally:
                 probe.close()
                 disconnector.close()
+
+    def test_newer_probe_on_another_connection_wins_over_a_stale_probe(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = str(Path(directory) / "connections.sqlite3")
+            stale, newer = ProviderConnectionRepository(path), ProviderConnectionRepository(path)
+            try:
+                stale.create(connection())
+                original_get = stale.get
+
+                def stale_get(identifier):
+                    current = original_get(identifier)
+                    newer.record_probe(
+                        identifier, state=ConnectionState.ACTION_REQUIRED, capabilities=None,
+                        health_code="authorization_revoked", expires_at=None,
+                        now=NOW,
+                    )
+                    return current
+
+                with patch.object(stale, "get", side_effect=stale_get):
+                    with self.assertRaises(ConnectionConflict):
+                        stale.record_probe(
+                            "spotify-1", state=ConnectionState.CONNECTED, capabilities=None,
+                            health_code=None, expires_at=None, now=NOW + timedelta(seconds=3),
+                        )
+                self.assertEqual(stale.get("spotify-1").health_code, "authorization_revoked")
+            finally:
+                stale.close()
+                newer.close()
+
+    def test_probe_cannot_move_observation_time_backwards(self) -> None:
+        self.repository.create(connection())
+        self.repository.record_probe(
+            "spotify-1", state=ConnectionState.ACTION_REQUIRED, capabilities=None,
+            health_code="newer", expires_at=None, now=NOW + timedelta(seconds=2),
+        )
+        before = self.repository.get("spotify-1")
+        with self.assertRaises(ConnectionConflict):
+            self.repository.record_probe(
+                "spotify-1", state=ConnectionState.CONNECTED, capabilities=None,
+                health_code=None, expires_at=None, now=NOW + timedelta(seconds=1),
+            )
+        self.assertEqual(self.repository.get("spotify-1"), before)
+
+    def test_healthcheck_returns_false_for_missing_capability_fields(self) -> None:
+        self.repository.create(connection())
+        for missing in ("enabled", "evidence_version", "observed_at"):
+            with self.subTest(missing=missing):
+                payload = {"enabled": [], "evidence_version": "v1", "observed_at": "now"}
+                del payload[missing]
+                self.repository._connection.execute(
+                    "UPDATE provider_connections SET capabilities_json = ?", (json.dumps(payload),),
+                )
+                self.assertFalse(self.repository.healthcheck())
 
     def test_probe_cannot_disconnect_without_erasing_the_secret(self) -> None:
         self.repository.create(connection())

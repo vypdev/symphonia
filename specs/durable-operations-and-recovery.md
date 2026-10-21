@@ -33,6 +33,8 @@ Evidence sources:
 - [SQLite recovery and backup spike](../docs/development/storage-recovery-spike.md)
 - [Durable one-playlist import outcomes](../tests/test_library_import_execution.py): intent validation, cancellation before reads, retry budget, rate-limit deadline, and permanent failure.
 
+The PR #1 regression correction rejects retry/rate-limit transitions at or after lease expiry before any checkpoint, cancellation or audit mutation. A cancellation-requested checkpoint with an unresolved outcome stays in waiting_user for every requested state, including failed, partial and succeeded. Six state cases and eight expiry/wait/cancellation cases cover these boundaries; the capability remains Draft. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

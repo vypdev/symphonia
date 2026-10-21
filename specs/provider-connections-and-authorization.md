@@ -74,6 +74,8 @@ not a claim that the connection capability is implemented.
 - Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), [architecture boundary tests](../tests/test_architecture_boundaries.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
 - Unknowns: callback reachability, secret encryption key, Google/YouTube product scope, exact scopes, token expiry/revocation behavior under test accounts, and provider-specific client-registration policy.
 
+The PR #1 correction fences probe publication with the complete observation captured before provider I/O and a compare-and-swap predicate inside the SQLite update, including when concurrent probes have equal timestamps. A competing observation or disconnect wins over a stale success or error; older timestamps cannot replace newer health. Missing capability keys make readiness fail closed. Cross-connection, in-flight success/error and three corruption fixtures cover this foundation boundary. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

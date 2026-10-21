@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-20
-- **Last reviewed:** 2026-09-22
+- **Last reviewed:** 2026-10-21
 
 ## Context
 
@@ -18,11 +18,14 @@ The implementation follows the `vypdev/homeassistant-gateway` deployment
 pattern: the App is the product boundary and Ingress is the administrative
 entry point. Provider authorization is owned by the App's provider adapters;
 the MVP does not require a companion integration to broker OAuth. A companion
-integration remains a later, optional native-surface extension.
+integration remains optional for App-only library/import/copy use. As refined
+by [ADR 0006](0006-narrow-home-assistant-playback-broker.md), the narrow companion
+broker is required when Home Assistant listening is enabled; its implementation
+still requires the listening SDD's readiness and owner-approval gates.
 
 The domain and application core remain independent of Home Assistant. A standalone composition profile will use the same core so the product can operate without Home Assistant and tests do not require it. Timing of the standalone release remains open.
 
-A companion Home Assistant custom integration may later expose native entities, actions, and events over a stable authenticated service contract. It will not duplicate domain policy or access the database/secrets directly.
+A companion Home Assistant custom integration may later expose native entities, actions, and events beyond the required playback broker over a stable authenticated service contract. These additional projections remain optional. The integration will not duplicate domain policy or access the database/secrets directly.
 
 ## Alternatives considered
 
@@ -40,7 +43,7 @@ Rejected because it damages testability, standalone usability, and architectural
 
 ### App calls Home Assistant directly for every native feature
 
-Not selected. A companion integration, MQTT, and direct APIs need an RFC. Native surfaces should not force service policy into Home Assistant adapters.
+Not selected. ADR 0006 subsequently chose the narrow companion broker for listening; its transport/pairing contract remains open there. Other native surfaces need their own RFC and must not force service policy into Home Assistant adapters.
 
 ## Consequences
 
@@ -56,5 +59,5 @@ Trade-offs:
 - Ingress-relative routing and provider OAuth callbacks need explicit design and testing;
 - Home Assistant OS/Supervised becomes the primary release matrix;
 - standalone mode needs its own authentication/network boundary;
-- App and optional integration artifacts need version compatibility;
+- App and companion integration artifacts need version compatibility when listening is enabled;
 - provider credentials in Supervisor backups require a deliberate encryption/key/restore model.

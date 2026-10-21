@@ -57,10 +57,10 @@ def next_offset(next_url: Any, fallback: int) -> int | None:
             ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
             "Spotify pagination next link contained an invalid offset",
         ) from error
-    if offset < fallback:
+    if offset != fallback:
         raise ProviderApiError(
             ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
-            "Spotify pagination moved backwards",
+            "Spotify pagination did not continue at the expected offset",
         )
     return offset
 

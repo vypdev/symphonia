@@ -190,6 +190,8 @@ def _validate_sdds(root: Path, capabilities: list[dict[str, Any]], errors: list[
         except (ValueError, OSError, RuntimeError):
             continue  # The path validator already reports this boundary error.
         if not path.is_file():
+            if path.exists():
+                _add(errors, f"{specification} must reference a regular SDD file")
             continue
         text = path.read_text(encoding="utf-8")
         matches = CAPABILITY_ID_RE.findall(text)

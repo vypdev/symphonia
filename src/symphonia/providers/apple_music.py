@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, parse_qs, urlsplit
+from urllib.parse import quote, urlencode, parse_qs, urlsplit
 from urllib.request import Request, urlopen
 
 from .contracts import (
@@ -149,7 +149,7 @@ class AppleMusicAdapter(ProviderAdapter):
             seen_offsets.add(offset)
             response = self._request(
                 connection_id,
-                f"/me/library/playlists/{playlist.object_id}/tracks",
+                f"/me/library/playlists/{quote(playlist.object_id, safe='')}/tracks",
                 {"limit": str(self._page_size), "offset": str(offset)},
             )
             items = response.payload.get("data", [])
@@ -273,10 +273,10 @@ class AppleMusicAdapter(ProviderAdapter):
                 ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
                 "Apple Music pagination next link contained an invalid offset",
             ) from error
-        if next_offset < fallback:
+        if next_offset != fallback:
             raise ProviderApiError(
                 ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
-                "Apple Music pagination moved backwards",
+                "Apple Music pagination did not continue at the expected offset",
             )
         return next_offset
 

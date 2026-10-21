@@ -140,6 +140,17 @@ class SpecValidatorTests(unittest.TestCase):
             _validate_requirements(root, [capability], errors)
         self.assertEqual(len(errors), 2)
 
+    def test_primary_sdd_cannot_be_an_existing_directory(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            capability = self._capability("draft", [])
+            capability["specification"] = "specs"
+            errors: list[str] = []
+            _validate_paths(root, [capability], errors)
+            _validate_sdds(root, [capability], errors)
+            self.assertTrue(any("regular SDD file" in error for error in errors))
+
     def test_primary_sdd_must_declare_exactly_one_status(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)
