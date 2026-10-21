@@ -63,6 +63,19 @@ class FakeClient:
 
 
 class YouTubeDataAdapterTests(unittest.TestCase):
+    def test_quota_403_reasons_are_rate_limits_but_permissions_remain_distinct(self) -> None:
+        from types import SimpleNamespace
+        for reason in ("quotaExceeded", "dailyLimitExceeded", "userRateLimitExceeded", "rateLimitExceeded", "servingLimitExceeded",
+                       "insufficientPermissions", [], {}):
+            with self.subTest(reason=reason):
+                response = JsonResponse(403, {"error": {"errors": [{"reason": reason}]}}, {"Retry-After": "120"})
+                client = SimpleNamespace(request=lambda *args, **kwargs: response)
+                with self.assertRaises(ProviderApiError) as raised:
+                    YouTubeDataAdapter(client, lambda _: "fixture").capabilities("account")
+                limited = isinstance(reason, str) and reason != "insufficientPermissions"
+                self.assertEqual(raised.exception.category, ProviderErrorCategory.RATE_LIMITED if limited else ProviderErrorCategory.PERMISSION_DENIED)
+                self.assertEqual(raised.exception.retry_at is not None, limited)
+
     def test_missing_items_requires_explicit_first_page_empty_evidence(self) -> None:
         from types import SimpleNamespace
         playlist = ProviderObjectRef("youtube_data", "playlist", "playlist", "account")

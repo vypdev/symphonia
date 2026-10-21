@@ -51,6 +51,8 @@ and enter waiting_user without another provider mutation.
 
 Import page boundaries renew a live lease with the fresh clock and configured duration, preserving cancellation and ownership checks. Cumulative reads can span lease intervals, but an individual call outliving its lease remains fenced. Copy retry-counter validation is shared by admission and increment, so invalid counters cannot be consumed even through an internal mutation path.
 
+Credential/credentials aliases are rejected recursively in operation payloads and checkpoints, including snake/kebab/camel/uppercase forms. Existing unsafe rows fail reads/readiness without exposing values; no row is silently erased or replaced. The guarded issue-step parser already rejects non-string values before set membership, with explicit regression evidence.
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.
@@ -324,7 +326,7 @@ Implementation shall update:
 | `SYM-JOB-001`–`SYM-JOB-008` | Sections 6-11 | State, lease, checkpoint, retry, fairness, time, cancellation, and reconciliation suites |
 | `SYM-PROD-004`–`SYM-PROD-006` | Sections 6, 10, and 13 | Attribution, persisted state, item-failure, and error tests |
 | `SYM-ARCH-001`–`SYM-ARCH-002`, `SYM-ARCH-005`, `SYM-ARCH-008`–`SYM-ARCH-010` | Sections 5-14 | Durability, atomicity, history, sanitation, retry, and partial-result tests |
-| `SYM-OBS-001`–`SYM-OBS-006` | Section 13 | Correlation, event, metric cardinality, health, diagnostic, and audit tests |
+| `SYM-OBS-001`–`SYM-OBS-006` | Section 12 | Correlation, event, metric cardinality, health, diagnostic, and audit tests |
 | `SYM-TEST-004`, `SYM-TEST-013` | Sections 14-15 | Provider-write fault and migration release gates |
 | `SYM-DEP-002`, `SYM-DEP-008` | Sections 6, 11, and 14 | App restart and graceful/abrupt shutdown tests |
 

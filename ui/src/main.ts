@@ -1,15 +1,17 @@
 import { LitElement, html } from "lit";
 import { DashboardStore, sectionFromHash, sections, type Section } from "./model.ts";
 import { styles } from "./styles.ts";
+import { ThemeState } from "./theme.ts";
 import { dateText, renderLoadState, renderSection, snapshotStatus } from "./views.ts";
 
 class SymDashboard extends LitElement {
   static styles = styles;
   private readonly store = new DashboardStore(() => this.requestUpdate());
   private readonly colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
-  private dark = this.colorScheme.matches;
+  private readonly theme = new ThemeState(this.colorScheme.matches);
+  private get dark(): boolean { return this.theme.dark; }
   private section: Section = sectionFromHash(window.location.hash);
-  private readonly onScheme = (event: MediaQueryListEvent): void => { this.dark = event.matches; this.requestUpdate(); };
+  private readonly onScheme = (event: MediaQueryListEvent): void => { this.theme.systemChanged(event.matches); this.requestUpdate(); };
   private readonly onHash = (): void => {
     this.section = sectionFromHash(window.location.hash);
     this.requestUpdate();
@@ -18,6 +20,7 @@ class SymDashboard extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.theme.systemChanged(this.colorScheme.matches);
     this.colorScheme.addEventListener("change", this.onScheme);
     window.addEventListener("hashchange", this.onHash);
     void this.refresh();
@@ -39,7 +42,7 @@ class SymDashboard extends LitElement {
   }
 
   private skip(): void { this.renderRoot.querySelector<HTMLElement>("main")?.focus(); }
-  private toggleTheme(): void { this.dark = !this.dark; this.requestUpdate(); }
+  private toggleTheme(): void { this.theme.toggle(); this.requestUpdate(); }
 
   render() {
     const snapshot = this.store.snapshot;

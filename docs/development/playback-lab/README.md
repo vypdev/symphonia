@@ -15,7 +15,10 @@ profile at [`.devcontainer/devcontainer.json`](../../../.devcontainer/devcontain
 It runs the official Supervisor development environment, rather than pretending
 that Home Assistant Container provides Apps or Ingress. The dated
 [local Supervisor/App lab](../ha-app-lab.md) now covers a real local build,
-startup, health, and authenticated App entry pass; the Symphonia Ingress UI remains blank/loading.
+startup, health and authenticated Ingress pass. The earlier blank/loading UI
+observation was superseded by the 2026-10-04 App-lab dashboard render, navigation,
+Refresh, theme-toggle and narrow-viewport checks documented there. This is App/UI
+evidence, not proof of the separate provider/playback feasibility matrix.
 
 The App metadata currently lives under `addon/`, while its build context and
 `Dockerfile` live at the repository root. The staging helper bridges that
@@ -53,7 +56,9 @@ multicast/audio-path evidence; macOS container networking is not that proof.
 The setup follows Home Assistant's [local App testing guide](https://developers.home-assistant.io/docs/apps/testing/)
 and current [Apps example devcontainer](https://github.com/home-assistant/apps-example/blob/main/.devcontainer.json),
 reviewed again 2026-10-04. Static CI and the dated local build/startup smoke
-pass; the authenticated browser reached the App panel but did not display a functional Symphonia UI.
+pass. The first browser attempt reached the App panel without a functional UI;
+the later dated App-lab pass rendered and exercised the operational dashboard.
+Keep those observations distinct from the still-pending playback/provider proof.
 
 ## Safety and limits
 

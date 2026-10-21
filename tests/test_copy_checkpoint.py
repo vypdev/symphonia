@@ -36,6 +36,11 @@ class CopyCheckpointTests(unittest.TestCase):
         parsed.confirmed.append("occ-2")
         self.assertEqual(checkpoint["confirmed_occurrences"], ["occ-1"])
 
+    def test_non_string_issue_steps_are_rejected_before_set_membership(self) -> None:
+        for issue in ({"step": []}, {"step": {}}, {"step": None}, {"step": False}, {"step": 7}, None, []):
+            with self.subTest(issue=issue):
+                self.assertEqual(parse_copy_progress(self.plan, {"issues": [issue]}), "invalid_copy_checkpoint")
+
     def test_gapped_or_conflicting_progress_requires_recovery(self) -> None:
         self.assertEqual(
             parse_copy_progress(self.plan, {

@@ -176,12 +176,19 @@ class YouTubeDataAdapter(ProviderAdapter):
         error_payload = response.payload.get("error") if isinstance(response.payload, Mapping) else None
         errors = error_payload.get("errors") if isinstance(error_payload, Mapping) else None
         reason = errors[0].get("reason") if isinstance(errors, list) and errors and isinstance(errors[0], Mapping) else None
+        if not isinstance(reason, str):
+            reason = None
         category = {
             401: ProviderErrorCategory.AUTHENTICATION_REQUIRED,
             403: ProviderErrorCategory.PERMISSION_DENIED,
             404: ProviderErrorCategory.NOT_FOUND,
             429: ProviderErrorCategory.RATE_LIMITED,
         }.get(response.status, ProviderErrorCategory.PROVIDER_UNAVAILABLE if response.status >= 500 else ProviderErrorCategory.INVALID_REQUEST)
+        if response.status == 403 and isinstance(reason, str) and reason in {
+            "quotaExceeded", "dailyLimitExceeded", "userRateLimitExceeded",
+            "rateLimitExceeded", "servingLimitExceeded",
+        }:
+            category = ProviderErrorCategory.RATE_LIMITED
         retry_at = None
         retry_after = next((value for key, value in response.headers.items() if key.lower() == "retry-after"), None)
         if category is ProviderErrorCategory.RATE_LIMITED and retry_after is not None:

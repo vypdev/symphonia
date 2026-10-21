@@ -8,7 +8,7 @@ import json
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, parse_qs, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from .contracts import (
     AccessBasis,
@@ -24,6 +24,7 @@ from .contracts import (
 from .errors import ProviderApiError, ProviderErrorCategory
 from .retry_after import parse_retry_after
 from .http_json import decode_json_object
+from .http_transport import open_authenticated as urlopen
 
 
 class AppleJsonClient(Protocol):

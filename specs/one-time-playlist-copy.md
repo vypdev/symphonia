@@ -63,6 +63,8 @@ invalid_copy_checkpoint; the current finite retry ceiling remains unchanged.
 
 The horizontal product journey and all UI examples now consistently follow the owner-approved strict policy: resolve every non-ready occurrence before acceptance, with partial execution results distinct from an omission override.
 
+Redirected POSTs and successful writes with malformed target metadata retain an unknown outcome and in-flight reconciliation evidence. Refusing an authenticated redirect does not prove that the original write had no effect; no blind repeated create/add call is admitted.
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

@@ -29,3 +29,7 @@ The HTTP entrypoint delegates public probes to `runtime/routes.py`, the protecte
 
 Keyboard users can activate **Skip to content** to focus the main region. Its
 visible inset focus outline uses the same theme accent as the other controls.
+
+Theme selection follows the browser initially. A manual light/dark choice wins
+over later system preference changes for this component lifetime; reloading
+the page restores automatic browser following. No theme preference is stored.

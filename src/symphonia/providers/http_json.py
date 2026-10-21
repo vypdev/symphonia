@@ -8,9 +8,10 @@ import json
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from .errors import ProviderApiError, ProviderErrorCategory
+from .http_transport import open_authenticated as urlopen
 
 
 @dataclass(frozen=True, slots=True)

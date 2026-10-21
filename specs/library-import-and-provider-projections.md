@@ -113,6 +113,8 @@ adapter policies from unproven live-provider guarantees.
 
 The foundation renews its still-live lease at every page boundary while checking cancellation and ownership. Four 20-second page reads can therefore complete across a 30-second lease interval. A single blocking request that outlasts its lease still stops for recovery; the guard never revives expired ownership and does not add a background heartbeat or page staging.
 
+YouTube HTTP 403 quotaExceeded, dailyLimitExceeded, userRateLimitExceeded, rateLimitExceeded and servingLimitExceeded reasons use the existing rate-limit wait/retry policy, preserving Retry-After. Ordinary permission failures remain distinct. Authenticated API redirects are refused rather than following an untrusted Location.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

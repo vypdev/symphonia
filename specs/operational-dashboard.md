@@ -44,6 +44,12 @@ The skip-to-content destination now has an explicit visible focus ring using the
 
 The production boundary guard now recursively checks all owned TypeScript sources, with browser I/O restricted to root main.ts. Eleven native Node fixtures per UI package cover nested pure modules, browser I/O, source symlinks, static/dynamic/template/computed/type imports and re-exports. The guard parses TypeScript using the already-pinned Rolldown parser; computed module sources fail closed. These fixtures now run in each Node CI lane rather than the Python suite. See the [final follow-up](../docs/development/pr1-review-2026-10-21.md).
 
+The initial theme follows the browser color scheme. An explicit light/dark
+selection remains in force for the component lifetime, including later system
+scheme changes and reconnection; a fresh page starts from the browser again.
+Three pure state-sequence tests prove automatic following and both explicit
+choices. This does not add storage or claim full host-theme context support.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
@@ -189,7 +195,7 @@ No schema or data change. The UI is built from a pinned lockfile and shipped as 
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **35 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 11 source-boundary checks, 9 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The thirteen client/model tests exercise empty, operation-only, retained-entry-only and unavailable-entry-only snapshots, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser. See the [PR #1 regression review](../docs/development/pr1-review-2026-10-21.md) for the three additional nonempty-state cases.
+Minimum **38 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 11 source-boundary checks, 12 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The thirteen client/model tests exercise empty, operation-only, retained-entry-only and unavailable-entry-only snapshots, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser. See the [PR #1 regression review](../docs/development/pr1-review-2026-10-21.md) for the three additional nonempty-state cases.
 
 ## 15. Documentation and discoverability
 
@@ -235,7 +241,7 @@ Minimum **35 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 11 
 
 - [x] Root panel, relative assets and live API work through authenticated Ingress.
 - [x] Direct access is denied and DTO redaction tests pass.
-- [x] At least 35 distinct cases across projection, routing, source boundaries, client state, build, browser, and lab checks; the repository verification suite passes.
+- [x] At least 38 distinct cases across projection, routing, source boundaries, client state, build, browser, and lab checks; the repository verification suite passes.
 - [x] User/operator/contributor documentation and catalog evidence are current.
 - [x] Browser visual and keyboard review is recorded in the lab guide.
 - [x] GitHub Verify passed for the functional commit `557ceab` ([run](https://github.com/vypdev/symphonia/actions/runs/37224401052)); later refactors require their own green run.

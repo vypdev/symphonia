@@ -59,33 +59,33 @@
   @media (max-width: 480px) { main { padding: 16px 14px 48px; } .panel { padding: 14px 15px; } .topbar-inner { padding: 0 14px; } .fact { grid-template-columns: 1fr; gap: 2px; } }
   @media (forced-colors: active) { .status, .alert, .panel, button { border: 1px solid CanvasText; } .tabs a[aria-current="page"] { border-bottom-color: Highlight; } }
   @media (prefers-reduced-motion: no-preference) { .tabs a, button { transition: background-color .15s ease, color .15s ease; } }
-`;function Oe(e){switch(e){case`ready`:case`empty`:return{label:`Storage ready`,tone:`positive`};case`refreshing`:return{label:`Refreshing`,tone:`caution`};case`stale`:return{label:`Snapshot stale`,tone:`caution`};default:return null}}function ke(e){switch(e){case`loading`:return I`<div class="alert">Loading stored status…</div>`;case`refreshing`:return I`<div class="alert">Refreshing stored status…</div>`;case`blocked`:return I`<div class="alert" data-tone="negative"><strong>Status unavailable.</strong><p>Check that the App is running, then retry.</p></div>`;case`stale`:return I`<div class="alert" data-tone="caution"><strong>Could not refresh.</strong><p>Showing the last successful snapshot. Try again or check App logs.</p></div>`;case`empty`:return I`<div class="alert" data-tone="caution"><strong>No stored data yet.</strong><p>The App is ready, but no connections, playlists, or operations are recorded.</p></div>`;default:return I``}}function $(e){if(!e)return`Not available`;let t=new Date(e);return Number.isNaN(t.valueOf())?`Not available`:t.toLocaleString()}function Ae(e){return[`completed`,`succeeded`,`ready`,`active`].includes(e)?`positive`:[`failed`,`cancelled`,`blocked`].includes(e)?`negative`:`caution`}function je(e){return I`
+`,Oe=class{preference=`auto`;systemDark;constructor(e){this.systemDark=e}get dark(){return this.preference===`auto`?this.systemDark:this.preference===`dark`}systemChanged(e){this.systemDark=e}toggle(){this.preference=this.dark?`light`:`dark`}};function ke(e){switch(e){case`ready`:case`empty`:return{label:`Storage ready`,tone:`positive`};case`refreshing`:return{label:`Refreshing`,tone:`caution`};case`stale`:return{label:`Snapshot stale`,tone:`caution`};default:return null}}function Ae(e){switch(e){case`loading`:return I`<div class="alert">Loading stored status…</div>`;case`refreshing`:return I`<div class="alert">Refreshing stored status…</div>`;case`blocked`:return I`<div class="alert" data-tone="negative"><strong>Status unavailable.</strong><p>Check that the App is running, then retry.</p></div>`;case`stale`:return I`<div class="alert" data-tone="caution"><strong>Could not refresh.</strong><p>Showing the last successful snapshot. Try again or check App logs.</p></div>`;case`empty`:return I`<div class="alert" data-tone="caution"><strong>No stored data yet.</strong><p>The App is ready, but no connections, playlists, or operations are recorded.</p></div>`;default:return I``}}function $(e){if(!e)return`Not available`;let t=new Date(e);return Number.isNaN(t.valueOf())?`Not available`:t.toLocaleString()}function je(e){return[`completed`,`succeeded`,`ready`,`active`].includes(e)?`positive`:[`failed`,`cancelled`,`blocked`].includes(e)?`negative`:`caution`}function Me(e){return I`
     <div class="grid">
       <section class="panel"><h2>Operations</h2><p class="metric">${e.queue.total}</p><p class="muted">${e.queue.eligible_count} eligible to run</p></section>
       <section class="panel"><h2>Connections</h2><p class="metric">${e.connections.total}</p><p class="muted">${e.connections.expired_count} expired</p></section>
       <section class="panel"><h2>Library</h2><p class="metric">${e.library.current_playlists}</p><p class="muted">current playlists · ${e.library.entries} entries</p></section>
     </div>
     <section class="panel"><h2>Next steps</h2><p>Provider setup, library import, playback, and playlist copy are not available in this build. This dashboard reflects stored App data only.</p></section>
-  `}function Me(e){let t=Object.entries(e.connections.by_provider);return I`<section class="panel"><h2>Stored connections</h2>
+  `}function Ne(e){let t=Object.entries(e.connections.by_provider);return I`<section class="panel"><h2>Stored connections</h2>
     ${t.length?t.map(([e,t])=>I`<div class="row"><div class="row-copy"><strong>${e}</strong><small>${Object.entries(t).map(([e,t])=>`${e}: ${t}`).join(` · `)}</small></div></div>`):I`<p>No connections recorded. Provider setup is not available in this build.</p>`}
     <p class="muted">${e.connections.expired_count} connection records have expired credentials.</p>
-  </section>`}function Ne(e){return I`<section class="panel"><h2>Stored library projection</h2><dl>
+  </section>`}function Pe(e){return I`<section class="panel"><h2>Stored library projection</h2><dl>
     <div class="fact"><dt>Current playlists</dt><dd>${e.library.current_playlists}</dd></div>
     <div class="fact"><dt>Entries</dt><dd>${e.library.entries}</dd></div>
     <div class="fact"><dt>Unavailable entries</dt><dd>${e.library.unavailable_entries}</dd></div>
     <div class="fact"><dt>Last published</dt><dd>${$(e.library.latest_published_at)}</dd></div>
-  </dl><p class="muted">Import controls are not available in this build.</p></section>`}function Pe(e){return I`<section class="panel"><h2>Recent operations</h2>
+  </dl><p class="muted">Import controls are not available in this build.</p></section>`}function Fe(e){return I`<section class="panel"><h2>Recent operations</h2>
     ${e.operations.length?e.operations.map(e=>I`<div class="row">
       <div class="row-copy"><strong>${e.type||`Operation`}</strong><small>${e.id} · Updated ${$(e.updated_at)}</small></div>
-      <span class="status" data-tone=${Ae(e.state)}>${e.state||`unknown`}</span>
+      <span class="status" data-tone=${je(e.state)}>${e.state||`unknown`}</span>
     </div>`):I`<p>No operations recorded.</p>`}
-  </section>`}function Fe(e){return I`<section class="panel"><h2>App diagnostics</h2><dl>
+  </section>`}function Ie(e){return I`<section class="panel"><h2>App diagnostics</h2><dl>
     <div class="fact"><dt>Service</dt><dd>Ready</dd></div>
     <div class="fact"><dt>Version</dt><dd>${e.version}</dd></div>
     <div class="fact"><dt>Queue states</dt><dd>${Object.entries(e.queue.states).map(([e,t])=>`${e}: ${t}`).join(` · `)||`None`}</dd></div>
     <div class="fact"><dt>Identity decisions</dt><dd>${e.resolutions.total}</dd></div>
     <div class="fact"><dt>Last successful read</dt><dd>${$(e.generated_at)}</dd></div>
-  </dl><p class="muted">Detailed payloads, account identifiers, and credentials are never shown here.</p></section>`}function Ie(e,t){switch(e){case`connections`:return Me(t);case`library`:return Ne(t);case`activity`:return Pe(t);case`diagnostics`:return Fe(t);default:return je(t)}}var Le=class extends q{static styles=De;store=new Ee(()=>this.requestUpdate());colorScheme=window.matchMedia(`(prefers-color-scheme: dark)`);dark=this.colorScheme.matches;section=Y(window.location.hash);onScheme=e=>{this.dark=e.matches,this.requestUpdate()};onHash=()=>{this.section=Y(window.location.hash),this.requestUpdate(),this.updateComplete.then(()=>this.renderRoot.querySelector(`h1`)?.focus())};connectedCallback(){super.connectedCallback(),this.colorScheme.addEventListener(`change`,this.onScheme),window.addEventListener(`hashchange`,this.onHash),this.refresh()}disconnectedCallback(){this.store.cancel(),this.colorScheme.removeEventListener(`change`,this.onScheme),window.removeEventListener(`hashchange`,this.onHash),super.disconnectedCallback()}async refresh(){await this.store.refresh(async e=>{let t=await fetch(`./api/dashboard`,{credentials:`same-origin`,cache:`no-store`,signal:e});if(!t.ok)throw Error(`dashboard_unavailable`);return t.json()})}skip(){this.renderRoot.querySelector(`main`)?.focus()}toggleTheme(){this.dark=!this.dark,this.requestUpdate()}render(){let e=this.store.snapshot,t=this.store.state,n=Oe(t);return I`<div class=${this.dark?`dark`:`light`}>
+  </dl><p class="muted">Detailed payloads, account identifiers, and credentials are never shown here.</p></section>`}function Le(e,t){switch(e){case`connections`:return Ne(t);case`library`:return Pe(t);case`activity`:return Fe(t);case`diagnostics`:return Ie(t);default:return Me(t)}}var Re=class extends q{static styles=De;store=new Ee(()=>this.requestUpdate());colorScheme=window.matchMedia(`(prefers-color-scheme: dark)`);theme=new Oe(this.colorScheme.matches);get dark(){return this.theme.dark}section=Y(window.location.hash);onScheme=e=>{this.theme.systemChanged(e.matches),this.requestUpdate()};onHash=()=>{this.section=Y(window.location.hash),this.requestUpdate(),this.updateComplete.then(()=>this.renderRoot.querySelector(`h1`)?.focus())};connectedCallback(){super.connectedCallback(),this.theme.systemChanged(this.colorScheme.matches),this.colorScheme.addEventListener(`change`,this.onScheme),window.addEventListener(`hashchange`,this.onHash),this.refresh()}disconnectedCallback(){this.store.cancel(),this.colorScheme.removeEventListener(`change`,this.onScheme),window.removeEventListener(`hashchange`,this.onHash),super.disconnectedCallback()}async refresh(){await this.store.refresh(async e=>{let t=await fetch(`./api/dashboard`,{credentials:`same-origin`,cache:`no-store`,signal:e});if(!t.ok)throw Error(`dashboard_unavailable`);return t.json()})}skip(){this.renderRoot.querySelector(`main`)?.focus()}toggleTheme(){this.theme.toggle(),this.requestUpdate()}render(){let e=this.store.snapshot,t=this.store.state,n=ke(t);return I`<div class=${this.dark?`dark`:`light`}>
       <button class="skip" type="button" @click=${this.skip}>Skip to content</button>
       <header class="topbar"><div class="topbar-inner">
         <div class="brand"><span class="brand-mark" aria-hidden="true">♫</span><strong>Symphonia</strong></div>
@@ -99,10 +99,10 @@
         <div class="heading"><div><p class="eyebrow">Home Assistant App</p><h1 tabindex="-1">${this.section.charAt(0).toUpperCase()+this.section.slice(1)}</h1><p class="muted">Live operational state from Symphonia</p></div>
           ${n?I`<span class="status" data-tone=${n.tone}>${n.label}</span>`:I``}</div>
         <div role="status" aria-live="polite">
-          ${ke(t)}
+          ${Ae(t)}
         </div>
-        ${e?Ie(this.section,e):I``}
+        ${e?Le(this.section,e):I``}
         ${e?I`<p class="muted">Last successful read: ${$(e.generated_at)}</p>`:I``}
       </main>
       <footer>Symphonia · App status and stored data</footer>
-    </div>`}};customElements.define(`sym-dashboard`,Le);
+    </div>`}};customElements.define(`sym-dashboard`,Re);

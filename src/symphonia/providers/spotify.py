@@ -203,6 +203,12 @@ class SpotifyAdapter(ProviderAdapter, PlaylistWriter):
         if not isinstance(token, str) or not token.strip():
             raise ProviderApiError(ProviderErrorCategory.AUTHENTICATION_REQUIRED, "Spotify connection has no usable access token")
         response = self._client.request(method, path, token=token, query=query, body=body)
+        if method == "POST" and 300 <= response.status < 400:
+            raise ProviderApiError(
+                ProviderErrorCategory.UNKNOWN_WRITE_OUTCOME,
+                "Spotify write returned an unsupported redirect",
+                provider_code=str(response.status),
+            )
         if 200 <= response.status < 300:
             if not isinstance(response.payload, Mapping):
                 raise ProviderApiError(

@@ -25,6 +25,18 @@ class FakeClient:
 
 
 class SpotifyAdapterTests(unittest.TestCase):
+    def test_redirects_and_invalid_target_metadata_preserve_unknown_write_outcomes(self) -> None:
+        for response in (JsonResponse(302, {}, {}), JsonResponse(201, {}, {}), JsonResponse(201, [], {})):
+            with self.subTest(response=response):
+                adapter = SpotifyAdapter(FakeClient({"capabilities": response}), lambda _: "fixture",
+                                         connection_id="account", allow_writes=True)
+                with self.assertRaises(ProviderWriteError) as raised:
+                    adapter.ensure_target_playlist(provider="spotify", name="Copy", visibility="private", idempotency_key="target")
+                self.assertEqual(raised.exception.outcome, WriteOutcome.UNKNOWN_OUTCOME)
+                result = adapter.add_entry(target_playlist_id="target", provider_track_id="track", idempotency_key="entry")
+                expected = WriteOutcome.CONFIRMED_SUCCESS if response.status == 201 and isinstance(response.payload, dict) else WriteOutcome.UNKNOWN_OUTCOME
+                self.assertEqual(result.outcome, expected)
+
     def test_missing_items_is_not_a_complete_empty_playlist(self) -> None:
         client = FakeClient({"0": JsonResponse(200, {}, {})})
         with self.assertRaises(ProviderApiError) as raised:

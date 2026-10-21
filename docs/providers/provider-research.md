@@ -226,3 +226,9 @@ Spotify is a plausible personal/self-hosted MVP adapter, with meaningful 2026 ac
 
 These are official documentation/standard observations checked on 2026-10-21.
 No community implementation evidence is used for these corrections.
+
+## 2026-10-21 — Official YouTube quota classification
+
+The [YouTube error reference](https://developers.google.com/youtube/data/reference/rest/v3/errors) distinguishes quota exhaustion from forbidden access. Its [global domain errors](https://developers.google.com/youtube/data/reference/rest/v3/core_errors) enumerate daily/per-user/rate/service quota reasons under 403. The foundation maps the five recognized quota reasons to RATE_LIMITED and retains ordinary permission errors separately. This is dated documentation evidence, verified offline; actual account quotas/reset behavior remain part of provider proof.
+
+Local Python 3.13 redirect-handler inspection also confirms that default redirects copy request headers except content headers. The shared authenticated opener refuses redirects. Thirty local HTTP scenarios cover same/cross origins and GET/POST/Apple headers without provider accounts or external calls.

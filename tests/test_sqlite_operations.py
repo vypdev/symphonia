@@ -441,6 +441,37 @@ class OperationRepositoryTests(unittest.TestCase):
                 now=self.now,
             )
 
+    def test_plain_credential_aliases_cannot_be_persisted_as_payload_or_checkpoint(self) -> None:
+        keys = ("credential", "credentials", "provider_credentials", "provider-credential",
+                "providerCredentials", "PROVIDER_CREDENTIALS")
+        for index, key in enumerate(keys):
+            with self.subTest(key=key), self.assertRaises(ValueError) as raised:
+                self.repository.create(operation_type="copy", idempotency_key=f"blocked-{index}",
+                                       payload={"nested": [{key: "fixture-private-value"}]}, now=self.now)
+            self.assertNotIn("fixture-private-value", str(raised.exception))
+            self.assertEqual(self.repository._connection.execute("SELECT COUNT(*) FROM operations").fetchone()[0], 0)
+        operation = self.repository.create(operation_type="copy", idempotency_key="safe-checkpoint", payload={}, now=self.now)
+        before = self.repository.claim(operation.operation_id, worker_id="worker", now=self.now)
+        for key in keys:
+            with self.subTest(checkpoint_key=key), self.assertRaises(ValueError):
+                self.repository.checkpoint(operation.operation_id, worker_id="worker", checkpoint={key: "fixture-private-value"}, now=self.now)
+            self.assertEqual(self.repository.get(operation.operation_id), before)
+
+    def test_legacy_credential_fields_fail_readiness_without_echoing_the_value(self) -> None:
+        operation = self.repository.create(operation_type="copy", idempotency_key="legacy-credentials", payload={}, now=self.now)
+        for column in ("payload_json", "checkpoint_json"):
+            with self.subTest(column=column):
+                self.repository._connection.execute(
+                    f"UPDATE operations SET {column} = ? WHERE operation_id = ?",
+                    ('{"provider_credentials":"fixture-private-value"}', operation.operation_id),
+                )
+                with self.assertRaises(ValueError) as raised:
+                    self.repository.get(operation.operation_id)
+                self.assertNotIn("fixture-private-value", str(raised.exception))
+                self.assertFalse(self.repository.healthcheck())
+                self.repository._connection.execute(f"UPDATE operations SET {column} = '{{}}' WHERE operation_id = ?", (operation.operation_id,))
+                self.assertTrue(self.repository.healthcheck())
+
     def test_operation_payload_rejects_nested_credentials(self) -> None:
         with self.assertRaisesRegex(ValueError, "operation payload contains credential-shaped keys") as raised:
             self.repository.create(

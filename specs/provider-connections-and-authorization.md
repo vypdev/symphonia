@@ -85,6 +85,8 @@ Malformed successful responses become sanitized provider-contract failures,
 and Apple non-object error bodies retain their HTTP category/code. These
 transport guards do not complete the Draft authorization capability.
 
+Authenticated server API transports refuse all automatic redirects, including same-origin redirects, before any second request can forward Bearer or Apple user-token headers. Loopback fixtures prove the policy with fake credentials. The policy concerns server API requests; consent/callback browser flows remain governed by the authorization contract.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

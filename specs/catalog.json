@@ -159,11 +159,13 @@
       ],
       "implementationEvidence": {
         "code": [
-          "docs/development/ui-lit-spike/scripts/check-boundary.mjs"
+          "docs/development/ui-lit-spike/scripts/check-boundary.mjs",
+          "ui/src/theme.ts"
         ],
         "tests": [
           "ui/src/boundary.test.ts",
-          "docs/development/ui-lit-spike/src/boundary.test.ts"
+          "docs/development/ui-lit-spike/src/boundary.test.ts",
+          "ui/src/theme.test.ts"
         ],
         "documentation": [
           "docs/development/pr1-review-2026-10-21.md"
@@ -215,7 +217,8 @@
           "ui/src/views.ts",
           "ui/src/styles.ts",
           "addon/config.yaml",
-          "ui/scripts/check-boundary.mjs"
+          "ui/scripts/check-boundary.mjs",
+          "ui/src/theme.ts"
         ],
         "tests": [
           "tests/test_operational_dashboard.py",
@@ -226,7 +229,8 @@
           "tests/test_architecture_boundaries.py",
           "docs/development/ha-app-lab.md",
           "ui/src/boundary.test.ts",
-          "docs/development/ui-lit-spike/src/boundary.test.ts"
+          "docs/development/ui-lit-spike/src/boundary.test.ts",
+          "ui/src/theme.test.ts"
         ],
         "documentation": [
           "docs/development/operational-dashboard.md",
@@ -350,7 +354,8 @@
           "src/symphonia/infrastructure/sqlite_authorization.py",
           "src/symphonia/infrastructure/sqlite_connections.py",
           "tools/oauth_callback_spike.py",
-          "src/symphonia/providers/retry_after.py"
+          "src/symphonia/providers/retry_after.py",
+          "src/symphonia/providers/http_transport.py"
         ],
         "tests": [
           "tests/test_authorization_service.py",
@@ -360,7 +365,8 @@
           "tests/test_sqlite_connections.py",
           "tests/test_oauth_callback_spike.py",
           "tests/test_provider_http_json.py",
-          "tests/test_retry_after.py"
+          "tests/test_retry_after.py",
+          "tests/test_provider_redirects.py"
         ],
         "documentation": [
           "docs/development/oauth-callback-spike.md",
@@ -438,7 +444,8 @@
           "src/symphonia/infrastructure/sqlite_publication_guard.py",
           "src/symphonia/domain/operations.py",
           "src/symphonia/application/operation_runner.py",
-          "src/symphonia/providers/retry_after.py"
+          "src/symphonia/providers/retry_after.py",
+          "src/symphonia/providers/http_transport.py"
         ],
         "tests": [
           "tests/test_provider_import.py",
@@ -451,7 +458,8 @@
           "tests/test_apple_music_adapter.py",
           "tests/test_operation_runner.py",
           "tests/test_provider_http_json.py",
-          "tests/test_retry_after.py"
+          "tests/test_retry_after.py",
+          "tests/test_provider_redirects.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",
@@ -572,7 +580,8 @@
           "src/symphonia/application/copy_execution_entries.py",
           "src/symphonia/providers/spotify.py",
           "src/symphonia/providers/spotify_error_mapping.py",
-          "src/symphonia/domain/models.py"
+          "src/symphonia/domain/models.py",
+          "src/symphonia/providers/http_transport.py"
         ],
         "tests": [
           "tests/test_architecture_boundaries.py",
@@ -581,7 +590,8 @@
           "tests/test_copy_execution.py",
           "tests/test_copy_checkpoint.py",
           "tests/test_spotify_adapter.py",
-          "tests/test_copy_planning.py"
+          "tests/test_copy_planning.py",
+          "tests/test_provider_redirects.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",

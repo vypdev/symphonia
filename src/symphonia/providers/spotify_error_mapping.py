@@ -46,6 +46,7 @@ def write_outcome(error: ProviderApiError) -> WriteOutcome:
         ProviderErrorCategory.NETWORK_ERROR,
         ProviderErrorCategory.PROVIDER_UNAVAILABLE,
         ProviderErrorCategory.UNKNOWN_WRITE_OUTCOME,
+        ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
     }:
         return WriteOutcome.UNKNOWN_OUTCOME
     return WriteOutcome.PERMANENT_FAILURE
