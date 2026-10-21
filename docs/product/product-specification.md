@@ -92,9 +92,9 @@ Provider-backed browsing/search for a selected playback source is part of listen
 1. The user selects a source playlist and target connection.
 2. Symphonia captures the source version and creates a dry-run plan.
 3. The plan shows ordered matches, duplicates, ambiguous/unmatched/unavailable items, target capability constraints, and expected writes.
-4. The user resolves blockers and chooses an explicit unresolved-item policy.
+4. The user resolves blockers; any remaining non-ready occurrence blocks acceptance and target writes under the strict initial policy.
 5. Symphonia executes the accepted plan safely.
-6. The user sees the target playlist, item-level results, retries, omissions, and recovery actions.
+6. The user sees the target playlist, item-level results, retries, partial outcomes, and recovery actions.
 
 ### Diagnose an operation
 

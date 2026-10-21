@@ -28,3 +28,7 @@ The static copy/activity copy follows the strict initial policy: every non-ready
 occurrence blocks confirmation and target writes; there is no omission override.
 Completed synthetic examples contain confirmed occurrences only. The fixture
 does not execute any provider operation.
+
+A fully confirmed completed operation uses the success tone; warnings are
+reserved for unresolved/partial states. Partial-copy examples elsewhere retain
+failed writes as execution outcomes, rather than presenting accepted omissions.

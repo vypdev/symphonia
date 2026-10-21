@@ -117,6 +117,33 @@ class LibraryImportExecutionTests(unittest.TestCase):
                 operation_ids.add(first.operation_id)
         self.assertEqual(len(operation_ids), len(intents))
 
+    def test_page_boundary_renewal_allows_cumulative_reads_longer_than_one_lease(self) -> None:
+        owner = self
+
+        class LongAdapter(FakeAdapter):
+            def iter_playlist_pages(self, connection_id, playlist, cursor=None):
+                for index in range(4):
+                    self.read_calls += 1
+                    owner.clock_now += timedelta(seconds=20)
+                    entry = ProviderPlaylistEntry(
+                        f"occ-{index}", index,
+                        ProviderObjectRef("spotify", "track", f"track-{index}", playlist.namespace),
+                        MediaKind.TRACK,
+                    )
+                    yield ProviderPlaylistPage(
+                        playlist, (entry,), None if index == 0 else str(index),
+                        str(index + 1) if index < 3 else None, index == 3,
+                    )
+
+        adapter = LongAdapter()
+        result = self.enqueue(adapter)
+        self.assertEqual(result.state, "succeeded")
+        self.assertEqual(adapter.read_calls, 4)
+        self.assertEqual(self.clock_now, NOW + timedelta(seconds=80))
+        snapshot = self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
+        self.assertIsNotNone(snapshot)
+        self.assertEqual(len(snapshot.snapshot.entries), 4)
+
     def test_import_is_published_as_a_succeeded_operation(self) -> None:
         result = self.enqueue(FakeAdapter())
         self.assertEqual(result.state, "succeeded")

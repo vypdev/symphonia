@@ -49,6 +49,8 @@ Copy retry counters are validated before provider access. Negative, boolean,
 string, fractional, null and container values are corrupt checkpoint evidence
 and enter waiting_user without another provider mutation.
 
+Import page boundaries renew a live lease with the fresh clock and configured duration, preserving cancellation and ownership checks. Cumulative reads can span lease intervals, but an individual call outliving its lease remains fenced. Copy retry-counter validation is shared by admission and increment, so invalid counters cannot be consumed even through an internal mutation path.
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

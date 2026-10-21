@@ -588,7 +588,8 @@
           "specs/one-time-playlist-copy.md",
           "docs/development/bugbot-review-2026-10-21.md",
           "docs/development/pr1-review-2026-10-21.md",
-          "docs/providers/provider-specification.md"
+          "docs/providers/provider-specification.md",
+          "docs/product/product-specification.md"
         ]
       },
       "blockers": [

@@ -244,8 +244,8 @@ Retained state: the last confirmed status is shown as stale; no provider write i
 ```
 
 ```text
-Copy completed with omissions
-113 entries were confirmed and 4 explicitly accepted omissions remain listed.
+Copy partially completed
+113 occurrences were confirmed and 4 permanently failed writes remain listed.
 Primary action: Review result
 ```
 
@@ -257,7 +257,7 @@ Pause and Next are available; unsupported controls explain why they are disabled
 
 ### 9.3 Accessibility and localization
 
-- Locale/direction/timezone use validated public HA context with region-to-language-to-English fallback.
+- Locale/direction/timezone use validated public HA context when available; otherwise use deterministic browser/standalone fallbacks, with region-to-language-to-English locale fallback.
 - Navigation, tabs, dialogs, fields, lists/tables, row actions, loading, and feedback follow native HTML or complete ARIA patterns.
 - Focus survives passive refresh; dialogs trap and restore focus; route/action errors move focus only when required to recover.
 - Mobile/narrow layout preserves headings, current status, primary action, and recovery facts; bounded containers own intentional scrolling.

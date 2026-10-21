@@ -61,6 +61,8 @@ Persisted retry_attempts must be a non-negative integer (not a boolean or
 coercible string). A malformed counter is quarantined before provider work as
 invalid_copy_checkpoint; the current finite retry ceiling remains unchanged.
 
+The horizontal product journey and all UI examples now consistently follow the owner-approved strict policy: resolve every non-ready occurrence before acceptance, with partial execution results distinct from an omission override.
+
 ## 3. Actors and authorization
 
 - A Home Assistant administrator configures provider connections and service-level limits.

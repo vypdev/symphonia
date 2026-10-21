@@ -11,7 +11,7 @@ from symphonia.domain.operations import LeaseConflict, OperationRecord
 from symphonia.domain.plans import CopyPlanRecord
 from symphonia.providers.writing import PlaylistWriter
 
-from .copy_checkpoint import CopyProgress
+from .copy_checkpoint import CopyProgress, validated_retry_attempts
 from .ports import OperationPort
 
 
@@ -102,7 +102,7 @@ class CopyRun:
         )
 
     def _retry_budget_exhausted(self) -> bool:
-        retry_attempts = self.checkpoint.get("retry_attempts", 0) + 1
+        retry_attempts = validated_retry_attempts(self.checkpoint) + 1
         self.checkpoint = {**self.checkpoint, "retry_attempts": retry_attempts}
         if retry_attempts > self.max_retry_attempts:
             self.checkpoint["failure_code"] = "retry_exhausted"

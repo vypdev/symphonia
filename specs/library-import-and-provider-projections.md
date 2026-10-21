@@ -111,6 +111,8 @@ All three adapters parse numeric and HTTP-date Retry-After values. The dated
 [official evidence](../docs/providers/provider-research.md) distinguishes these
 adapter policies from unproven live-provider guarantees.
 
+The foundation renews its still-live lease at every page boundary while checking cancellation and ownership. Four 20-second page reads can therefore complete across a 30-second lease interval. A single blocking request that outlasts its lease still stops for recovery; the guard never revives expired ownership and does not add a background heartbeat or page staging.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

@@ -18,6 +18,13 @@ class CopyProgress:
     unknown_step: str | None
 
 
+def validated_retry_attempts(checkpoint: dict[str, Any]) -> int:
+    attempts = checkpoint.get("retry_attempts", 0)
+    if isinstance(attempts, bool) or not isinstance(attempts, int) or attempts < 0:
+        raise ValueError("invalid copy retry counter")
+    return attempts
+
+
 def parse_copy_progress(plan: CopyPlan, checkpoint: dict[str, Any]) -> CopyProgress | str:
     """Return validated progress or the public recovery code for a corrupt checkpoint."""
 
@@ -27,12 +34,12 @@ def parse_copy_progress(plan: CopyPlan, checkpoint: dict[str, Any]) -> CopyProgr
     raw_issues = checkpoint.get("issues", [])
     target_id = checkpoint.get("target_playlist_id")
     unknown_step = checkpoint.get("unknown_step")
-    retry_attempts = checkpoint.get("retry_attempts", 0)
+    try:
+        validated_retry_attempts(checkpoint)
+    except ValueError:
+        return "invalid_copy_checkpoint"
     if (
-        isinstance(retry_attempts, bool)
-        or not isinstance(retry_attempts, int)
-        or retry_attempts < 0
-        or not isinstance(raw_confirmed, list)
+        not isinstance(raw_confirmed, list)
         or not all(isinstance(item, str) for item in raw_confirmed)
         or not isinstance(raw_issues, list)
         or (target_id is not None and (not isinstance(target_id, str) or not target_id.strip()))

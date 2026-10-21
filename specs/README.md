@@ -113,7 +113,7 @@ Readiness is necessary but not authorization to implement. The owner must still 
 | Provider connections | [Provider connections and authorization](provider-connections-and-authorization.md) | OAuth/cookies, secrets, callback boundary, effective capabilities |
 | Provider imports | [Library import and provider projections](library-import-and-provider-projections.md) | Completeness, provenance, unavailable items, retention |
 | Recording identity | [Recording identity resolution](recording-identity-resolution.md) | Conservative matching, evidence, manual decisions |
-| Playlist copy | [One-time playlist copy](one-time-playlist-copy.md) | Immutable plan, explicit omissions, safe external writes |
+| Playlist copy | [One-time playlist copy](one-time-playlist-copy.md) | Immutable plan, strict readiness, safe external writes |
 | Durable execution | [Durable operations and recovery](durable-operations-and-recovery.md) | Leases, checkpoints, retries, restarts, partial outcomes |
 
 Persistent synchronization intentionally has no implementation SDD yet. It remains future scope until playlist ownership, conflict semantics, provider revision evidence, and the copy contract are resolved.

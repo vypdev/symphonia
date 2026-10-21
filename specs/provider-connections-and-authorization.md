@@ -185,9 +185,13 @@ Text equivalent: an unconfigured adapter starts one authorization attempt; verif
 | `degraded` | transient provider/dependency/partial capability fault | Some named features unavailable | `connected`, `action_required`, `disconnecting` | retry or administrator |
 | `action_required` | expired/revoked/invalid grant or changed required terms | Jobs needing provider access are paused | `authorizing`, `disconnecting` | administrator reauthorizes |
 | `disconnecting` | cleanup is underway | No new provider work is admitted | `disconnected` | automatic/bounded user action |
-| `disconnected` | local grant erased and cleanup scheduled | No provider access remains | terminal or new independent setup | administrator |
+| `disconnected` | local grant erased and cleanup scheduled | Symphonia has no local access; provider-side revocation is reported separately | terminal or new independent setup | administrator |
 
 Authorization attempts also have `created`, `redirected`, `returned`, `consumed`, `denied`, `expired`, and `failed` states; only one transition may consume the callback.
+
+Disconnected does not certify external grant revocation. Show its distinct
+outcome as confirmed, pending, failed or unsupported, with provider-account
+revocation guidance when needed; local credential erasure remains complete.
 
 ## 7. Configuration contract
 
