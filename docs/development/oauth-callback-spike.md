@@ -11,6 +11,7 @@ integration is not required for the MVP authorization path.
 
 - callback state resolves from a durable SHA-256 digest after repository restart;
 - the callback is single-use and provider-bound before consumption;
+- IPv4 (127.0.0.1) and IPv6 (::1) loopback use the matching socket family and the same callback-only boundary;
 - denial becomes a terminal attempt state without persisting provider error text;
 - unknown paths, duplicate state parameters, replay, and wrong-provider callbacks fail safely;
 - the HTTP prototype exposes only the configured callback route and refuses broad

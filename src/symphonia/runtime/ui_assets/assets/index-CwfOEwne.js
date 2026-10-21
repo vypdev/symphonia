@@ -26,7 +26,7 @@
   .tabs a:hover { color: var(--text); background: var(--canvas); }
   .tabs a[aria-current="page"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 650; }
   main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
-  main:focus { outline: none; }
+  main:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
   .heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 22px; }
   .eyebrow { margin: 0 0 2px; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; font-weight: 700; }
   h1 { margin: 0; font-size: clamp(25px, 3vw, 32px); line-height: 1.2; letter-spacing: -.025em; }

@@ -944,6 +944,30 @@ class OperationRepositoryTests(unittest.TestCase):
                         self.assertEqual(self.repository.get(operation.operation_id), before)
                         self.assertEqual(self.repository.events(operation.operation_id), events)
 
+    def test_missing_lease_expiry_cannot_be_renewed_or_mutated_before_takeover(self) -> None:
+        for action in ("renew_lease", "checkpoint", "complete", "schedule_retry", "schedule_rate_limit"):
+            with self.subTest(action=action):
+                created = self.repository.create(
+                    operation_type="copy", idempotency_key=f"null-lease-{action}", payload={}, now=self.now,
+                )
+                self.repository.claim(created.operation_id, worker_id="old", now=self.now)
+                self.repository._connection.execute(
+                    "UPDATE operations SET lease_expires_at = NULL WHERE operation_id = ?",
+                    (created.operation_id,),
+                )
+                before = self.repository.get(created.operation_id)
+                events = self.repository.events(created.operation_id)
+                kwargs = {"worker_id": "old", "now": self.now}
+                if action != "renew_lease": kwargs["checkpoint"] = {"progress": "stale"}
+                if action.startswith("schedule_"): kwargs["next_run_at"] = self.now + timedelta(minutes=1)
+                if action == "complete": kwargs["state"] = "succeeded"
+                with self.assertRaises(LeaseConflict):
+                    getattr(self.repository, "checkpoint" if action == "complete" else action)(created.operation_id, **kwargs)
+                self.assertEqual(self.repository.get(created.operation_id), before)
+                self.assertEqual(self.repository.events(created.operation_id), events)
+                replacement = self.repository.claim(created.operation_id, worker_id="new", now=self.now)
+                self.assertEqual(replacement.worker_id, "new")
+
     def test_cancelling_waiting_unknown_outcome_keeps_quarantine(self) -> None:
         operation = self.repository.create(
             operation_type="copy", idempotency_key="cancel-waiting-unknown",

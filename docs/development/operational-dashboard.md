@@ -26,3 +26,6 @@ The server projects an allowlisted, redacted response at `./api/dashboard`; it n
 The UI source is in [`ui/`](../../ui/) and uses a pinned Lit/TypeScript/Vite build. `model.ts` validates and holds the snapshot, `views.ts` renders each section and freshness status, and `main.ts` owns browser events and the API fetch. Run `npm ci --ignore-scripts`, `npm run check`, `npm run check-boundary`, `npm test`, and `npm run build` there. The boundary check keeps model and views free of browser I/O and prevents UI imports from escaping the package.
 
 The HTTP entrypoint delegates public probes to `runtime/routes.py`, the protected dashboard response and assets to `runtime/dashboard_surface.py`, and durable resource ownership to `runtime/resources.py`. SQLite backup creation and validation live in `runtime/backup.py`. The build writes versioned static assets to `src/symphonia/runtime/ui_assets/`, which are included in the App image. Rebuild the local App with `python3 tools/ha_app_lab.py up`, then run `python3 tools/ha_app_lab.py ingress-smoke`. The regular Python suite and GitHub Verify workflow check projection, access, architecture boundaries, and reproducible assets.
+
+Keyboard users can activate **Skip to content** to focus the main region. Its
+visible inset focus outline uses the same theme accent as the other controls.

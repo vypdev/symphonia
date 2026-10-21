@@ -36,6 +36,8 @@ The Python runtime serves `/health`, `/ready`, and `/version`; `RuntimeResources
 - Community evidence: [Gateway review](../docs/development/ui-lit-spike/gateway-reference.md) informs restrained visual hierarchy only.
 - Unknowns outside this scope: complete supported browser matrix, public HA theme/locale transfer, provider authorization, playback, and full component catalog. This narrow dashboard uses browser fallbacks and does not claim the full UI foundation is ready.
 
+The skip-to-content destination now has an explicit visible focus ring using the existing accent token. A local isolated browser check activated the skip control with Tab/Enter and verified focus on main and a visible inset outline in the blocked state; this does not revalidate the full Home Assistant/browser matrix. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

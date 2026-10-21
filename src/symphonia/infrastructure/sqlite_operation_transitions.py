@@ -49,7 +49,7 @@ def checkpoint(
             raise OperationNotFound(operation_id)
         if row["state"] != "running" or row["worker_id"] != worker_id:
             raise LeaseConflict("worker does not own a running operation")
-        if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
+        if row["lease_expires_at"] is None or row["lease_expires_at"] <= now_text:
             raise LeaseConflict("operation lease has expired")
         effective_state = state
         if row["cancel_requested"]:

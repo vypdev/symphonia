@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import socket
 from collections.abc import Mapping
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
@@ -106,6 +107,7 @@ class CallbackOnlyServer(HTTPServer):
         self.callback_path = _normalize_callback_path(callback_path)
         self.authorization = authorization
         self.clock = clock
+        self.address_family = socket.AF_INET6 if address[0] == "::1" else socket.AF_INET
         super().__init__(address, CallbackOnlyRequestHandler)
 
 

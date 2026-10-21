@@ -79,12 +79,8 @@ class CopyRun:
         return self.finish("waiting_user")
 
     def schedule_retry(self) -> OperationRecord:
-        retry_attempts = int(self.checkpoint.get("retry_attempts", 0)) + 1
-        self.checkpoint = {**self.checkpoint, "retry_attempts": retry_attempts}
-        if retry_attempts > self.max_retry_attempts:
-            return self.finish(
-                "failed", checkpoint=self.checkpoint | {"failure_code": "retry_exhausted"}
-            )
+        if self._retry_budget_exhausted():
+            return self.finish("failed")
         return self.operations.schedule_retry(
             self.operation.operation_id,
             worker_id=self.worker_id,
@@ -93,7 +89,17 @@ class CopyRun:
             now=self.now,
         )
 
+    def _retry_budget_exhausted(self) -> bool:
+        retry_attempts = int(self.checkpoint.get("retry_attempts", 0)) + 1
+        self.checkpoint = {**self.checkpoint, "retry_attempts": retry_attempts}
+        if retry_attempts > self.max_retry_attempts:
+            self.checkpoint["failure_code"] = "retry_exhausted"
+            return True
+        return False
+
     def schedule_rate_limit(self, retry_at: datetime | None) -> OperationRecord:
+        if self._retry_budget_exhausted():
+            return self.finish("failed")
         next_run_at = (
             retry_at if retry_at is not None and retry_at > self.now
             else self.now + timedelta(seconds=self.retry_delay_seconds)

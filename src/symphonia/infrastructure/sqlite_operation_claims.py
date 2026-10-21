@@ -238,7 +238,7 @@ def renew_lease(
             raise LeaseConflict("worker does not own a running operation")
         if row["cancel_requested"]:
             raise LeaseConflict("operation cancellation has been requested")
-        if row["lease_expires_at"] is not None and row["lease_expires_at"] <= now_text:
+        if row["lease_expires_at"] is None or row["lease_expires_at"] <= now_text:
             raise LeaseConflict("operation lease has expired")
         context.connection.execute(
             "UPDATE operations SET lease_expires_at = ?, updated_at = ? WHERE operation_id = ?",

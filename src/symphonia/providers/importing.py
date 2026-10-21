@@ -47,6 +47,9 @@ def collect_playlist_pages(pages: list[ProviderPlaylistPage] | tuple[ProviderPla
     seen_cursors: set[str] = set()
     seen_next_cursors: set[str] = set()
     complete = True
+    if pages[0].cursor is not None:
+        issues.append(ImportIssue.MISSING_CONTINUATION)
+        complete = False
     for index, page in enumerate(pages):
         if page.playlist.external_key != first.external_key:
             issues.append(ImportIssue.INCONSISTENT_PLAYLIST)
@@ -72,7 +75,9 @@ def collect_playlist_pages(pages: list[ProviderPlaylistPage] | tuple[ProviderPla
                 issues.append(ImportIssue.CONFLICTING_OCCURRENCE)
                 complete = False
 
-        if index < len(pages) - 1 and page.next_cursor is None:
+        if index < len(pages) - 1 and (
+            page.next_cursor is None or page.next_cursor != pages[index + 1].cursor
+        ):
             issues.append(ImportIssue.MISSING_CONTINUATION)
             complete = False
         if index == len(pages) - 1:
@@ -82,6 +87,9 @@ def collect_playlist_pages(pages: list[ProviderPlaylistPage] | tuple[ProviderPla
                     issues.append(ImportIssue.MISSING_CONTINUATION)
 
     ordered = tuple(sorted(entries_by_id.values(), key=lambda entry: entry.position))
+    if any(entry.position != index for index, entry in enumerate(ordered)):
+        issues.append(ImportIssue.MISSING_CONTINUATION)
+        complete = False
     return CollectionImportResult(
         playlist=first.object_id,
         provider=first.provider,

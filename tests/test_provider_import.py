@@ -157,6 +157,23 @@ class ProviderContractTests(unittest.TestCase):
         self.assertEqual([item.occurrence_id for item in result.entries], ["occ-1", "occ-2", "occ-3"])
         self.assertEqual(result.entries[0].track.object_id, result.entries[1].track.object_id)
 
+    def test_missing_page_links_and_positions_cannot_be_published_as_complete(self) -> None:
+        first = ProviderPlaylistPage(playlist_ref(), (entry("one", 0, "track-1"),), None, "50", False)
+        for cursor in ("100", None):
+            with self.subTest(cursor=cursor):
+                last = ProviderPlaylistPage(playlist_ref(), (entry("two", 1, "track-2"),), cursor, None, True)
+                result = collect_playlist_pages([first, last])
+                self.assertFalse(result.complete)
+                self.assertIn(ImportIssue.MISSING_CONTINUATION, result.issues)
+        resumed = collect_playlist_pages([
+            ProviderPlaylistPage(playlist_ref(), (entry("two", 0, "track-2"),), "50", None, True),
+        ])
+        self.assertFalse(resumed.complete)
+        gap = collect_playlist_pages([
+            first, ProviderPlaylistPage(playlist_ref(), (entry("two", 2, "track-2"),), "50", None, True),
+        ])
+        self.assertFalse(gap.complete)
+
     def test_incomplete_page_does_not_look_complete(self) -> None:
         result = collect_playlist_pages(
             [ProviderPlaylistPage(playlist_ref(), (entry("occ-1", 0, "track-1"),), None, "cursor-2", False)]

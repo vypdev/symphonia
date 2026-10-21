@@ -76,6 +76,8 @@ not a claim that the connection capability is implemented.
 
 The PR #1 correction fences probe publication with the complete observation captured before provider I/O and a compare-and-swap predicate inside the SQLite update, including when concurrent probes have equal timestamps. A competing observation or disconnect wins over a stale success or error; older timestamps cannot replace newer health. Missing capability keys make readiness fail closed. Cross-connection, in-flight success/error and three corruption fixtures cover this foundation boundary. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
+The isolated callback spike selects the IPv6 socket family for its already accepted ::1 loopback host. A real IPv6 HTTP callback regression proves the same route/state/secret boundary as IPv4. This remains research evidence and adds no reachable production authorization endpoint. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

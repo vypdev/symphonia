@@ -35,6 +35,8 @@ Evidence sources:
 
 The PR #1 regression correction rejects retry/rate-limit transitions at or after lease expiry before any checkpoint, cancellation or audit mutation. A cancellation-requested checkpoint with an unresolved outcome stays in waiting_user for every requested state, including failed, partial and succeeded. Six state cases and eight expiry/wait/cancellation cases cover these boundaries; the capability remains Draft. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
+A missing lease expiry is treated as expired by renewal, checkpoints and wait scheduling, consistently with takeover. Rejected mutations preserve both state and audit. Rate-limit responses consume the same persisted bounded retry-attempt budget as transient errors in import and copy execution; eligible waits still honor provider deadlines. Repository and executor regressions cover NULL leases, takeover, repeated rate limits and mixed transient/rate-limit errors. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

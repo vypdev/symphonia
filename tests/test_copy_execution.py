@@ -181,6 +181,32 @@ class CopyExecutionTests(unittest.TestCase):
             self.executor.execute_claimed(claimed, writer=self.writer, worker_id="worker-a", now=NOW)
         self.assertEqual(self.writer.added, [])
 
+    def test_target_rate_limits_have_a_bounded_retry_budget(self) -> None:
+        digest = self.accepted_digest()
+        executor = CopyExecutionService(self.plans, self.operations, max_retry_attempts=1)
+        writer = FailingTargetWriter(ProviderWriteError(WriteOutcome.RATE_LIMITED, "quota", retry_at=NOW + timedelta(minutes=3)))
+        first = executor.execute(digest, writer=writer, worker_id="worker-a", now=NOW)
+        self.assertEqual(first.state, "waiting_rate_limit")
+        self.assertEqual(first.next_run_at, NOW + timedelta(minutes=3))
+        failed = executor.execute(digest, writer=writer, worker_id="worker-b", now=first.next_run_at)
+        self.assertEqual(failed.state, "failed")
+        self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
+        self.assertEqual(failed.checkpoint["retry_attempts"], 2)
+        self.assertIsNone(failed.next_run_at)
+
+    def test_entry_rate_limits_share_the_transient_retry_budget(self) -> None:
+        digest = self.accepted_digest()
+        executor = CopyExecutionService(self.plans, self.operations, max_retry_attempts=1)
+        key = f"{digest}:entry:occ-1"
+        self.writer.results[key] = WriteResult(WriteOutcome.RETRYABLE)
+        first = executor.execute(digest, writer=self.writer, worker_id="worker-a", now=NOW)
+        self.writer.results[key] = WriteResult(WriteOutcome.RATE_LIMITED)
+        failed = executor.execute(digest, writer=self.writer, worker_id="worker-b", now=first.next_run_at)
+        self.assertEqual(failed.state, "failed")
+        self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
+        self.assertEqual(failed.checkpoint["retry_attempts"], 2)
+        self.assertEqual(len(self.writer.added), 2)
+
     def test_unknown_write_is_reconciled_before_success(self) -> None:
         digest = self.accepted_digest()
         step_key = f"{digest}:entry:occ-1"

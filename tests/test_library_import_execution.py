@@ -148,6 +148,32 @@ class LibraryImportExecutionTests(unittest.TestCase):
         self.assertEqual(result.state, "waiting_rate_limit")
         self.assertEqual(result.next_run_at, deadline)
 
+    def test_rate_limits_share_the_bounded_retry_budget(self) -> None:
+        for first_category in (ProviderErrorCategory.RATE_LIMITED, ProviderErrorCategory.TIMEOUT):
+            with self.subTest(first_category=first_category):
+                service = LibraryImportExecutionService(
+                    LibraryImportService(self.projections), self.operations,
+                    max_retry_attempts=1, clock=lambda: self.clock_now,
+                )
+                adapter = FakeAdapter(error=ProviderApiError(first_category, "wait", retry_at=NOW + timedelta(minutes=3)))
+                created = service.enqueue_playlist(
+                    adapter, connection_id="connection-1", playlist=self.playlist,
+                    snapshot_id=f"budget-{first_category.value}", observed_at=NOW, now=NOW,
+                )
+                claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+                self.clock_now = NOW
+                waiting = service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+                self.assertEqual(waiting.checkpoint["retry_attempts"], 1)
+                next_time = waiting.next_run_at
+                self.clock_now = next_time
+                claimed = self.operations.claim(created.operation_id, worker_id="worker-b", now=next_time)
+                adapter.error = ProviderApiError(ProviderErrorCategory.RATE_LIMITED, "wait")
+                failed = service.execute_claimed(claimed, adapter=adapter, worker_id="worker-b", now=next_time)
+                self.assertEqual(failed.state, "failed")
+                self.assertEqual(failed.checkpoint["retry_attempts"], 2)
+                self.assertEqual(failed.checkpoint["failure_code"], "retry_exhausted")
+                self.assertIsNone(failed.next_run_at)
+
     def test_permanent_provider_failure_is_terminal(self) -> None:
         result = self.enqueue(
             FakeAdapter(error=ProviderApiError(ProviderErrorCategory.INVALID_REQUEST, "invalid"))

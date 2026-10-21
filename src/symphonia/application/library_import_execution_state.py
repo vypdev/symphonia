@@ -74,6 +74,17 @@ class ImportRun:
             ProviderErrorCategory.PERMISSION_DENIED,
         }:
             return self.checkpoint_state("waiting_user")
+        if error.category in {
+            ProviderErrorCategory.RATE_LIMITED,
+            ProviderErrorCategory.PROVIDER_UNAVAILABLE,
+            ProviderErrorCategory.TIMEOUT,
+            ProviderErrorCategory.NETWORK_ERROR,
+        }:
+            retry_attempts = int(self.checkpoint.get("retry_attempts", 0)) + 1
+            self.checkpoint["retry_attempts"] = retry_attempts
+            if retry_attempts > self.max_retry_attempts:
+                self.checkpoint["failure_code"] = "retry_exhausted"
+                return self.checkpoint_state("failed")
         if error.category is ProviderErrorCategory.RATE_LIMITED:
             retry_at = (
                 error.retry_at if error.retry_at and error.retry_at > self.now
@@ -91,11 +102,6 @@ class ImportRun:
             ProviderErrorCategory.TIMEOUT,
             ProviderErrorCategory.NETWORK_ERROR,
         }:
-            retry_attempts = int(self.checkpoint.get("retry_attempts", 0)) + 1
-            self.checkpoint["retry_attempts"] = retry_attempts
-            if retry_attempts > self.max_retry_attempts:
-                self.checkpoint["failure_code"] = "retry_exhausted"
-                return self.checkpoint_state("failed")
             return self.operations.schedule_retry(
                 self.operation.operation_id,
                 worker_id=self.worker_id,

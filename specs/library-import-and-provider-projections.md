@@ -84,6 +84,8 @@ not import completeness, staging, retention, or release readiness.
 
 The PR #1 correction verifies every returned page against the complete requested playlist identity before publication, including object type and account namespace. Apple Music and Spotify reject forward and backward offset gaps; Apple playlist IDs are encoded as one opaque path segment. Regression fixtures prove no mismatched snapshot publication or second gap request. The existing single-playlist foundation remains the only implemented evidence. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
+The collector now requires an initial page, exact adjacent opaque cursor links and contiguous occurrence positions beginning at zero. A resumed suffix or a cursor/position gap remains incomplete and cannot replace a complete snapshot. Rate limits consume the existing bounded retry budget; the provider deadline remains authoritative while attempts remain. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

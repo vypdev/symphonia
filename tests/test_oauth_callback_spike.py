@@ -125,6 +125,24 @@ class OAuthCallbackSpikeTests(unittest.TestCase):
                 host="0.0.0.0",
             )
 
+    def test_ipv6_loopback_serves_the_same_callback_boundary(self) -> None:
+        server = create_callback_server(authorization=self.service, provider="spotify", clock=lambda: NOW, host="::1", port=0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        connection = http.client.HTTPConnection("::1", server.server_address[1], timeout=2)
+        try:
+            connection.request("GET", "/oauth/callback?state=state-for-callback&code=ipv6-secret-code")
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            self.assertNotIn("ipv6-secret-code", response.read().decode())
+            self.assertEqual(self.repository.get("attempt-1").state, AuthorizationState.CONSUMED)
+        finally:
+            connection.close()
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+
     def test_loopback_http_boundary_consumes_callback_without_leaking_code(self) -> None:
         try:
             server = create_callback_server(
