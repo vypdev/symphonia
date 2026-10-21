@@ -412,7 +412,8 @@
           "src/symphonia/infrastructure/sqlite_library.py",
           "src/symphonia/providers/apple_music.py",
           "src/symphonia/infrastructure/sqlite_publication_guard.py",
-          "src/symphonia/domain/operations.py"
+          "src/symphonia/domain/operations.py",
+          "src/symphonia/application/operation_runner.py"
         ],
         "tests": [
           "tests/test_provider_import.py",
@@ -422,7 +423,8 @@
           "tests/test_architecture_boundaries.py",
           "tests/test_library_import_execution.py",
           "tests/test_sqlite_library.py",
-          "tests/test_apple_music_adapter.py"
+          "tests/test_apple_music_adapter.py",
+          "tests/test_operation_runner.py"
         ],
         "documentation": [
           "docs/development/implementation-baseline.md",

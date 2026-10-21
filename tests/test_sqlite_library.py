@@ -282,7 +282,7 @@ class ImportPublicationGuardTests(unittest.TestCase):
                 with self.assertRaises(LeaseConflict):
                     self.repository.publish(
                         self.result, snapshot_id=reason, published_at=NOW,
-                        operation_guard=OperationPublicationGuard(operation_id, worker_id, now),
+                        operation_guard=OperationPublicationGuard(operation_id, worker_id, lambda: now),
                     )
                 self.assertFalse(self.repository._connection.in_transaction)
                 with self.assertRaises(KeyError):
@@ -290,12 +290,29 @@ class ImportPublicationGuardTests(unittest.TestCase):
 
     def test_publication_excludes_cancellation_until_commit(self) -> None:
         operation = self.claim()
-        guard = OperationPublicationGuard(operation.operation_id, "worker-a", NOW)
+        guard = OperationPublicationGuard(operation.operation_id, "worker-a", lambda: NOW)
         with publication_transaction(self.repository._connection, guard):
             with self.assertRaisesRegex(sqlite3.OperationalError, "locked"):
                 self.other.cancel(operation.operation_id, now=NOW)
             self.assertFalse(self.operations.get(operation.operation_id).cancel_requested)
         self.assertTrue(self.other.cancel(operation.operation_id, now=NOW).cancel_requested)
+
+    def test_clock_is_read_inside_the_publication_transaction(self) -> None:
+        operation = self.claim()
+        observed = []
+
+        def after_lock():
+            observed.append(self.repository._connection.in_transaction)
+            return NOW + timedelta(seconds=30)
+
+        with self.assertRaises(LeaseConflict):
+            self.repository.publish(
+                self.result, snapshot_id="expired-after-lock", published_at=NOW,
+                operation_guard=OperationPublicationGuard(operation.operation_id, "worker-a", after_lock),
+            )
+        self.assertEqual(observed, [True])
+        with self.assertRaises(KeyError):
+            self.repository.get("expired-after-lock")
 
     def test_cancelled_idempotent_retry_cannot_bypass_the_guard(self) -> None:
         operation = self.claim()
@@ -304,7 +321,7 @@ class ImportPublicationGuardTests(unittest.TestCase):
         with self.assertRaises(LeaseConflict):
             self.repository.publish(
                 self.result, snapshot_id="existing", published_at=NOW,
-                operation_guard=OperationPublicationGuard(operation.operation_id, "worker-a", NOW),
+                operation_guard=OperationPublicationGuard(operation.operation_id, "worker-a", lambda: NOW),
             )
         self.assertEqual(self.repository.get("existing").snapshot_id, "existing")
 
@@ -314,14 +331,14 @@ class ImportPublicationGuardTests(unittest.TestCase):
         with self.assertRaises(sqlite3.OperationalError):
             isolated.publish(
                 self.result, snapshot_id="isolated", published_at=NOW,
-                operation_guard=OperationPublicationGuard("import", "worker-a", NOW),
+                operation_guard=OperationPublicationGuard("import", "worker-a", lambda: NOW),
             )
         with self.assertRaises(KeyError):
             isolated.get("isolated")
 
     def test_interrupted_publication_rolls_back(self) -> None:
         operation = self.claim()
-        guard = OperationPublicationGuard(operation.operation_id, "worker-a", NOW)
+        guard = OperationPublicationGuard(operation.operation_id, "worker-a", lambda: NOW)
         with self.assertRaises(KeyboardInterrupt):
             with publication_transaction(self.repository._connection, guard):
                 raise KeyboardInterrupt()

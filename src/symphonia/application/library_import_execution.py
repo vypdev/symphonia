@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from symphonia.domain.operations import LeaseConflict, OperationPublicationGuard, OperationRecord
@@ -15,6 +16,10 @@ from .library_import_payload import parse_import_payload
 from .ports import OperationPort
 
 
+def _current_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 @dataclass(frozen=True, slots=True)
 class LibraryImportExecutionService:
     """Make import publication resumable and visible as a durable operation."""
@@ -23,6 +28,7 @@ class LibraryImportExecutionService:
     operations: OperationPort
     retry_delay_seconds: int = 60
     max_retry_attempts: int = 5
+    clock: Callable[[], datetime] = _current_utc
 
     def __post_init__(self) -> None:
         if self.retry_delay_seconds <= 0:
@@ -108,27 +114,32 @@ class LibraryImportExecutionService:
                 connection_id=connection_id,
                 playlist=playlist,
             )
+            run.now = self.clock()
             cancelled = run.cancel_if_requested()
             if cancelled is not None:
                 return cancelled
             self.operations.renew_lease(
-                operation.operation_id, worker_id=worker_id, now=now,
+                operation.operation_id, worker_id=worker_id, now=run.now,
                 lease_seconds=lease_seconds,
             )
             publication = self.imports.publish_playlist(
                 collected, snapshot_id=snapshot_id, observed_at=observed_at,
-                operation_guard=OperationPublicationGuard(operation.operation_id, worker_id, now),
+                operation_guard=OperationPublicationGuard(operation.operation_id, worker_id, self.clock),
             )
         except LeaseConflict:
+            run.now = self.clock()
             cancelled = run.cancel_if_requested()
             if cancelled is not None:
                 return cancelled
             raise
         except ProviderApiError as error:
+            run.now = self.clock()
             return run.handle_provider_error(error)
         except Exception as error:
+            run.now = self.clock()
             return run.fail_unexpected(error)
 
+        run.now = self.clock()
         return run.complete(publication)
 
 __all__ = ["LibraryImportExecutionService"]

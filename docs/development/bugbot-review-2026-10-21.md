@@ -27,16 +27,19 @@ owner-authorized approval-policy adjustments are recorded below.
 | 11 | Lab acts on matching label alone | Valid. Require both pinned image and lab label before status, Ingress smoke or stop accesses the named container. | `SYM-TEST-012`; [guarded lab tests](../../tests/test_ha_app_lab.py), [operator guide](ha-app-lab.md) |
 | 12 | Dashboard read survives disconnect | Valid. Abort active/superseded requests and invalidate late completions; cleanup preserves the safe snapshot without inventing a read failure. | `SYM-UI-004`, `SYM-UI-009`; [client state tests](../../ui/src/model.test.ts), [dashboard SDD](../../specs/operational-dashboard.md) |
 | 13 | Follow-up PR review: cancellation after final renewal can still publish | Valid. Check operation state, ownership, lease expiry and cancellation inside the snapshot write transaction in the shared SQLite database. Serialize cancellation/takeover with publication and fail closed without shared operation state. | `SYM-JOB-004`, `SYM-LIB-004`; [after-renewal races](../../tests/test_library_import_execution.py), [transaction fence tests](../../tests/test_sqlite_library.py), [finding](https://github.com/vypdev/symphonia/pull/10#discussion_r4335451401) |
+| 14 | Follow-up PR review: publication checks expiry against pre-read time | Valid. Refresh an injected UTC clock after provider I/O and inside the locked publication transaction; refresh completion/retry timing and propagate lease conflicts without backdating a failure checkpoint. | `SYM-JOB-004`, `SYM-ARCH-005`; [slow-read/completion/retry cases](../../tests/test_library_import_execution.py), [locked clock](../../tests/test_sqlite_library.py), [lease recovery](../../tests/test_operation_runner.py), [finding](https://github.com/vypdev/symphonia/pull/10#discussion_r4335587874) |
 
 ## Verification budget and acceptance
 
-Minimum **38 distinct regression cases**: 3 copy-policy/admission, 2 connection
+Minimum **43 distinct regression cases**: 3 copy-policy/admission, 2 connection
 probe/cleanup, 6 import cancellation/lease/publication ordering, 5 Apple media
 types, 4 catalog path boundaries, 4 lab command identities and 3 dashboard abort
 and late-result cases, plus 11 follow-up publication-fence cases: cancellation
 and takeover after renewal; cancelled, expired, missing, wrong-owner and
 terminal guards; competing cancellation; idempotent replay; isolated storage;
-and interrupted publication. Parameterized cases count only for distinct inputs or
+and interrupted publication; plus 5 time-source cases for expired reads,
+valid delayed completion, delayed retry timing, a clock read after locking,
+and dispatcher lease recovery. Parameterized cases count only for distinct inputs or
 states. Existing runtime/callback tests verify the two scope dispositions.
 
 Acceptance requires the complete offline Python suite, production and fixture
@@ -56,6 +59,9 @@ and measures **87% combined line/branch coverage** with the enforced 85%
 minimum. Seven added test methods exercise the 11 distinct publication-fence
 cases listed above. The SDD validator and patch whitespace checks pass; no UI
 source, dependency, asset, or Copilot workflow changes for this follow-up.
+Finding 14 adds five time-source/recovery tests. Final local verification passes
+**322 Python tests without skips**, retains **87% combined line/branch coverage**
+and the 85% floor, and passes specification validation and patch whitespace.
 
 Copilot preservation is checked against the baseline for all 29 installed
 assets and AGENTS.md, plus the managed pointer/profile/guide/skill hashes in the

@@ -54,7 +54,10 @@ class LibraryImportExecutionTests(unittest.TestCase):
         self.database_path = f"{directory.name}/state.sqlite3"
         self.operations = OperationRepository(self.database_path)
         self.projections = PlaylistProjectionRepository(self.database_path)
-        self.service = LibraryImportExecutionService(LibraryImportService(self.projections), self.operations)
+        self.clock_now = NOW
+        self.service = LibraryImportExecutionService(
+            LibraryImportService(self.projections), self.operations, clock=lambda: self.clock_now,
+        )
         self.playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
 
     def tearDown(self) -> None:
@@ -104,7 +107,8 @@ class LibraryImportExecutionTests(unittest.TestCase):
 
     def test_transient_import_failure_honors_retry_budget(self) -> None:
         service = LibraryImportExecutionService(
-            LibraryImportService(self.projections), self.operations, max_retry_attempts=0
+            LibraryImportService(self.projections), self.operations, max_retry_attempts=0,
+            clock=lambda: self.clock_now,
         )
         created = service.enqueue_playlist(
             FakeAdapter(error=ProviderApiError(ProviderErrorCategory.TIMEOUT, "temporary")),
@@ -277,6 +281,51 @@ class LibraryImportExecutionTests(unittest.TestCase):
         self.assertEqual(renewals, 2)
         with self.assertRaises(KeyError):
             self.projections.get("snapshot-1")
+
+    def test_read_outlasting_the_lease_cannot_publish(self) -> None:
+        test = self
+
+        class SlowAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                test.clock_now = NOW + timedelta(seconds=31)
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        adapter = SlowAdapter()
+        created = self.service.enqueue_playlist(
+            adapter, connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="snapshot-1", observed_at=NOW, now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+        with self.assertRaises(LeaseConflict):
+            self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+        with self.assertRaises(KeyError):
+            self.projections.get("snapshot-1")
+
+    def test_read_within_the_lease_uses_fresh_time_for_completion(self) -> None:
+        test = self
+
+        class SlowAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                test.clock_now = NOW + timedelta(seconds=20)
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        result = self.enqueue(SlowAdapter())
+        self.assertEqual(result.state, "succeeded")
+        self.assertEqual(result.updated_at, NOW + timedelta(seconds=20))
+
+    def test_slow_provider_failure_schedules_retry_from_current_time(self) -> None:
+        test = self
+
+        class SlowAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                test.clock_now = NOW + timedelta(seconds=20)
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        result = self.enqueue(SlowAdapter(error=ProviderApiError(
+            ProviderErrorCategory.NETWORK_ERROR, "offline",
+        )))
+        self.assertEqual(result.state, "retry_scheduled")
+        self.assertEqual(result.next_run_at, NOW + timedelta(seconds=80))
 
     def test_malformed_persisted_playlist_id_never_reaches_adapter(self) -> None:
         adapter = FakeAdapter()

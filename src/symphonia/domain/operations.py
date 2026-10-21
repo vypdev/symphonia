@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -17,7 +18,7 @@ class OperationPublicationGuard:
 
     operation_id: str
     worker_id: str
-    now: datetime
+    clock: Callable[[], datetime]
 
 
 @dataclass(frozen=True, slots=True)

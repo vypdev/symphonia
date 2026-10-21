@@ -40,7 +40,7 @@ def publication_transaction(
                 or row["worker_id"] != guard.worker_id
                 or row["cancel_requested"] != 0
                 or row["lease_expires_at"] is None
-                or row["lease_expires_at"] <= _utc(guard.now)
+                or row["lease_expires_at"] <= _utc(guard.clock())
             ):
                 raise LeaseConflict("operation cannot publish under the supplied lease")
         yield

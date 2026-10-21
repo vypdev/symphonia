@@ -132,6 +132,11 @@ transaction prevents publication; competing cancellation cannot commit during
 publication. Published complete steps remain confirmed when publication wins
 that ordering. This closes the foundation's local publication race without
 implementing the pending multi-collection/session or provider-write contracts.
+The import executor refreshes its injected clock after provider I/O and before
+terminal/error handling. Publication reads that clock inside the write
+transaction, so a long read or lock wait cannot reuse the pre-read timestamp
+to authorize an expired lease. A lease conflict escapes the dispatcher without
+a backdated failure checkpoint and remains eligible for existing lease recovery.
 
 ### Idempotency
 

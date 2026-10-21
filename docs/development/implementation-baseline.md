@@ -170,6 +170,10 @@ cancellation and worker takeover. Isolated in-memory adapters remain useful
 for standalone tests; guarded durable publication fails closed without the
 shared operation table. A completed publication remains confirmed if a later
 cancellation request arrives.
+The executor uses a fresh injected UTC clock after provider I/O, and the
+publication guard reads it after acquiring the database write lock. Expired
+leases stop publication and propagate for recovery; they are never turned into
+failure checkpoints using the old dispatch timestamp.
 
 Run `make coverage COVERAGE_PYTHON=<quality-environment-python>` with the pinned
 `quality` dependency installed to measure combined line/branch coverage. The
