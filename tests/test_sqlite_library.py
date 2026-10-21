@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import sqlite3
 import tempfile
 import unittest
@@ -148,6 +148,32 @@ class PlaylistProjectionRepositoryTests(unittest.TestCase):
         self.repository.publish(result, snapshot_id="snapshot-1", published_at=NOW.replace(minute=3))
         current = self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
         self.assertEqual(current.snapshot_id, "snapshot-2")
+
+    def test_late_older_observation_is_retained_without_replacing_current(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/overlap.sqlite3"
+            newer, older = PlaylistProjectionRepository(path), PlaylistProjectionRepository(path)
+            try:
+                result = collect_playlist_pages([page()])
+                newer.publish(result, snapshot_id="newer", published_at=NOW + timedelta(minutes=1))
+                older.publish(result, snapshot_id="older", published_at=NOW)
+                self.assertEqual(newer.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1").snapshot_id, "newer")
+                self.assertEqual(older.get("older").published_at, NOW)
+            finally:
+                newer.close()
+                older.close()
+
+    def test_equal_observation_time_does_not_supersede_current(self) -> None:
+        result = collect_playlist_pages([page()])
+        self.repository.publish(result, snapshot_id="first", published_at=NOW)
+        self.repository.publish(result, snapshot_id="equal", published_at=NOW)
+        self.assertEqual(self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1").snapshot_id, "first")
+
+    def test_later_observation_advances_current(self) -> None:
+        result = collect_playlist_pages([page()])
+        self.repository.publish(result, snapshot_id="first", published_at=NOW)
+        self.repository.publish(result, snapshot_id="later", published_at=NOW + timedelta(seconds=1))
+        self.assertEqual(self.repository.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1").snapshot_id, "later")
 
     def test_reusing_snapshot_id_for_different_content_is_rejected(self) -> None:
         self.repository.publish(collect_playlist_pages([page()]), snapshot_id="snapshot-1", published_at=NOW)

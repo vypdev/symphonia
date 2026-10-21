@@ -87,6 +87,7 @@ The UI requests `./api/dashboard` with same-origin credentials. The API checks t
 - If stores are not ready, the API returns 503 with a safe status; the UI shows blocked recovery text.
 - If refresh fails after a successful read, the last snapshot remains visible and both its message and heading status explicitly mark it stale.
 - Unknown tabs select overview. Overlapping requests are fenced by a generation counter.
+- Disconnect aborts the active fetch and fences late success/error completions. A superseding refresh aborts the previous request. Reconnecting starts a fresh read; cleanup does not mark the retained snapshot stale or blocked.
 
 ### 6.3 States
 
@@ -179,7 +180,7 @@ No schema or data change. The UI is built from a pinned lockfile and shipped as 
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **18 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 3 client state/race, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The seven production UI tests exercise empty, initial failure, stale, overlapping, malformed nested and oversized responses, and freshness status; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser.
+Minimum **21 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 6 client state/race/cleanup, 3 layout/accessibility/browser behavior, 2 build/relative asset, 2 live Ingress/session. Deterministic fixtures use no provider calls. Live lab evidence supplements offline tests. The ten production UI tests exercise empty, initial failure, stale, overlapping, malformed nested and oversized responses, freshness status, disconnect cleanup and superseding aborts; Python projection tests cover exact allowlists, unhealthy resources, bounded strings/counts, and the existing combined diagnostic source. HTTP/Ingress tests cover the peer gate, forged header, path/asset allowlist, missing session, and real proxy routes. Browser evidence covers light/dark, narrow width, navigation, refresh, and keyboard skip. The built asset is checked for reproducibility in CI. A failed refresh is a deterministic client test; it was not induced in the live administrator browser.
 
 ## 15. Documentation and discoverability
 
@@ -201,6 +202,7 @@ Minimum **18 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 3 c
 7. Given arbitrary non-root Ingress prefix, assets and API resolve within that prefix.
 8. Given keyboard, narrow viewport, dark or forced colors, status and refresh remain usable.
 9. Given a secret-bearing diagnostic payload, no secret reaches the DTO or rendered UI.
+10. Given disconnect during a read, its signal is aborted and neither a late response nor an abort rejection updates the detached view; reconnecting can load a fresh snapshot.
 
 ## 17. Requirements traceability
 

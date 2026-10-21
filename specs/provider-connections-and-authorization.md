@@ -50,6 +50,13 @@ application-owned repository protocols instead of SQLite classes. This
 boundary change does not supply token handling or clear the callback and
 secret-storage blockers.
 
+A capability probe atomically checks that its original secret reference is
+still active when publishing health. A disconnect that wins this race leaves
+the connection disconnected, with no secret reference or restored capabilities;
+the stale probe reports a connection conflict. A probe cannot perform a
+disconnect without the dedicated cleanup operation. Two SQLite connections
+exercise this boundary in the [dated regression review](../docs/development/bugbot-review-2026-10-21.md).
+
 Provider token exchange, refresh/revocation adapters, encrypted secret
 storage, end-to-end account verification, authenticated actor/session binding,
 and provider-specific callback integration do not yet exist. Invalid attempt
@@ -343,7 +350,7 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 4. Given two simultaneous refresh requests, one exchange occurs and all callers observe one durable result.
 5. Given provider outage, the connection becomes degraded without falsely requesting reauthorization; given invalid grant, it becomes action-required without blind retries.
 6. Given a read-only playlist or missing scope, planning sees the object/connection denial even when the adapter supports the operation generally.
-7. Given disconnect, new calls stop, local grant material is erased, revocation is attempted safely, provider-data cleanup is scheduled, and manual decisions/audit remain.
+7. Given disconnect, new calls stop, local grant material is erased, revocation is attempted safely, provider-data cleanup is scheduled, and manual decisions/audit remain. A stale capability probe cannot reactivate the disconnected connection or restore its capabilities.
 8. Given an unofficial adapter, authorization cannot begin without explicit risk acknowledgement and the UI never labels it official/supported by Home Assistant.
 9. Given hostile callback/provider/error content, no open redirect, path/egress injection, Markdown/HTML injection, or secret output occurs.
 10. Given App restart at every attempt phase, no callback is consumed twice and no orphan grant becomes an active connection.

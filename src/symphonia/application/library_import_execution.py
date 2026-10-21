@@ -103,12 +103,20 @@ class LibraryImportExecutionService:
                 now=now,
                 lease_seconds=lease_seconds,
             )
-            publication = self.imports.import_playlist(
+            collected = self.imports.collect_playlist(
                 adapter,
                 connection_id=connection_id,
                 playlist=playlist,
-                snapshot_id=snapshot_id,
-                observed_at=observed_at,
+            )
+            cancelled = run.cancel_if_requested()
+            if cancelled is not None:
+                return cancelled
+            self.operations.renew_lease(
+                operation.operation_id, worker_id=worker_id, now=now,
+                lease_seconds=lease_seconds,
+            )
+            publication = self.imports.publish_playlist(
+                collected, snapshot_id=snapshot_id, observed_at=observed_at,
             )
         except LeaseConflict:
             cancelled = run.cancel_if_requested()

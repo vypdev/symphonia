@@ -36,11 +36,25 @@ class LibraryImportService:
     ) -> ImportPublication:
         """Read normalized pages through an adapter and publish the result."""
 
+        result = self.collect_playlist(
+            adapter, connection_id=connection_id, playlist=playlist, cursor=cursor,
+        )
+        return self.publish_playlist(result, snapshot_id=snapshot_id, observed_at=observed_at)
+
+    def collect_playlist(
+        self,
+        adapter: ProviderAdapter,
+        *,
+        connection_id: str,
+        playlist: ProviderObjectRef,
+        cursor: str | None = None,
+    ) -> CollectionImportResult:
+        """Collect normalized pages without changing the current projection."""
+
         if adapter.manifest.provider != playlist.provider:
             raise ValueError("adapter provider does not match playlist provider")
         pages = tuple(adapter.read_playlist_pages(connection_id, playlist, cursor))
-        result = collect_playlist_pages(pages)
-        return self.publish_playlist(result, snapshot_id=snapshot_id, observed_at=observed_at)
+        return collect_playlist_pages(pages)
 
     def publish_playlist(
         self,
@@ -59,4 +73,7 @@ class LibraryImportService:
             )
             return ImportPublication("partial", None, retained, result.issues)
         snapshot = self.projections.publish(result, snapshot_id=snapshot_id, published_at=observed_at)
-        return ImportPublication("succeeded", snapshot, snapshot, result.issues)
+        current = self.projections.current(
+            provider=result.provider, namespace=result.namespace, playlist_id=result.playlist,
+        )
+        return ImportPublication("succeeded", snapshot, current, result.issues)

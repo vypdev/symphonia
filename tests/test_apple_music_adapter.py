@@ -69,6 +69,19 @@ class AppleMusicAdapterTests(unittest.TestCase):
         self.assertEqual(entries[2].track.object_type, "songs")
         self.assertEqual(client.calls[0][2:4], ("developer-token", "user-token"))
 
+    def test_mixed_playlist_preserves_media_kinds_and_unknown_resources(self) -> None:
+        kinds = ["songs", "library-songs", "music-videos", "library-music-videos", "future-resource"]
+
+        class MixedClient(FakeAppleClient):
+            def request(self, method, path, *, developer_token, user_token, query):
+                return AppleJsonResponse(200, {"data": [{"id": f"item-{i}", "type": kind} for i, kind in enumerate(kinds)]}, {})
+
+        adapter = AppleMusicAdapter(MixedClient(), lambda _: ("developer", "user"))
+        entries = adapter.read_playlist_pages("apple-connection-1", self.playlist())[0].entries
+        self.assertEqual([entry.media_kind for entry in entries], [MediaKind.TRACK, MediaKind.TRACK, MediaKind.VIDEO, MediaKind.VIDEO, MediaKind.UNKNOWN])
+        self.assertEqual([entry.track.object_type for entry in entries], kinds)
+        self.assertEqual([entry.position for entry in entries], list(range(5)))
+
     def test_capability_probe_uses_user_library_endpoint(self) -> None:
         client = FakeAppleClient()
         adapter = AppleMusicAdapter(client, lambda connection_id: ("developer-token", "user-token"))

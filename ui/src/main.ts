@@ -24,14 +24,15 @@ class SymDashboard extends LitElement {
   }
 
   disconnectedCallback(): void {
+    this.store.cancel();
     this.colorScheme.removeEventListener("change", this.onScheme);
     window.removeEventListener("hashchange", this.onHash);
     super.disconnectedCallback();
   }
 
   private async refresh(): Promise<void> {
-    await this.store.refresh(async () => {
-      const response = await fetch("./api/dashboard", { credentials: "same-origin", cache: "no-store" });
+    await this.store.refresh(async signal => {
+      const response = await fetch("./api/dashboard", { credentials: "same-origin", cache: "no-store", signal });
       if (!response.ok) throw new Error("dashboard_unavailable");
       return response.json() as Promise<unknown>;
     });

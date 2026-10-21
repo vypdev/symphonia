@@ -154,6 +154,17 @@ If official support is insufficient, owner decisions are required among narrowin
 
 ## Apple Music future-provider observations
 
+### Media resource evidence reviewed 2026-10-21
+
+Apple's official [playlist track request data](https://developer.apple.com/documentation/applemusicapi/libraryplaylisttracksrequest/data-data.dictionary)
+lists `songs`, `library-songs`, `music-videos` and `library-music-videos`.
+Its [library music-video response example](https://developer.apple.com/documentation/applemusicapi/get-all-library-music-videos)
+uses `library-music-videos`. The experimental reader therefore preserves the
+song/video distinction and maps unfamiliar resource types to unknown. This is
+dated documentation evidence, not a live library-playlist feasibility result
+or an expansion of Apple's accepted product scope. The [regression review](../development/bugbot-review-2026-10-21.md)
+records the corresponding offline mixed-media fixture.
+
 Apple Music is outside the current MVP, but the ecosystem review identified a materially stronger official library surface than YouTube Music. It is therefore a useful future-provider or contingency candidate, not an accepted scope change.
 
 ### Documented useful primitives

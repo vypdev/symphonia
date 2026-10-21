@@ -156,7 +156,13 @@ class CopyPlan:
 
     @property
     def blocked(self) -> bool:
-        return any(entry.disposition == "blocked" for entry in self.entries)
+        # Non-strict plans remain readable for historical/research callers,
+        # but the accepted product policy permits no omission override.
+        return self.policy is not CopyPolicy.STRICT or any(
+            entry.classification is not EntryClassification.READY
+            or entry.disposition != "write"
+            for entry in self.entries
+        )
 
     @property
     def writable_entries(self) -> tuple[CopyPlanEntry, ...]:

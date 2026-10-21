@@ -7,6 +7,7 @@ from tools.validate_specs import (
     _validate_markdown_links,
     _validate_requirements,
     _validate_sdds,
+    _validate_paths,
     validate,
 )
 
@@ -30,6 +31,37 @@ class SpecValidatorTests(unittest.TestCase):
     def test_repository_specifications_are_consistent(self) -> None:
         root = Path(__file__).resolve().parents[1]
         self.assertEqual(validate(root), [])
+
+    def test_catalog_rejects_absolute_traversal_and_symlink_escapes_without_reading_them(self) -> None:
+        with TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "repository"
+            (root / "specs").mkdir(parents=True)
+            outside = parent / "outside.md"
+            outside.write_bytes(b"\xff")  # Reading this as an SDD would fail.
+            (root / "specs/escape.md").symlink_to(outside)
+            for raw in (str(outside), "../outside.md", "specs/escape.md"):
+                with self.subTest(path=raw):
+                    capability = self._capability("draft", [])
+                    capability["specification"] = raw
+                    errors: list[str] = []
+                    _validate_paths(root, [capability], errors)
+                    _validate_sdds(root, [capability], errors)
+                    _validate_markdown_links(root, errors)
+                    self.assertEqual(len(errors), 1)
+                    self.assertIn("outside repository", errors[0])
+
+    def test_catalog_rejects_external_implementation_evidence(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            (root / "specs/example.md").write_text("example")
+            capability = self._capability("draft", [])
+            capability["implementationEvidence"] = {"code": ["../external.py"], "tests": [], "documentation": []}
+            errors: list[str] = []
+            _validate_paths(root, [capability], errors)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("outside repository", errors[0])
 
     def test_ready_sdd_cannot_keep_catalog_blockers(self) -> None:
         capability = self._capability(

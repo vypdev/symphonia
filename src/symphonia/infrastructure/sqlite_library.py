@@ -172,8 +172,12 @@ class PlaylistProjectionRepository:
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(provider, namespace, playlist_id)
                 DO UPDATE SET snapshot_id = excluded.snapshot_id
+                WHERE ? > (
+                    SELECT published_at FROM playlist_snapshots
+                     WHERE snapshot_id = current_playlist_snapshots.snapshot_id
+                )
                 """,
-                (result.provider, result.namespace, result.playlist, snapshot_id),
+                (result.provider, result.namespace, result.playlist, snapshot_id, timestamp),
             )
             self._connection.execute("COMMIT")
         except Exception:

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import unittest
 
 from symphonia.application import LibraryImportExecutionService, LibraryImportService, OperationRunner
+from symphonia.domain.operations import LeaseConflict
 from symphonia.infrastructure import OperationRepository, PlaylistProjectionRepository
 from symphonia.providers import (
     AccessBasis,
@@ -176,6 +177,51 @@ class LibraryImportExecutionTests(unittest.TestCase):
         )
         self.assertEqual(result.state, "cancelled")
         self.assertEqual(adapter.read_calls, 0)
+
+    def test_cancellation_during_read_retains_the_previous_complete_projection(self) -> None:
+        self.service.imports.import_playlist(
+            FakeAdapter(), connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="previous", observed_at=NOW - timedelta(minutes=1),
+        )
+        for complete in (True, False):
+            with self.subTest(complete=complete):
+                operations = self.operations
+
+                class CancellingAdapter(FakeAdapter):
+                    def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                        operations.cancel(created.operation_id, now=NOW)
+                        return super().read_playlist_pages(connection_id, playlist, cursor)
+
+                adapter = CancellingAdapter(complete=complete)
+                created = self.service.enqueue_playlist(
+                    adapter, connection_id="connection-1", playlist=self.playlist,
+                    snapshot_id=f"cancelled-{complete}", observed_at=NOW, now=NOW,
+                )
+                claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+                result = self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+                self.assertEqual(result.state, "cancelled")
+                current = self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1")
+                self.assertEqual(current.snapshot_id, "previous")
+                with self.assertRaises(KeyError):
+                    self.projections.get(f"cancelled-{complete}")
+
+    def test_lease_loss_during_read_prevents_publication(self) -> None:
+        operations = self.operations
+
+        class LosingAdapter(FakeAdapter):
+            def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                operations.claim(created.operation_id, worker_id="other-worker", now=NOW + timedelta(seconds=31))
+                return super().read_playlist_pages(connection_id, playlist, cursor)
+
+        adapter = LosingAdapter()
+        created = self.service.enqueue_playlist(
+            adapter, connection_id="connection-1", playlist=self.playlist,
+            snapshot_id="lost-lease", observed_at=NOW, now=NOW,
+        )
+        claimed = self.operations.claim(created.operation_id, worker_id="worker-a", now=NOW)
+        with self.assertRaises(LeaseConflict):
+            self.service.execute_claimed(claimed, adapter=adapter, worker_id="worker-a", now=NOW)
+        self.assertIsNone(self.projections.current(provider="spotify", namespace="connection-1", playlist_id="playlist-1"))
 
     def test_malformed_persisted_playlist_id_never_reaches_adapter(self) -> None:
         adapter = FakeAdapter()

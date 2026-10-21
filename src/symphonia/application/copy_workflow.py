@@ -68,6 +68,7 @@ class CopyWorkflowService:
         stored = self.plans.get(digest)
         if stored.accepted_at is None:
             raise PlanAcceptanceError("copy plan must be accepted before it can be enqueued")
+        stored.plan.accept(digest)
         return self.operations.create(
             operation_type="copy_playlist",
             idempotency_key=f"copy-plan:{digest}",

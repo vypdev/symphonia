@@ -11,6 +11,10 @@ This first view is read-only. Provider connection, import, playback, and copy co
 - **Snapshot stale:** the latest refresh failed. The caution status and message mark the retained figures as old; try again or check App logs. Running operations continue in the server.
 - **No connections recorded:** no connection is stored. Provider setup is not yet supported by this build.
 
+Leaving the panel aborts its active read and ignores late completions. Returning
+starts a new read. A superseding refresh also aborts the prior request; cleanup
+does not report a provider or storage failure.
+
 ## Implementation and verification
 
 The server projects an allowlisted, redacted response at `./api/dashboard`; it never returns operation payloads, event bodies, account identifiers, database paths, credentials, or Ingress tokens. Static assets and the dashboard API are available only from the verified Supervisor peer. Supervisor authenticates the Ingress session and the App panel is administrator-only. The browser uses relative asset/API URLs so arbitrary Ingress prefixes work.

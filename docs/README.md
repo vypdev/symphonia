@@ -24,6 +24,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | [Local Supervisor/App lab](development/ha-app-lab.md) | Reproducible disposable App build/startup environment and dated authenticated entry smoke | Functional Ingress UI or supported deployment proof |
 | [Development specification](development/development-specification.md) | Specification workflow, testing and delivery gates | Product scope |
 | [Local quality audit](development/quality-audit.md) | Reproducible offline RepoWise/Graphify review and current architecture/test debt | A release or SDD readiness claim |
+| [Bugbot review, 2026-10-21](development/bugbot-review-2026-10-21.md) | Disposition of twelve findings, bounded corrections, regression budget and preserved Copilot configuration | A completed Draft capability or live provider guarantee |
 | [ADRs](decisions/README.md) | Decisions that have actually been accepted | Proposals and guesses |
 | [Open questions](open-questions.md) | Decisions needed, assumptions, risk register, next design work | Accepted requirements |
 

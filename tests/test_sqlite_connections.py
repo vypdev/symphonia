@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from symphonia.infrastructure import (
     ConnectionConflict,
@@ -95,6 +98,43 @@ class ProviderConnectionRepositoryTests(unittest.TestCase):
         self.assertIsNone(disconnected.secret_ref)
         self.assertIsNone(disconnected.capabilities)
         self.assertEqual(self.repository.list(provider="spotify")[0].health_code, "disconnected")
+
+    def test_disconnect_on_another_connection_wins_over_a_stale_probe(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = str(Path(directory) / "connections.sqlite3")
+            probe, disconnector = ProviderConnectionRepository(path), ProviderConnectionRepository(path)
+            try:
+                probe.create(connection())
+                original_get = probe.get
+
+                def stale_get(identifier):
+                    current = original_get(identifier)
+                    disconnector.disconnect(identifier, now=NOW + timedelta(seconds=1))
+                    return current
+
+                with patch.object(probe, "get", side_effect=stale_get):
+                    with self.assertRaises(ConnectionConflict):
+                        probe.record_probe(
+                            "spotify-1", state=ConnectionState.CONNECTED, capabilities=None,
+                            health_code=None, expires_at=None, now=NOW,
+                        )
+                current = probe.get("spotify-1")
+                self.assertEqual(current.state, ConnectionState.DISCONNECTED)
+                self.assertIsNone(current.secret_ref)
+                self.assertIsNone(current.capabilities)
+                self.assertTrue(probe.healthcheck())
+            finally:
+                probe.close()
+                disconnector.close()
+
+    def test_probe_cannot_disconnect_without_erasing_the_secret(self) -> None:
+        self.repository.create(connection())
+        with self.assertRaises(ConnectionConflict):
+            self.repository.record_probe(
+                "spotify-1", state=ConnectionState.DISCONNECTED, capabilities=None,
+                health_code=None, expires_at=None, now=NOW,
+            )
+        self.assertEqual(self.repository.get("spotify-1"), connection())
 
     def test_health_summary_contains_only_provider_state_counts(self) -> None:
         self.repository.create(connection())

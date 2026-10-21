@@ -78,16 +78,26 @@ export class DashboardStore {
   state: ViewState = "loading";
   snapshot: Dashboard | null = null;
   private generation = 0;
+  private request: AbortController | null = null;
   private readonly changed: () => void;
 
   constructor(changed: () => void) { this.changed = changed; }
 
-  async refresh(read: () => Promise<unknown>): Promise<void> {
+  cancel(): void {
+    ++this.generation;
+    this.request?.abort();
+    this.request = null;
+  }
+
+  async refresh(read: (signal: AbortSignal) => Promise<unknown>): Promise<void> {
+    this.cancel();
+    const request = new AbortController();
+    this.request = request;
     const current = ++this.generation;
     this.state = this.snapshot ? "refreshing" : "loading";
     this.changed();
     try {
-      const value = await read();
+      const value = await read(request.signal);
       if (current !== this.generation) return;
       if (!isDashboard(value)) throw new Error("invalid_dashboard");
       this.snapshot = value;
@@ -95,6 +105,8 @@ export class DashboardStore {
     } catch {
       if (current !== this.generation) return;
       this.state = this.snapshot ? "stale" : "blocked";
+    } finally {
+      if (current === this.generation) this.request = null;
     }
     this.changed();
   }

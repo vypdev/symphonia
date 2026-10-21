@@ -293,7 +293,12 @@ class AppleMusicAdapter(ProviderAdapter):
             occurrence_id=f"{playlist.object_id}:{position}",
             position=position,
             track=ProviderObjectRef("apple_music", object_type, object_id, playlist.namespace),
-            media_kind=MediaKind.TRACK,
+            media_kind={
+                "songs": MediaKind.TRACK,
+                "library-songs": MediaKind.TRACK,
+                "music-videos": MediaKind.VIDEO,
+                "library-music-videos": MediaKind.VIDEO,
+            }.get(object_type, MediaKind.UNKNOWN),
             title=attributes.get("name") if isinstance(attributes.get("name"), str) else None,
             available=available,
         )

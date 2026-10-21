@@ -52,7 +52,12 @@ def _repository_markdown(root: Path) -> Iterator[Path]:
         children[:] = sorted(child for child in children if child not in GENERATED_MARKDOWN_DIRS)
         for name in sorted(files):
             if name.endswith(".md"):
-                yield Path(directory) / name
+                path = Path(directory) / name
+                try:
+                    if path.resolve().is_relative_to(root.resolve()) and path.is_file():
+                        yield path
+                except (OSError, RuntimeError):
+                    continue
 
 
 def _add(errors: list[str], message: str) -> None:
@@ -60,7 +65,12 @@ def _add(errors: list[str], message: str) -> None:
 
 
 def _local_path(root: Path, raw: str) -> Path:
-    return root / raw
+    if Path(raw).is_absolute():
+        raise ValueError("catalog paths must be repository-relative")
+    path = (root / raw).resolve()
+    if not path.is_relative_to(root.resolve()):
+        raise ValueError("catalog path escapes the repository")
+    return path
 
 
 def _unique_text_array(value: Any) -> bool:
@@ -159,7 +169,11 @@ def _validate_paths(root: Path, capabilities: list[dict[str, Any]], errors: list
             if not isinstance(raw_path, str):
                 _add(errors, f"{capability_id} contains a non-string path")
                 continue
-            path = _local_path(root, raw_path)
+            try:
+                path = _local_path(root, raw_path)
+            except (ValueError, OSError, RuntimeError):
+                _add(errors, f"{capability_id} references a path outside repository or an invalid path: {raw_path}")
+                continue
             if not path.exists():
                 _add(errors, f"{capability_id} references missing path: {raw_path}")
 
@@ -171,7 +185,10 @@ def _validate_sdds(root: Path, capabilities: list[dict[str, Any]], errors: list[
         specification = capability.get("specification")
         if not isinstance(capability_id, str) or not isinstance(specification, str):
             continue
-        path = _local_path(root, specification)
+        try:
+            path = _local_path(root, specification)
+        except (ValueError, OSError, RuntimeError):
+            continue  # The path validator already reports this boundary error.
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
@@ -188,6 +205,10 @@ def _validate_sdds(root: Path, capabilities: list[dict[str, Any]], errors: list[
 
     for path in sorted((root / "specs").glob("*.md")):
         if path.name in EXCLUDED_SPEC_MARKDOWN:
+            continue
+        try:
+            _local_path(root, str(path.relative_to(root)))
+        except (ValueError, OSError, RuntimeError):
             continue
         text = path.read_text(encoding="utf-8")
         matches = CAPABILITY_ID_RE.findall(text)

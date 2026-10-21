@@ -42,6 +42,7 @@ class CopyExecutionService:
         stored = self.plans.get(digest)
         if stored.accepted_at is None:
             raise PlanAcceptanceError("copy plan must be accepted before execution")
+        stored.plan.accept(digest)
         operation = self.operations.create(
             operation_type="copy_playlist",
             idempotency_key=f"copy-plan:{digest}",
@@ -84,6 +85,7 @@ class CopyExecutionService:
         stored = self.plans.get(digest)
         if stored.accepted_at is None:
             raise PlanAcceptanceError("copy plan must be accepted before execution")
+        stored.plan.accept(digest)
         return self._execute_claimed(
             stored,
             operation,

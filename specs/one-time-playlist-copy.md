@@ -95,7 +95,7 @@ The exact Home Assistant identity-to-Symphonia-user mapping remains an architect
 3. Symphonia resolves every source occurrence to a target provider item or a disclosed non-ready classification.
 4. Symphonia creates an immutable plan and calculates its digest.
 5. The user reviews counts, target settings, ambiguities, unavailable items, and policy consequences.
-6. The user resolves eligible ambiguities or excludes items explicitly. Each change creates a revised plan and digest.
+6. The user resolves eligible ambiguities. Each change creates a revised plan and digest; unresolved occurrences continue to block acceptance.
 7. The user accepts the final plan.
 8. A durable operation creates the target playlist, adds entries in planned order, checkpoints progress, and reconciles uncertain results.
 9. Symphonia presents a per-item result and an operation summary.
@@ -133,6 +133,12 @@ The operation uses the durable job vocabulary defined by `durable-operations-and
 ### Accepted initial acceptance policy
 
 The owner confirmed the strict initial policy on 2026-10-04: a plan cannot be accepted while any occurrence is not `ready`, and no target write can begin. The initial UI has no best-effort or omission override. A future itemized omission mode requires a new product decision and contract revision.
+
+The foundation enforces this policy at domain acceptance, operation admission,
+and execution, including plans accepted by an older foundation build. Historical
+`best_effort` plans remain readable but cannot be accepted, enqueued, or resumed
+for provider writes. Their immutable digests and history are preserved; the user
+must create and review a strict plan. See the [dated regression review](../docs/development/bugbot-review-2026-10-21.md).
 
 ### Target creation and collision policy
 
@@ -286,6 +292,7 @@ Implementation shall update:
 12. The numeric test budget and required fault-injection scenarios pass.
 13. Plan selection, review, blocked, accepted, running, waiting, reconciling, partial, cancelled, failed, and completed fixtures use the shared Home Assistant-native components and preserve every ordered occurrence, textual consequence, focus/action, and safe recovery path at phone and wide widths.
 14. Given an existing target playlist with the same name, the accepted copy plan still creates a new playlist; after an uncertain create, it waits for reconciliation and does not create another blindly.
+15. Given a historical best-effort plan, including one with an old acceptance timestamp, admission and execution reject it before provider calls; historical data remains readable.
 
 ## 17. Requirement traceability
 

@@ -70,3 +70,52 @@ test("status pill reflects freshness and never marks a stale snapshot healthy", 
   assert.deepEqual(snapshotStatus("stale"), { label: "Snapshot stale", tone: "caution" });
   assert.equal(snapshotStatus("blocked"), null);
 });
+
+test("disconnect aborts the active read and fences its late successful response", async () => {
+  let updates = 0;
+  const store = new DashboardStore(() => { updates++; });
+  let signal!: AbortSignal;
+  let release!: (value: Dashboard) => void;
+  const pending = store.refresh(active => {
+    signal = active;
+    return new Promise<Dashboard>(resolve => { release = resolve; });
+  });
+  store.cancel();
+  assert.equal(signal.aborted, true);
+  const before = updates;
+  release(empty);
+  await pending;
+  assert.equal(updates, before);
+  assert.equal(store.snapshot, null);
+  assert.equal(store.state, "loading");
+  await store.refresh(async () => empty);
+  assert.equal(store.state, "empty");
+});
+
+test("disconnect retains the safe snapshot and does not turn an abort into a failure", async () => {
+  const store = new DashboardStore(() => {});
+  await store.refresh(async () => empty);
+  let reject!: (error: Error) => void;
+  const pending = store.refresh(() => new Promise((_, fail) => { reject = fail; }));
+  store.cancel();
+  reject(new Error("AbortError"));
+  await pending;
+  assert.equal(store.snapshot, empty);
+  assert.notEqual(store.state, "stale");
+  assert.notEqual(store.state, "blocked");
+});
+
+test("a superseding refresh aborts the previous request without changing the newer result", async () => {
+  const store = new DashboardStore(() => {});
+  let signal!: AbortSignal;
+  let release!: (value: Dashboard) => void;
+  const previous = store.refresh(active => {
+    signal = active;
+    return new Promise<Dashboard>(resolve => { release = resolve; });
+  });
+  await store.refresh(async () => ({ ...empty, version: "newer" }));
+  assert.equal(signal.aborted, true);
+  release(empty);
+  await previous;
+  assert.equal(store.snapshot?.version, "newer");
+});
