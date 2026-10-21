@@ -12,3 +12,7 @@ When creating, revising, reviewing, or implementing product behavior:
 8. Treat provider documentation and community implementations as dated evidence, not permanent guarantees. Keep official API research separate from community implementation evidence.
 
 Until a repository-native specification validator is selected, every SDD change must at minimum pass the manual checks listed in `specs/README.md`.
+
+<!-- copilot:agent-guidance:start -->
+Before repository work, use the `copilot-repository-workflow` skill and read `.copilot/AGENT_GUIDE.md`. Managed remote branches are owned by the GitHub Action.
+<!-- copilot:agent-guidance:end -->
