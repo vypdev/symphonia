@@ -163,6 +163,13 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 The command must run without network access, provider accounts, Home Assistant, or a pre-existing database.
 
+Run `make coverage COVERAGE_PYTHON=<quality-environment-python>` with the pinned
+`quality` dependency installed to measure combined line/branch coverage. The
+repository requires at least **85%** overall coverage through
+`[tool.coverage.report].fail_under` in `pyproject.toml`. Both this target and
+the `Verify` workflow's `branch-coverage` job read that setting; the report
+exits unsuccessfully below the minimum.
+
 ## Boundary rules
 
 - `symphonia.domain` imports no infrastructure, provider, Home Assistant, or web framework modules.

@@ -28,4 +28,5 @@ branch = true
 source = ["symphonia"]
 
 [tool.coverage.report]
+fail_under = 85
 skip_covered = true

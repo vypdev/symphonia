@@ -7,7 +7,8 @@
 The review confirms ten findings requiring corrections. Two describe deliberate
 research/test boundaries rather than defects in the supported runtime. Their
 documentation is clarified below. No unfinished capability becomes implemented
-or ready, and no Copilot configuration or AGENTS.md instruction is changed.
+or ready. AGENTS.md and the installed Copilot assets remain unchanged; the
+owner-authorized approval-policy adjustments are recorded below.
 
 ## Disposition and requirement traceability
 
@@ -48,9 +49,37 @@ validation, whitespace and the playback-lab Compose configuration check.
 
 Copilot preservation is checked against the baseline for all 29 installed
 assets and AGENTS.md, plus the managed pointer/profile/guide/skill hashes in the
-unchanged setup manifest. Repository secrets, variables, labels and runners are
-not reconfigured. The maintainer explicitly authorized starting issue 9 with
+unchanged setup manifest. Repository secrets, labels and runners are unchanged.
+Only the approval-policy variable changes described below are authorized.
+The maintainer explicitly authorized starting issue 9 with
 `in-progress`; the Action created its exact managed branch from `develop`.
+
+## Owner-authorized coverage and approval gate
+
+The owner explicitly requested an **85% combined line/branch coverage minimum**,
+CI producer attestation, and `guarded` approval mode. The minimum is enforced
+by `coverage.py` through `pyproject.toml`, using the existing unmodified
+`Verify` / `branch-coverage` job. The producer is GitHub Actions App **15368**;
+the selected checks and all other policy values remain unchanged. After the
+enforcing job succeeds on the current revision, `PR_APPROVAL_POLICY` changes
+only `producerAttested` from `false` to `true` and `mode` from `recommend` to
+`guarded`.
+
+Acceptance requires the complete existing verification suite to pass, a
+negative check proving the coverage command fails below 85%, current-revision
+CI and Bugbot evidence, and a confirmed native approval before merge. The
+coverage minimum is a regression floor, not evidence that unfinished product
+capabilities meet their SDD acceptance budgets. No SDD status, provider
+contract, runtime behavior, or architecture decision changes for this gate.
+
+Local revalidation passed all **310 Python tests without skips**, **17 UI
+tests**, both type/boundary/build pipelines, reproducible App assets, the
+specification validator, whitespace, and Compose configuration. Coverage
+remains **86%**. An isolated temporary 1% coverage measurement made the same
+report command fail with exit status **2** and `fail-under=85`, confirming
+that the configured floor is enforced. `npm ci` also reported existing
+development-tool advisories for `vite` and `source-map-js`; their versions
+and lockfiles are unchanged by this coverage/approval adjustment.
 
 ## Compatibility, recovery and architecture
 
