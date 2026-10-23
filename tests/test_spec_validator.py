@@ -1,0 +1,241 @@
+from pathlib import Path
+import json
+from tempfile import TemporaryDirectory
+import unittest
+
+from tools.validate_specs import (
+    _validate_catalog_shape,
+    _validate_markdown_links,
+    _validate_requirements,
+    _validate_sdds,
+    _validate_paths,
+    validate,
+)
+
+
+class SpecValidatorTests(unittest.TestCase):
+    @staticmethod
+    def _capability(status: str, blockers: list[str]) -> dict[str, object]:
+        return {
+            "id": "example",
+            "title": "Example",
+            "status": status,
+            "scope": "Example scope",
+            "owner": "Owner",
+            "specification": "specs/example.md",
+            "requirements": ["SYM-PLAY-001"],
+            "evidence": [],
+            "implementationEvidence": {"code": [], "tests": [], "documentation": []},
+            "blockers": blockers,
+        }
+
+    def test_repository_specifications_are_consistent(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual(validate(root), [])
+
+    def test_installer_archives_are_excluded_but_current_and_named_documentation_are_checked(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in (
+                ".copilot/setup-backups/operation/.copilot/AGENT_GUIDE.md",
+                ".copilot/AGENT_GUIDE.md",
+                "docs/setup-backups/guide.md",
+            ):
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("[missing](missing.md)\n")
+            errors: list[str] = []
+            _validate_markdown_links(root, errors)
+            self.assertEqual(errors, [
+                ".copilot/AGENT_GUIDE.md links to missing path: missing.md",
+                "docs/setup-backups/guide.md links to missing path: missing.md",
+            ])
+
+    def test_catalog_rejects_absolute_traversal_and_symlink_escapes_without_reading_them(self) -> None:
+        with TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "repository"
+            (root / "specs").mkdir(parents=True)
+            outside = parent / "outside.md"
+            outside.write_bytes(b"\xff")  # Reading this as an SDD would fail.
+            (root / "specs/escape.md").symlink_to(outside)
+            for raw in (str(outside), "../outside.md", "specs/escape.md"):
+                with self.subTest(path=raw):
+                    capability = self._capability("draft", [])
+                    capability["specification"] = raw
+                    errors: list[str] = []
+                    _validate_paths(root, [capability], errors)
+                    _validate_sdds(root, [capability], errors)
+                    _validate_markdown_links(root, errors)
+                    self.assertEqual(len(errors), 1)
+                    self.assertIn("outside repository", errors[0])
+
+    def test_catalog_rejects_external_implementation_evidence(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            (root / "specs/example.md").write_text("example")
+            capability = self._capability("draft", [])
+            capability["implementationEvidence"] = {"code": ["../external.py"], "tests": [], "documentation": []}
+            errors: list[str] = []
+            _validate_paths(root, [capability], errors)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("outside repository", errors[0])
+
+    def test_ready_sdd_cannot_keep_catalog_blockers(self) -> None:
+        capability = self._capability(
+            "ready-for-implementation", ["unproven broker pairing"]
+        )
+        errors: list[str] = []
+        _validate_catalog_shape(
+            Path("/unused"), {"version": 1, "capabilities": [capability]}, errors
+        )
+        self.assertIn(
+            "catalog capability 0 cannot be ready-for-implementation while blockers remain",
+            errors,
+        )
+
+    def test_implemented_sdd_needs_code_tests_and_documentation_evidence(self) -> None:
+        capability = self._capability("implemented", [])
+        errors: list[str] = []
+        _validate_catalog_shape(
+            Path("/unused"), {"version": 1, "capabilities": [capability]}, errors
+        )
+        for field in ("code", "tests", "documentation"):
+            self.assertIn(
+                f"catalog capability 0 implemented status requires implementationEvidence.{field}",
+                errors,
+            )
+
+    def test_draft_can_retain_blockers_and_foundation_evidence(self) -> None:
+        capability = self._capability("draft", ["live provider proof"])
+        errors: list[str] = []
+        _validate_catalog_shape(
+            Path("/unused"), {"version": 1, "capabilities": [capability]}, errors
+        )
+        self.assertEqual(errors, [])
+
+    def test_ready_sdd_with_no_blockers_is_structurally_valid(self) -> None:
+        capability = self._capability("ready-for-implementation", [])
+        errors: list[str] = []
+        _validate_catalog_shape(
+            Path("/unused"), {"version": 1, "capabilities": [capability]}, errors
+        )
+        self.assertEqual(errors, [])
+
+    def test_implemented_sdd_with_complete_evidence_is_structurally_valid(self) -> None:
+        capability = self._capability("implemented", [])
+        capability["implementationEvidence"] = {
+            "code": ["src/example.py"],
+            "tests": ["tests/test_example.py"],
+            "documentation": ["docs/example.md"],
+        }
+        errors: list[str] = []
+        _validate_catalog_shape(
+            Path("/unused"), {"version": 1, "capabilities": [capability]}, errors
+        )
+        self.assertEqual(errors, [])
+
+    def test_malformed_catalog_arrays_are_reported_without_crashing(self) -> None:
+        capability = self._capability("draft", [])
+        capability["requirements"] = [{"not": "a requirement"}]
+        capability["blockers"] = [{"not": "a blocker"}]
+        errors: list[str] = []
+        _validate_catalog_shape(
+            Path("/unused"), {"version": 1, "capabilities": [capability]}, errors
+        )
+        self.assertIn(
+            "catalog capability 0 requirements must be an array of unique non-empty strings",
+            errors,
+        )
+        self.assertIn(
+            "catalog capability 0 blockers must be an array of unique non-empty strings",
+            errors,
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            _validate_requirements(root, [capability], errors)
+        self.assertEqual(len(errors), 2)
+
+    def test_primary_sdd_cannot_be_an_existing_directory(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            capability = self._capability("draft", [])
+            capability["specification"] = "specs"
+            errors: list[str] = []
+            _validate_paths(root, [capability], errors)
+            _validate_sdds(root, [capability], errors)
+            self.assertTrue(any("regular SDD file" in error for error in errors))
+
+    def test_required_validator_rejects_duplicate_ids_even_when_items_differ(self) -> None:
+        first = self._capability("draft", [])
+        second = {**first, "title": "Different object with the same ID"}
+        errors = []
+        _validate_catalog_shape(Path("/unused"), {"version": 1, "capabilities": [first, second]}, errors)
+        self.assertTrue(any("duplicate catalog capability id" in error for error in errors))
+
+    def test_full_validation_reports_malformed_ids_without_a_traceback(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            (root / "specs/CATALOG.md").write_text("")
+            for invalid_id in ([], {}, None, 17):
+                with self.subTest(invalid_id=invalid_id):
+                    capability = {**self._capability("draft", []), "id": invalid_id}
+                    (root / "specs/catalog.json").write_text(json.dumps({"version": 1, "capabilities": [capability]}))
+                    errors = validate(root)
+                    self.assertIn("catalog capability 0 has an invalid id", errors)
+
+    def test_malformed_primary_path_with_a_known_catalog_row_remains_a_diagnostic(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            (root / "specs/CATALOG.md").write_text("| `example` | Draft | [Example](example.md) |\n")
+            capability = {**self._capability("draft", []), "specification": {}}
+            (root / "specs/catalog.json").write_text(json.dumps({"version": 1, "capabilities": [capability]}))
+            self.assertIn("catalog capability 0 has an invalid specification path", validate(root))
+
+    def test_primary_sdd_must_declare_exactly_one_status(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            specs = root / "specs"
+            specs.mkdir()
+            (specs / "example.md").write_text(
+                "- Catalog capability ID: `example`\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            _validate_sdds(root, [self._capability("draft", [])], errors)
+            self.assertEqual(errors, ["specs/example.md must declare exactly one status"])
+
+    def test_protocol_relative_links_are_external_but_single_slash_paths_are_contained(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "guide.md").write_text("[external](//example.com/page) [local](/outside.md)")
+            errors = []
+            _validate_markdown_links(root, errors)
+            self.assertEqual(errors, ["guide.md links outside repository: /outside.md"])
+
+    def test_generated_dependency_markdown_is_not_treated_as_ours(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "docs"
+            docs.mkdir()
+            (docs / "guide.md").write_text("[missing](missing.md)", encoding="utf-8")
+            vendor = docs / "node_modules" / "package"
+            vendor.mkdir(parents=True)
+            (vendor / "README.md").write_text("[also missing](elsewhere.md) SYM-UI-999", encoding="utf-8")
+
+            errors: list[str] = []
+            _validate_markdown_links(root, errors)
+            self.assertEqual(errors, ["docs/guide.md links to missing path: missing.md"])
+
+            errors = []
+            _validate_requirements(root, [{"id": "ui", "requirements": ["SYM-UI-999"]}], errors)
+            self.assertEqual(errors, ["ui references unknown requirement SYM-UI-999"])
+
+
+if __name__ == "__main__":
+    unittest.main()
