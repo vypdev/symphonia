@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
+dist/
+build/
+node_modules/
+.venv/
+*.sqlite3
+*.db
+.repowise/
+graphify-out/
+docs/development/playback-lab/.env
