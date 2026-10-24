@@ -33,6 +33,24 @@ class SpecValidatorTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         self.assertEqual(validate(root), [])
 
+    def test_installer_archives_are_excluded_but_current_and_named_documentation_are_checked(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in (
+                ".copilot/setup-backups/operation/.copilot/AGENT_GUIDE.md",
+                ".copilot/AGENT_GUIDE.md",
+                "docs/setup-backups/guide.md",
+            ):
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("[missing](missing.md)\n")
+            errors: list[str] = []
+            _validate_markdown_links(root, errors)
+            self.assertEqual(errors, [
+                ".copilot/AGENT_GUIDE.md links to missing path: missing.md",
+                "docs/setup-backups/guide.md links to missing path: missing.md",
+            ])
+
     def test_catalog_rejects_absolute_traversal_and_symlink_escapes_without_reading_them(self) -> None:
         with TemporaryDirectory() as directory:
             parent = Path(directory)

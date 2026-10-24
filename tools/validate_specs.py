@@ -49,7 +49,11 @@ def _repository_markdown(root: Path) -> Iterator[Path]:
     """Yield owned Markdown, excluding generated/vendor trees at any depth."""
 
     for directory, children, files in os.walk(root):
-        children[:] = sorted(child for child in children if child not in GENERATED_MARKDOWN_DIRS)
+        children[:] = sorted(
+            child for child in children
+            if child not in GENERATED_MARKDOWN_DIRS
+            and not (Path(directory) == root / ".copilot" and child == "setup-backups")
+        )
         for name in sorted(files):
             if name.endswith(".md"):
                 path = Path(directory) / name

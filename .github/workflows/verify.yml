@@ -9,7 +9,10 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on:
+      group: vypdev
+      labels: [self-hosted, codex, Linux]
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -47,7 +50,10 @@ jobs:
         run: PYTHONPATH=src:. python -m unittest discover -s tests -v
 
   ui-lit-spike:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on:
+      group: vypdev
+      labels: [self-hosted, codex, Linux]
     defaults:
       run:
         working-directory: docs/development/ui-lit-spike
@@ -76,7 +82,10 @@ jobs:
         run: npm run verify-output
 
   operational-ui:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on:
+      group: vypdev
+      labels: [self-hosted, codex, Linux]
     defaults:
       run:
         working-directory: ui
@@ -105,7 +114,10 @@ jobs:
         run: git diff --exit-code -- ../src/symphonia/runtime/ui_assets
 
   branch-coverage:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on:
+      group: vypdev
+      labels: [self-hosted, codex, Linux]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -123,7 +135,10 @@ jobs:
           python -m coverage report --sort=cover
 
   playback-lab-config:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on:
+      group: vypdev
+      labels: [self-hosted, macOS, ARM64]
     defaults:
       run:
         working-directory: docs/development/playback-lab
