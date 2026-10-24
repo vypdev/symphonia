@@ -18,7 +18,5 @@ panel_title: Symphonia
 panel_admin: true
 map:
   - data:rw
-options:
-  log_level: info
-schema:
-  log_level: list(debug|info|warning|error)
+options: {}
+schema: {}

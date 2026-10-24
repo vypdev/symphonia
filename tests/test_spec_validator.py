@@ -5,6 +5,7 @@ import unittest
 
 from tools.validate_specs import (
     _validate_catalog_shape,
+    _validate_catalog_markdown,
     _validate_markdown_links,
     _validate_requirements,
     _validate_sdds,
@@ -14,6 +15,33 @@ from tools.validate_specs import (
 
 
 class SpecValidatorTests(unittest.TestCase):
+    def test_catalog_version_rejects_booleans_and_non_integers(self) -> None:
+        for version in (True, False, 1.0, "1", None):
+            with self.subTest(version=version):
+                errors = []
+                _validate_catalog_shape(Path("/unused"), {"version": version, "capabilities": [self._capability("draft", [])]}, errors)
+                self.assertIn("catalog.json version must be 1", errors)
+
+    def test_catalog_markdown_rejects_duplicate_rows(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "specs").mkdir()
+            row = "| `example` | Draft | [Example](example.md) |\n"
+            (root / "specs/CATALOG.md").write_text(row * 2)
+            errors = []
+            _validate_catalog_markdown(root, [self._capability("draft", [])], errors)
+            self.assertTrue(any("duplicate" in error for error in errors), errors)
+
+    def test_catalog_markdown_compares_the_complete_link_path(self) -> None:
+        for link, valid in (("example.md", True), ("./example.md", True), ("../specs/example.md", True), ("../docs/example.md", False)):
+            with self.subTest(link=link), TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "specs").mkdir()
+                (root / "specs/CATALOG.md").write_text(f"| `example` | Draft | [Example]({link}) |\n")
+                errors = []
+                _validate_catalog_markdown(root, [self._capability("draft", [])], errors)
+                self.assertEqual(not errors, valid, errors)
+
     @staticmethod
     def _capability(status: str, blockers: list[str]) -> dict[str, object]:
         return {

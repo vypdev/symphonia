@@ -29,11 +29,12 @@ class ResolutionDecisionRepository:
             integrity = self._connection.execute("PRAGMA integrity_check(1)").fetchone()
             if integrity is None or integrity[0] != "ok":
                 return False
-            for row in self._connection.execute("SELECT payload_json FROM resolution_decisions").fetchall():
+            for row in self._connection.execute("SELECT * FROM resolution_decisions").fetchall():
                 payload = load_json(row["payload_json"])
                 if not isinstance(payload, dict):
                     return False
-        except (sqlite3.Error, TypeError, ValueError):
+                self._decode_decision(row)
+        except (sqlite3.Error, TypeError, ValueError, AttributeError):
             return False
         return True
 
@@ -101,6 +102,10 @@ class ResolutionDecisionRepository:
         ).fetchone()
         if row is None:
             return None
+        return self._decode_decision(row)
+
+    @staticmethod
+    def _decode_decision(row: sqlite3.Row) -> ManualDecision:
         return ManualDecision(
             provider_track_key=row["provider_track_key"],
             candidate_recording_id=row["candidate_recording_id"],

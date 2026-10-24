@@ -304,6 +304,17 @@ class OperationRepositoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.repository.diagnostic(operation.operation_id, event_limit=101)
 
+    def test_diagnostic_never_exports_arbitrary_persisted_event_values(self) -> None:
+        import json
+        operation = self.repository.create(operation_type="copy", idempotency_key="diagnostic-event-values", payload={}, now=self.now)
+        payload = {"message": "provider returned access_token=fixture-private-token", "innocent": {"note": "fixture-private-note"}}
+        self.repository._connection.execute("UPDATE operation_events SET payload_json = ? WHERE operation_id = ?", (json.dumps(payload), operation.operation_id))
+        diagnostic = self.repository.diagnostic(operation.operation_id)
+        serialized = json.dumps(diagnostic)
+        self.assertNotIn("fixture-private-token", serialized)
+        self.assertNotIn("fixture-private-note", serialized)
+        self.assertEqual(diagnostic["events"][0]["payload_keys"], ["innocent", "message"])
+
     def test_diagnostics_list_is_bounded_and_redacted(self) -> None:
         for index in range(3):
             self.repository.create(

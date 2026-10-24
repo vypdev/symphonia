@@ -51,6 +51,34 @@ class FakeAppleClient:
 
 
 class AppleMusicAdapterTests(unittest.TestCase):
+    def test_next_links_cannot_change_the_playlist_resource_or_origin(self) -> None:
+        for link in ("https://other.test/v1/me/library/playlists/playlist-1/tracks?offset=2", "http://api.music.apple.com/v1/me/library/playlists/playlist-1/tracks?offset=2", "//api.music.apple.com/v1/me/library/playlists/playlist-1/tracks?offset=2", "/v1/me/library/playlists/other/tracks?offset=2", "/v1/me/library/playlists/playlist-1/tracks?offset=2#fragment", "tracks?offset=2"):
+            with self.subTest(link=link):
+                class ChangedResourceClient(FakeAppleClient):
+                    def request(self, *args, **kwargs):
+                        response = super().request(*args, **kwargs)
+                        if "next" in response.payload:
+                            response.payload["next"] = link
+                        return response
+
+                client = ChangedResourceClient()
+                with self.assertRaises(ProviderApiError):
+                    AppleMusicAdapter(client, lambda _: ("developer", "user"), page_size=2).read_playlist_pages("apple-connection-1", self.playlist())
+                self.assertEqual(len(client.calls), 1)
+
+    def test_relative_next_link_reads_every_page_without_following_untrusted_urls(self) -> None:
+        class RelativeClient(FakeAppleClient):
+            def request(self, *args, **kwargs):
+                response = super().request(*args, **kwargs)
+                if "next" in response.payload:
+                    response.payload["next"] = "/v1/me/library/playlists/playlist-1/tracks?offset=2"
+                return response
+
+        client = RelativeClient()
+        pages = AppleMusicAdapter(client, lambda _: ("developer", "user"), page_size=2).read_playlist_pages("apple-connection-1", self.playlist())
+        self.assertEqual(len(pages), 2)
+        self.assertEqual([call[1] for call in client.calls], ["/me/library/playlists/playlist-1/tracks"] * 2)
+
     def test_missing_data_is_not_a_complete_empty_playlist(self) -> None:
         from types import SimpleNamespace
         client = SimpleNamespace(request=lambda *args, **kwargs: AppleJsonResponse(200, {}, {}))

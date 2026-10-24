@@ -14,3 +14,5 @@ backup/restore behavior and release signing still require their SDD gates
 before stable publication. The future UI is governed by the
 [Home Assistant-native UI foundation](../specs/home-assistant-native-ui.md); the
 metadata scaffold does not imply that UI has been implemented.
+
+The experimental scaffold exposes no runtime options. The unused `log_level` control has been removed; verbosity is not configurable through Supervisor options until runtime logging support is accepted. Existing persisted options are not read or rewritten.

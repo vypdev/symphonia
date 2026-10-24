@@ -55,6 +55,8 @@ Credential/credentials aliases are rejected recursively in operation payloads an
 
 A healthy lease renewal retains the later of its current expiry and the newly requested expiry; shortening a requested duration cannot release ownership early. Renewal still refuses expired, missing, cancelled or foreign ownership, and audit evidence records the effective expiry.
 
+The October 25 foundation correction exports event `payload_keys` and `payload_keys_truncated` instead of arbitrary persisted event values. Credential-like text under innocent keys is excluded without rewriting the append-only ledger. See the [remaining PR 1 review](../docs/development/pr1-review-2026-10-25.md).
+
 ## 3. Actors and authorization
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.

@@ -75,7 +75,8 @@ class OperationDiagnostics:
                     "event_type": event.event_type,
                     "state": event.state,
                     "worker_id": event.worker_id,
-                    "payload": event.payload,
+                    "payload_keys": _bounded_keys(event.payload)[0],
+                    "payload_keys_truncated": _bounded_keys(event.payload)[1],
                     "created_at": _utc(event.created_at),
                 }
                 for event in selected_events

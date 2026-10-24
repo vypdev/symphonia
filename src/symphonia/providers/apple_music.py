@@ -173,7 +173,10 @@ class AppleMusicAdapter(ProviderAdapter):
                     ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
                     "Apple Music pagination advanced without returning items",
                 )
-            next_offset = self._next_offset(next_url, offset + len(entries))
+            next_offset = self._next_offset(
+                next_url, offset + len(entries),
+                expected_path=f"/v1/me/library/playlists/{quote(playlist.object_id, safe='')}/tracks",
+            )
             pages.append(
                 ProviderPlaylistPage(
                     playlist=playlist,
@@ -249,7 +252,7 @@ class AppleMusicAdapter(ProviderAdapter):
         return value
 
     @staticmethod
-    def _next_offset(next_url: Any, fallback: int) -> int | None:
+    def _next_offset(next_url: Any, fallback: int, *, expected_path: str) -> int | None:
         if not next_url:
             return None
         if not isinstance(next_url, str):
@@ -264,10 +267,12 @@ class AppleMusicAdapter(ProviderAdapter):
                 ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
                 "Apple Music pagination next link was malformed",
             ) from error
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        absolute = parsed.scheme == "https" and parsed.netloc == "api.music.apple.com"
+        relative = not parsed.scheme and not parsed.netloc and next_url.startswith("/v1/")
+        if not (absolute or relative) or parsed.path != expected_path or parsed.fragment:
             raise ProviderApiError(
                 ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED,
-                "Apple Music pagination next link was not an absolute URL",
+                "Apple Music pagination next link did not identify the same playlist resource",
             )
         values = parse_qs(parsed.query, keep_blank_values=True).get("offset")
         if values is None or len(values) != 1:

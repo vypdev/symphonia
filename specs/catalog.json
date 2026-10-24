@@ -53,7 +53,8 @@
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/development/ha-app-lab.md",
         "docs/development/bugbot-review-2026-10-21.md",
-        "docs/development/pr1-review-2026-10-21.md"
+        "docs/development/pr1-review-2026-10-21.md",
+        "docs/development/pr1-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -99,7 +100,8 @@
           "docs/development/playback-lab/README.md",
           "specs/home-assistant-app-runtime-and-ingress.md",
           "docs/development/bugbot-review-2026-10-21.md",
-          "docs/development/pr1-review-2026-10-21.md"
+          "docs/development/pr1-review-2026-10-21.md",
+          "docs/development/pr1-review-2026-10-25.md"
         ]
       },
       "blockers": [
@@ -423,7 +425,8 @@
         "docs/open-questions.md",
         "docs/development/implementation-baseline.md",
         "docs/development/bugbot-review-2026-10-21.md",
-        "docs/development/pr1-review-2026-10-21.md"
+        "docs/development/pr1-review-2026-10-21.md",
+        "docs/development/pr1-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -467,7 +470,8 @@
           "docs/development/bugbot-review-2026-10-21.md",
           "docs/development/pr1-review-2026-10-21.md",
           "docs/providers/provider-specification.md",
-          "docs/providers/provider-research.md"
+          "docs/providers/provider-research.md",
+          "docs/development/pr1-review-2026-10-25.md"
         ]
       },
       "blockers": [
@@ -506,7 +510,8 @@
         "docs/domain/domain-model.md",
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md",
-        "docs/development/pr1-review-2026-10-21.md"
+        "docs/development/pr1-review-2026-10-21.md",
+        "docs/development/pr1-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -516,7 +521,8 @@
           "tests/test_identity_resolution.py"
         ],
         "documentation": [
-          "docs/development/pr1-review-2026-10-21.md"
+          "docs/development/pr1-review-2026-10-21.md",
+          "docs/development/pr1-review-2026-10-25.md"
         ]
       },
       "blockers": [
@@ -653,7 +659,8 @@
         "docs/open-questions.md",
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/development/bugbot-review-2026-10-21.md",
-        "docs/development/pr1-review-2026-10-21.md"
+        "docs/development/pr1-review-2026-10-21.md",
+        "docs/development/pr1-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -707,7 +714,8 @@
           "docs/development/implementation-baseline.md",
           "specs/durable-operations-and-recovery.md",
           "docs/development/bugbot-review-2026-10-21.md",
-          "docs/development/pr1-review-2026-10-21.md"
+          "docs/development/pr1-review-2026-10-21.md",
+          "docs/development/pr1-review-2026-10-25.md"
         ]
       },
       "blockers": [
