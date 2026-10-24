@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 import re
 import unittest
+from urllib.parse import urlsplit
 
 
 FIXTURE = Path(__file__).resolve().parents[1] / "docs/development/ui-spike"
@@ -19,6 +20,18 @@ class FixtureParser(HTMLParser):
 
 
 class UiSpikeContractTests(unittest.TestCase):
+    def test_guard_rejects_browser_resource_url_variants(self) -> None:
+        original = self.parser
+        try:
+            for html in ('<img src="HTTPS://example.test/a">', '<img srcset="local.png 1x, https://example.test/a 2x">', '<video poster="//example.test/a">', '<object data="https://example.test/a">', '<form action="JaVaScRiPt:alert(1)">'):
+                with self.subTest(html=html):
+                    self.parser = FixtureParser()
+                    self.parser.feed(html)
+                    with self.assertRaises(AssertionError):
+                        self.test_fixture_cannot_issue_actions_or_load_remote_assets()
+        finally:
+            self.parser = original
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.html = (FIXTURE / "index.html").read_text(encoding="utf-8")
@@ -44,11 +57,14 @@ class UiSpikeContractTests(unittest.TestCase):
         for tag, attrs in self.parser.elements:
             if tag == "button" and attrs.get("id") != "theme-toggle":
                 self.assertIn("disabled", attrs)
-            for name in ("href", "src", "action"):
+            for name in ("href", "src", "action", "srcset", "poster", "formaction", "data", "background"):
                 value = attrs.get(name)
                 if value is None:
                     continue
-                self.assertFalse(value.startswith(("http:", "https:", "//", "/", "javascript:")), (tag, name, value))
+                candidates = [candidate.strip().split()[0] for candidate in value.split(",") if candidate.strip()] if name == "srcset" else [value.strip()]
+                for candidate in candidates:
+                    normalized = candidate.replace("\\", "/")
+                    self.assertFalse(urlsplit(normalized).scheme or normalized.startswith("/"), (tag, name, value))
             self.assertFalse(any(name.lower().startswith("on") for name in attrs), (tag, attrs))
         self.assertNotIn("fetch(", self.script)
         self.assertNotIn("XMLHttpRequest", self.script)

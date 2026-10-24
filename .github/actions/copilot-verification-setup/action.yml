@@ -1,13 +1,36 @@
-# Created once by Copilot setup. This action and its assets belong to your project.
-# Replace the placeholder with reviewed runtime/dependency setup, then merge onto MAIN_BRANCH.
-name: Prepare project verification
-description: Configure project dependencies before enabling VERIFICATION_SETUP.
+name: Prepare Symphonia verification
+description: Install candidate Python quality and Node UI dependencies in the private verification profile.
 runs:
   using: composite
   steps:
-    - name: Configure project verification dependencies
+    - name: Resolve private Python paths
+      id: private-paths
       shell: bash
       run: |
-        printf '%s\n' 'Configure .github/actions/copilot-verification-setup/action.yml with your project dependencies before enabling VERIFICATION_SETUP.'
-        printf '%s\n' 'Replace this failing placeholder, review and merge it onto the configured MAIN_BRANCH, then run a real verification.'
-        exit 1
+        printf 'python=%s/verification-python\n' "$HOME" >> "$GITHUB_OUTPUT"
+        printf 'cache=%s/uv-cache\n' "$HOME" >> "$GITHUB_OUTPUT"
+    - name: Set up managed Python tooling
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      with:
+        version: 0.13.5
+        enable-cache: false
+    - name: Install Python quality dependencies from the candidate
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        UV_PYTHON_INSTALL_DIR: ${{ steps.private-paths.outputs.python }}
+        UV_CACHE_DIR: ${{ steps.private-paths.outputs.cache }}
+      run: |
+        uv python install 3.11
+        uv venv --managed-python --python 3.11 "$HOME/verification-venv"
+        uv pip install --no-cache --python "$HOME/verification-venv/bin/python" '.[quality]'
+        printf '%s\n' "$HOME/verification-venv/bin" >> "$GITHUB_PATH"
+    - name: Set up Node 24
+      uses: actions/setup-node@v7
+      with:
+        node-version: '24'
+        package-manager-cache: false
+    - name: Install UI dependencies from the candidate lockfile
+      shell: bash
+      working-directory: ${{ github.workspace }}/ui
+      run: npm ci --no-audit --no-fund

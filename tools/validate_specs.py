@@ -89,7 +89,7 @@ def _validate_catalog_shape(root: Path, catalog: Any, errors: list[str]) -> list
     if not isinstance(catalog, dict):
         _add(errors, "catalog.json must contain an object")
         return []
-    if catalog.get("version") != 1:
+    if type(catalog.get("version")) is not int or catalog["version"] != 1:
         _add(errors, "catalog.json version must be 1")
     capabilities = catalog.get("capabilities")
     if not isinstance(capabilities, list) or not capabilities:
@@ -245,7 +245,10 @@ def _validate_catalog_markdown(root: Path, capabilities: list[dict[str, Any]], e
     if not path.is_file():
         _add(errors, "specs/CATALOG.md is missing")
         return
-    rows = {match.group(1): (match.group(2).strip(), match.group(3)) for match in CATALOG_ROW_RE.finditer(path.read_text(encoding="utf-8"))}
+    matches = list(CATALOG_ROW_RE.finditer(path.read_text(encoding="utf-8")))
+    rows = {match.group(1): (match.group(2).strip(), match.group(3)) for match in matches}
+    if len(rows) != len(matches):
+        _add(errors, "specs/CATALOG.md contains duplicate capability rows")
     expected = {
         capability["id"]: capability for capability in capabilities
         if isinstance(capability.get("id"), str)
@@ -259,8 +262,13 @@ def _validate_catalog_markdown(root: Path, capabilities: list[dict[str, Any]], e
         status = capability.get("status")
         expected_status = CATALOG_STATUSES.get(status) if isinstance(status, str) else None
         specification = capability.get("specification")
-        expected_path = Path(specification).name if isinstance(specification, str) else None
-        if row != (expected_status, expected_path):
+        try:
+            expected_path = _local_path(root, specification)
+            actual_path = _local_path(root, str(Path("specs") / row[1]))
+        except (TypeError, ValueError, OSError):
+            _add(errors, f"specs/CATALOG.md row for {capability_id} has an invalid specification path")
+            continue
+        if row[0] != expected_status or actual_path != expected_path:
             _add(errors, f"specs/CATALOG.md row for {capability_id} disagrees with catalog.json")
 
 

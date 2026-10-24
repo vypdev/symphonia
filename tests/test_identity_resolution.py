@@ -18,6 +18,18 @@ from symphonia.infrastructure import ResolutionDecisionRepository
 
 
 class IdentityResolutionTests(unittest.TestCase):
+    def test_resolution_healthcheck_rejects_unreadable_decision_columns(self) -> None:
+        for column, value in (("action", "invalid"), ("actor_id", " "), ("reason", ""), ("provider_track_key", ""), ("candidate_recording_id", None)):
+            with self.subTest(column=column):
+                repository = ResolutionDecisionRepository()
+                try:
+                    repository.record(ManualDecision(provider_track_key="track", candidate_recording_id="recording", action=ManualDecisionAction.ACCEPT, actor_id="actor", reason="verified", created_at=datetime.now(timezone.utc).isoformat()))
+                    self.assertTrue(repository.healthcheck())
+                    repository._connection.execute(f"UPDATE resolution_decisions SET {column} = ?", (value,))
+                    self.assertFalse(repository.healthcheck())
+                finally:
+                    repository.close()
+
     def test_normalization_is_unicode_safe_and_lossless(self) -> None:
         metadata = normalize_recording_metadata(
             title="Beyoncé — Halo (Live Edit)",

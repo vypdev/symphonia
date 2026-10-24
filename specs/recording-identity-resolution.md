@@ -133,7 +133,7 @@ Text equivalent: items begin unmatched; candidate evidence may make them ambiguo
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
 | --- | --- | --- | --- | --- |
 | `unmatched` | no policy-acceptable candidate/link | No recording selected | `ambiguous`, `resolved`, `deferred`, `invalid` | new evidence or reviewer |
-| `ambiguous` | multiple/insufficient candidates require judgment | Copy is blocked or explicit best effort required | `resolved`, `unmatched`, `deferred`, `invalid` | reviewer |
+| `ambiguous` | multiple/insufficient candidates require judgment | Copy is blocked until user resolution | `resolved`, `unmatched`, `deferred`, `invalid` | reviewer |
 | `resolved` | one active automatic/manual link exists | Recording identity is available with origin/evidence | `ambiguous`, `unmatched`, `invalid`, `resolved` via explicit supersession | invalidation/reviewer |
 | `deferred` | reviewer intentionally postponed | No automatic relink until trigger/policy permits | `ambiguous`, `resolved`, `unmatched`, `invalid` | reviewer/new evidence |
 | `invalid` | source representation cannot participate under current model | Item remains auditable but unusable for recording copy | `unmatched` after corrected evidence | provider fix/re-import |

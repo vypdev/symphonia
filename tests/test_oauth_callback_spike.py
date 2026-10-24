@@ -126,7 +126,13 @@ class OAuthCallbackSpikeTests(unittest.TestCase):
             )
 
     def test_ipv6_loopback_serves_the_same_callback_boundary(self) -> None:
-        server = create_callback_server(authorization=self.service, provider="spotify", clock=lambda: NOW, host="::1", port=0)
+        try:
+            server = create_callback_server(authorization=self.service, provider="spotify", clock=lambda: NOW, host="::1", port=0)
+        except OSError as error:
+            import errno
+            if error.errno not in {errno.EAFNOSUPPORT, errno.EADDRNOTAVAIL, errno.EACCES, errno.EPERM}:
+                raise
+            self.skipTest("IPv6 loopback binding is unavailable in this environment")
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         connection = http.client.HTTPConnection("::1", server.server_address[1], timeout=2)

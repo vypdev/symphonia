@@ -3,17 +3,16 @@ from __future__ import annotations
 from io import BytesIO
 import http.client
 from pathlib import Path
-import socket
 import tempfile
 import threading
 from types import SimpleNamespace
 import unittest
 
 from symphonia.infrastructure import OperationRepository
+from symphonia.runtime.resources import RuntimeResources
 from symphonia.runtime.http import (
     SymphoniaHTTPServer,
     SymphoniaRequestHandler,
-    create_server,
     route_get,
 )
 
@@ -243,18 +242,19 @@ class RuntimeHTTPTests(unittest.TestCase):
 
     def test_composed_runtime_http_smoke_exposes_health_and_readiness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
+            resources = RuntimeResources.open(str(Path(directory) / "symphonia.sqlite3"))
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-                    probe.bind(("127.0.0.1", 0))
-                    port = probe.getsockname()[1]
-                server = create_server(
-                    host="127.0.0.1",
-                    port=port,
-                    database_path=str(Path(directory) / "symphonia.sqlite3"),
+                server = SymphoniaHTTPServer(
+                    ("127.0.0.1", 0),
+                    resources=resources,
                     ingress_path="/symphonia",
                 )
             except PermissionError:
+                resources.close()
                 self.skipTest("the test sandbox does not permit local socket binding")
+            except BaseException:
+                resources.close()
+                raise
 
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
