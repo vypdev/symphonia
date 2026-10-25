@@ -144,7 +144,7 @@ cover duplicate/oversized fields, current actor/install/profile, typed/bounded
 epochs, exact purpose/identifier and expiry. Two regression cases use actual
 SQL/files with fake AEAD/signature verification: failed reset needs a fresh
 resume approval, while a competing completed resume fences a stale approval.
-They do not substitute for cryptography or real native HTTP. The integrated suite passes **569 tests, no
+They do not substitute for cryptography or real native HTTP. The integrated suite passes **570 tests, no
 skips**; combined application coverage remains 89%, with the unchanged 85% floor.
 The final native source was repeated after its parser guards; all twenty-eight
 observations pass. The container and all temporary users/config/key state are
@@ -221,8 +221,21 @@ setup is an explicitly installed research component, not the final helper.
 An initial App liveness-healthcheck omission and two harness programming errors
 were corrected before the successful repeat; failed runs are not counted as
 passes. The final operator/shim uses its own package namespace so it cannot
-replace Core's existing modules. Twelve ordinary boundary/target-guard/renewal tests are
+replace Core's existing modules. Thirteen ordinary boundary/target-guard/renewal tests are
 separate from real-wire evidence.
+
+The [cancellation regression](../../tools/ha_oauth_companion_lab/wire_cancellation_probe.py)
+cancels the actual asyncio harness task after it records one fake user. Six
+observations verify cancellation propagates, cleanup targets only that fake
+user, and the receipt/phase say `CancelledError`/`failed` rather than success.
+One ordinary regression also exercises this actual cancellation path with
+explicitly fake dependencies; it restores the process environment/modules.
+The pinned Core image supplies dependencies, but HA/auth APIs in this experiment
+are explicit stubs; no additional native-authorization claim is made. The
+harness sets success only after every observation/assertion completes, and an
+incomplete non-Exception exit cannot produce a successful receipt. A retained
+failed receipt prevents automatic retries; the operator must clean its owned
+fixture before explicit fresh staging.
 
 ## Fault-plan progress and remaining gates
 

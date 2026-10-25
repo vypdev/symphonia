@@ -126,3 +126,32 @@ class ResetWireLifecycleTests(unittest.TestCase):
         status,body=handler.send.call_args.args
         self.assertEqual(status,200);self.assertFalse(body["pairing_available"])
         self.assertNotIn("challenge",body);self.assertEqual(body["required_action"],"fresh_disposable_fixture")
+
+
+class CancellationReceiptTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cancelled_harness_cleans_owned_user_and_never_reports_success(self):
+        import os
+        from types import ModuleType
+        from tools.ha_oauth_companion_lab.wire_cancellation_probe import campaign
+        modules={name:ModuleType(name) for name in (
+            'aiohttp','cryptography','cryptography.x509','cryptography.hazmat',
+            'cryptography.hazmat.primitives','cryptography.hazmat.primitives.asymmetric',
+            'homeassistant','homeassistant.auth','homeassistant.auth.const','homeassistant.const')}
+        class Session:
+            async def __aenter__(self):return self
+            async def __aexit__(self,*args):return None
+        modules['aiohttp'].ClientSession=lambda **kwargs:Session()
+        modules['aiohttp'].DummyCookieJar=lambda:object()
+        modules['aiohttp'].ClientTimeout=lambda **kwargs:object()
+        modules['cryptography'].__version__='explicit-fake-dependency'
+        modules['cryptography'].x509=modules['cryptography.x509']
+        modules['cryptography.hazmat.primitives'].hashes=object()
+        modules['cryptography.hazmat.primitives'].serialization=object()
+        modules['cryptography.hazmat.primitives.asymmetric'].ec=object()
+        modules['homeassistant.auth.const'].GROUP_ID_ADMIN='fake-admin'
+        modules['homeassistant.auth.const'].GROUP_ID_USER='fake-user'
+        modules['homeassistant.const'].__version__='explicit-fake-core'
+        with patch.dict('sys.modules',modules),patch.dict(os.environ):
+            result=await campaign()
+        self.assertTrue(all(result['results'].values()))
+        self.assertEqual(result['native_authentication'],'not_exercised')

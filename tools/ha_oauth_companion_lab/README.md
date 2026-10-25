@@ -290,3 +290,9 @@ UID10001. Nine observations verify startup revokes before TLS, is idempotent,
 preserves history and never rekeys. Its admission Boolean is a test stub.
 Post-reset wire fixtures require explicit fresh provisioning; they never expose
 a consumed challenge or silently re-arm enrollment after restart.
+
+`wire_cancellation_probe.py` cancels the real asyncio task with explicitly fake
+HA/auth APIs and a synthetic process-only Supervisor credential in the pinned
+networkless image. Six observations distinguish interrupted/failed receipts
+from success and verify scoped fake-user cleanup. No live Core config/user,
+real credential, provider or native authorization is exercised.

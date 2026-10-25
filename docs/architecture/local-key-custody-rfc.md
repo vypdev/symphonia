@@ -161,7 +161,7 @@ locked-key Ingress survival, native fresh-admin approval and App Origin/CSRF
 redemption with interrupted reset/resume. Ingress returned 200 after user
 deactivation, while native confirmation returned 401: cached headers are not
 fresh authority. Browser cookies were manually supplied over lab HTTP, not
-validated by Chrome. Twelve ordinary boundary/operator/renewal guards supplement that
+validated by Chrome. Thirteen ordinary boundary/operator/renewal guards supplement that
 experiment. Full live lease/reader/reset/collector concurrency, final packaging/
 backup/restore, proposed recovery authority/UX review and native browser/provider
 conformance remain gates. The accepted custody direction and Draft status remain.

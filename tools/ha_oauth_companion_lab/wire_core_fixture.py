@@ -58,7 +58,7 @@ async def exercise(hass,root):
     from tools.ha_oauth_companion_lab.native_reset_probe import NativeSigner,unpack,pack
 
     users=[];credentials=[];sessions=[];browser={};results={};failure=None;stage="setup_users"
-    created_names=[];signer=None
+    created_names=[];signer=None;run_completed=False
     token=os.environ["SUPERVISOR_TOKEN"]
     def save(name,value):
         with PrivateFiles(root) as files:
@@ -277,11 +277,17 @@ async def exercise(hass,root):
             status,post_reset=await ingress()
             results["completed_reset_never_offers_consumed_challenge"]=status==200 and post_reset.get("pairing_available") is False and "challenge" not in post_reset and post_reset.get("required_action")=="fresh_disposable_fixture"
             assert all(v for k,v in results.items() if k!="ingress_after_disable_observed_status"),[k for k,v in results.items() if k!="ingress_after_disable_observed_status" and not v]
+            run_completed=True
+        except asyncio.CancelledError:
+            failure="CancelledError"
+            raise
         except Exception as error:
             failure=type(error).__name__
             save("failure-diagnostic.json",{"type":failure,"attribute":getattr(error,"name",None),
                 "frames":[{"file":Path(f.filename).name,"line":f.lineno} for f in traceback.extract_tb(error.__traceback__)]})
         finally:
+            if not run_completed and failure is None:
+                failure="IncompleteRun"
             for flow in list(hass.config_entries.flow.async_progress_by_handler(DOMAIN)):
                 hass.config_entries.flow.async_abort(flow["flow_id"])
             hass.data.pop(DOMAIN,None)
@@ -293,4 +299,4 @@ async def exercise(hass,root):
                 "synthetic_users_removed":len(users),"no_existing_user_auth_token_read":True,
                 "real_provider_or_owner_ha":False,"browser_cookie_semantics_proven":False}
             save("receipt.json",receipt)
-            save("phase.json",{"phase":"complete" if failure is None else "failed","error_type":failure})
+            save("phase.json",{"phase":"complete" if run_completed and failure is None else "failed","error_type":failure})

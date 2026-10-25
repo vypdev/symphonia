@@ -473,7 +473,7 @@ fresh native admin approval, actual App Origin/CSRF enforcement and interrupted
 reset with a new signed resume. A separate actual child death after reset commit
 before pair revocation passes nine observations: startup revokes idempotently
 before TLS, serializes renewal/reset and never rearms a consumed challenge.
-Twelve ordinary boundary/operator/renewal cases are
+Thirteen ordinary boundary/operator/renewal cases are
 separate. Ingress still returned 200 after user deactivation; native HTTP denied
 that user. Manual lab cookies are not browser/HTTPS proof. The signed recovery
 authority/UX remains proposed; final package/restore, production concurrency and
