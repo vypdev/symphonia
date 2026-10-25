@@ -1,0 +1,42 @@
+name: Verification setup smoke
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/copilot-verification-setup/**'
+      - '.github/actions/verification-smoke-profile/**'
+      - '.github/workflows/verification_setup_smoke.yml'
+      - '.copilot/verification-prerequisites.json'
+      - 'pyproject.toml'
+      - 'ui/package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verification-setup:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on:
+      group: vypdev
+      labels: [self-hosted, codex, Linux]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Register private profile and deferred cleanup
+        uses: ./.github/actions/verification-smoke-profile
+      - name: Prepare the reviewed dependency setup
+        uses: ./.github/actions/copilot-verification-setup
+      - name: Verify all configured commands with the prepared runtimes
+        run: |
+          python3 --version
+          node --version
+          make verify
+          make coverage
+          npm --prefix ui run check
+          npm --prefix ui run check-boundary
+          npm --prefix ui test
+          npm --prefix ui run build
+          git diff --check

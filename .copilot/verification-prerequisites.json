@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "runtimes": {
+    "python": "3.11",
+    "node": "24"
+  }
+}

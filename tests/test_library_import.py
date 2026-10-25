@@ -1,0 +1,156 @@
+from __future__ import annotations
+
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+import unittest
+
+from symphonia.application import LibraryImportService
+from symphonia.infrastructure import PlaylistProjectionRepository
+from symphonia.providers import (
+    AccessBasis,
+    MediaKind,
+    ProviderCapabilities,
+    ProviderManifest,
+    ProviderObjectRef,
+    ProviderPlaylistEntry,
+    ProviderPlaylistPage,
+    ProviderApiError,
+    ProviderErrorCategory,
+    collect_playlist_pages,
+)
+
+
+NOW = datetime(2026, 9, 20, 12, 0, tzinfo=timezone.utc)
+
+
+def result(complete: bool):
+    playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
+    track = ProviderObjectRef("spotify", "track", "track-1", "connection-1")
+    item = ProviderPlaylistEntry("occ-1", 0, track, MediaKind.TRACK)
+    return collect_playlist_pages([ProviderPlaylistPage(playlist, (item,), None, None, complete)])
+
+
+class LibraryImportServiceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.repository = PlaylistProjectionRepository()
+        self.service = LibraryImportService(self.repository)
+
+    def tearDown(self) -> None:
+        self.repository.close()
+
+    def test_complete_import_publishes_snapshot(self) -> None:
+        publication = self.service.publish_playlist(result(True), snapshot_id="snapshot-1", observed_at=NOW)
+        self.assertEqual(publication.state, "succeeded")
+        self.assertEqual(publication.snapshot.snapshot_id, "snapshot-1")
+        self.assertEqual(publication.retained_current.snapshot_id, "snapshot-1")
+
+    def test_older_import_reports_the_actual_retained_current_snapshot(self) -> None:
+        self.service.publish_playlist(result(True), snapshot_id="newer", observed_at=NOW)
+        publication = self.service.publish_playlist(
+            result(True), snapshot_id="older", observed_at=NOW - timedelta(seconds=1),
+        )
+        self.assertEqual(publication.snapshot.snapshot_id, "older")
+        self.assertEqual(publication.retained_current.snapshot_id, "newer")
+
+    def test_partial_import_retains_last_complete_snapshot(self) -> None:
+        self.service.publish_playlist(result(True), snapshot_id="snapshot-1", observed_at=NOW)
+        publication = self.service.publish_playlist(result(False), snapshot_id="snapshot-2", observed_at=NOW)
+        self.assertEqual(publication.state, "partial")
+        self.assertIsNone(publication.snapshot)
+        self.assertEqual(publication.retained_current.snapshot_id, "snapshot-1")
+
+    def test_partial_result_does_not_call_publication_port(self) -> None:
+        class RecordingPort:
+            current_key: tuple[str, str, str] | None = None
+
+            def current(self, *, provider: str, namespace: str, playlist_id: str):
+                self.current_key = (provider, namespace, playlist_id)
+                return None
+
+            def publish(self, *args, **kwargs):
+                raise AssertionError("partial results must never be published")
+
+        port = RecordingPort()
+        publication = LibraryImportService(port).publish_playlist(
+            result(False), snapshot_id="snapshot-partial", observed_at=NOW
+        )
+
+        self.assertEqual(publication.state, "partial")
+        self.assertIsNone(publication.snapshot)
+        self.assertEqual(port.current_key, ("spotify", "connection-1", "playlist-1"))
+
+    def test_import_playlist_uses_normalized_adapter_pages(self) -> None:
+        playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
+
+        class FakeAdapter:
+            manifest = ProviderManifest("spotify", "Spotify", AccessBasis.OFFICIAL, "beta", "limited")
+
+            def capabilities(self, connection_id: str) -> ProviderCapabilities:
+                return ProviderCapabilities(frozenset(), "fixture", "2026-09-20T12:00:00Z")
+
+            def read_playlist_pages(self, connection_id: str, requested: ProviderObjectRef, cursor: str | None = None):
+                self.assert_connection = connection_id
+                return [
+                    ProviderPlaylistPage(
+                        requested,
+                        (ProviderPlaylistEntry("occ-1", 0, ProviderObjectRef("spotify", "track", "track-1", requested.namespace), MediaKind.TRACK),),
+                        cursor,
+                        None,
+                        True,
+                    )
+                ]
+
+        publication = self.service.import_playlist(
+            FakeAdapter(),
+            connection_id="connection-1",
+            playlist=playlist,
+            snapshot_id="snapshot-adapter",
+            observed_at=NOW,
+        )
+        self.assertEqual(publication.state, "succeeded")
+        self.assertEqual(publication.snapshot.snapshot_id, "snapshot-adapter")
+
+    def test_adapter_pages_must_match_every_part_of_the_requested_identity(self) -> None:
+        requested = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
+        self.service.publish_playlist(result(True), snapshot_id="existing", observed_at=NOW)
+        before = self.repository.summary()
+        for field, value in (("provider", "youtube"), ("object_type", "library-playlists"),
+                             ("object_id", "another-playlist"), ("namespace", "another-account")):
+            with self.subTest(field=field):
+                wrong = replace(requested, **{field: value})
+
+                class WrongIdentityAdapter:
+                    manifest = ProviderManifest("spotify", "Spotify", AccessBasis.OFFICIAL, "beta", "read")
+
+                    def read_playlist_pages(self, connection_id, playlist, cursor=None):
+                        return (ProviderPlaylistPage(wrong, (), None, None, True),)
+
+                with self.assertRaises(ProviderApiError) as context:
+                    self.service.import_playlist(
+                        WrongIdentityAdapter(), connection_id="connection-1", playlist=requested,
+                        snapshot_id="wrong", observed_at=NOW,
+                    )
+                self.assertEqual(context.exception.category, ProviderErrorCategory.PROVIDER_CONTRACT_CHANGED)
+                self.assertEqual(self.repository.summary(), before)
+
+    def test_import_playlist_rejects_another_provider_adapter(self) -> None:
+        playlist = ProviderObjectRef("spotify", "playlist", "playlist-1", "connection-1")
+
+        class WrongAdapter:
+            manifest = ProviderManifest("youtube", "YouTube", AccessBasis.OFFICIAL, "beta", "limited")
+
+            def read_playlist_pages(self, connection_id: str, requested: ProviderObjectRef, cursor: str | None = None):
+                return ()
+
+        with self.assertRaises(ValueError):
+            self.service.import_playlist(
+                WrongAdapter(),
+                connection_id="connection-1",
+                playlist=playlist,
+                snapshot_id="snapshot-wrong",
+                observed_at=NOW,
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

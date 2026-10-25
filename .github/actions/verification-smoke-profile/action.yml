@@ -1,0 +1,6 @@
+name: Private verification smoke profile
+description: Give setup a fresh HOME and clean it after dependency post steps.
+runs:
+  using: node24
+  main: main.cjs
+  post: post.cjs
