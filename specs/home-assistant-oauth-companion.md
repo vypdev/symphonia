@@ -5,10 +5,10 @@
 - Catalog capability ID: `home-assistant-oauth-companion`
 - Owners: Symphonia maintainers
 - Scope: pair a thin HA integration with the App, run native provider consent without a public App callback, and admit one App-owned grant exchange through a verified native flow.
-- Related requirements: `SYM-ACC-002`, `SYM-ACC-004`–`SYM-ACC-006`, `SYM-HA-002`, `SYM-HA-004`–`SYM-HA-007`, `SYM-HA-012`, `SYM-SEC-001`–`SYM-SEC-008`, `SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-014`, `SYM-PROV-009`, `SYM-PROV-012`, `SYM-PROV-013`, `SYM-PROV-022`
+- Related requirements: `SYM-ACC-002`, `SYM-ACC-004`–`SYM-ACC-006`, `SYM-HA-002`, `SYM-HA-004`–`SYM-HA-007`, `SYM-HA-012`, `SYM-SEC-001`–`SYM-SEC-008`, `SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-015`, `SYM-PROV-009`, `SYM-PROV-012`, `SYM-PROV-013`, `SYM-PROV-022`
 - Related decisions/research: [ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md), [protocol RFC](../docs/architecture/home-assistant-oauth-companion-rfc.md), [official research](../docs/providers/provider-research.md#2026-10-25--native-home-assistant-oauth-companion), [ecosystem evidence](../docs/providers/home-assistant-ecosystem-review.md#2026-10-25--oauth-companion-evidence), [authorization](provider-connections-and-authorization.md), [runtime](home-assistant-app-runtime-and-ingress.md), [UI foundation](home-assistant-native-ui.md), `OQ-004`, `RG-002`, `RG-008`
 - Required review gates: product UX, architecture, HA platform, provider feasibility, testing, documentation, security/operations
-- Open decisions blocking readiness: supported-version/browser/package conformance of the native hooks; production enrollment/certificate lifecycle and durable pairing; sealed key source and HA/App cold-start/backup policy; App secret publication/recovery; production PKCE-only credential UX and exact provider scopes; full live conformance. Bounded HTTP/TLS/backup evidence is now recorded below.
+- Open decisions blocking readiness: supported-version/browser/package conformance of the native hooks; production enrollment/certificate lifecycle and durable pairing; final local-key adapter/package, reset/rotation and backup/restore conformance under accepted ADR 0008; App secret publication/recovery; production PKCE-only credential UX and exact provider scopes; full live conformance. Bounded HTTP/TLS/backup evidence is now recorded below.
 
 ## 1. Executive summary
 
@@ -26,7 +26,7 @@ Install/pair auxiliary integration -> review provider/client/scope -> consent
 
 This is a design contract, not an installed or implemented capability. The
 authority direction is accepted; the RFC's transport and concrete hooks remain
-proposed. All readiness blockers must close before implementation approval.
+proposed. All readiness blockers must close before production implementation.
 
 ## 2. Problem, current behavior, and evidence
 
@@ -67,8 +67,8 @@ an ordinary repository scan.
 | --- | --- | --- |
 | Native hooks | Main reconfigure/reauth, fresh actor, per-attempt S256, staged callback and saved-file canaries pass in isolated Core 2026.9.4 and 2026.10.3 | Supported package/deployment/browser matrix and production adapter conformance |
 | Internal pairing/TLS | Actual alias, SPKI pin, client-certificate enrollment/replay/epoch/profile rejection pass with no host port | Pre-issued test PKI does not prove CSR issuance, protected persistence, renewal or durable enrollment |
-| Private HA storage | `Store(private=True)` is 0600 but plaintext | A sealed key record and protected wrapping-key source still need proof |
-| Native backups | Password protection rejects wrong key; unprotected Core/App controls are readable; App key exclusion and locked App-only restore pass | Live-key protection, cold-start/unseal and complete HA/App recovery policy |
+| Private HA storage | `Store(private=True)` is 0600 but plaintext; follow-up private key reopens and signs in a new process | Accepted trusted-host file profile in ADR 0008; final integration adapter/lifecycle still needs proof |
+| Native backups | Password protection rejects wrong key; App exclusion/locked restore pass; follow-up protected Core archive recovers its synthetic pairing key | Encrypted Core archives may retain native identity; final App reset/rotation and full restore conformance remain open |
 | AEAD fixture | External-key recovery succeeds; wrong key/domain or tampering fails | Does not select a production encryption/key-management stack |
 
 No provider exchange, real Spotify consent, personal HA changes, public callback
@@ -205,8 +205,13 @@ creating a flow; configuration cannot weaken identity, TLS, scope or expiry.
 Precedence is accepted deployment profile → validated pairing/config → immutable
 attempt snapshot. An option change cancels pending attempts; it cannot rewrite
 their scopes, redirect or destination. Provider secrets are never App options.
-The key reference has no plaintext fallback. Standalone configuration is not
-applicable to this HA capability and remains separately gated.
+Key references resolve only through the ADR 0008 private-file adapter. Core
+pairing keys are deliberately local plaintext under trusted-host permissions,
+with encrypted HA backups; no config-entry/App-option fallback is allowed.
+App OAuth private keys are excluded from ordinary backups. Setup discloses the
+host and backup trust boundary and requires acknowledgement that HA backups
+must be encrypted, without claiming to inspect every existing archive. Standalone
+configuration is not applicable and remains separately gated.
 
 ## 8. Clean Architecture design
 
@@ -302,8 +307,12 @@ consent links name their destination; diagrams have text equivalents.
 3. Core callback is public by the native protocol; it only stages. OAuth codes
    necessarily traverse provider/browser callback URLs, but are never echoed
    into result text, query logs, ordinary state or support evidence.
-4. Store grants encrypted only in the App. Pair keys need their own protected
-   storage/backup contract; HA config-entry encryption is not assumed.
+4. Store grants encrypted only in the App. Enforce `SYM-SEC-015`: private
+   Core pairing files may occur in encrypted Core archives; exclude all App
+   OAuth private keys from ordinary App backups. Missing/unsafe existing keys
+   block credential operations without silent rekey or data deletion. Setup
+   discloses host trust and requires encrypted-backup acknowledgement; it does
+   not certify historical archives or request backup-inspection privileges.
 5. No broad Core credential or playback permission is requested. Admin compromise
    remains a privileged threat; provider/backend permissions are not per-user sandboxes.
 6. No claim of Python memory zeroization or continuous Core-session revocation.
@@ -328,8 +337,15 @@ before consent. A mismatch disables new consent without weakening TLS or
 corrupting active App connections. No native Spotify grant or disposable trial
 grant is imported; initial migration is explicit new consent.
 
-Restore-to-new-instance invalidates pairing and pending attempts, then requires
-admin re-pairing; active grants follow the separately approved key/backup policy.
+A Core backup may copy the complete pairing identity. The operator must revoke
+the previous App pair and explicitly re-pair after Core restore; no automatic
+clone/restore detection is promised. Revocation fences pending attempts and
+closes old sessions. Until revocation a copied private key may remain trusted.
+App restoration without excluded keys locks credential operations while retaining
+non-secret library/history. Only an authenticated explicit reset may fence old
+attempts/refresh/refs, create a new credential identity and require new pairing
+and consent; startup/health cannot reset keys. External provider revocation is
+a separate outcome. These recovery rules follow ADR 0008.
 Downgrade disables this profile rather than exposing a callback tunnel. Schema
 and staged-secret recovery need fixtures before release. Non-provider music
 data and accepted operation history are retained by their own SDDs.
@@ -351,7 +367,7 @@ These supplement the authorization **82** and runtime **58** case budgets;
 reused fixtures do not count as multiple proven requirements. Use fake clocks,
 provider transport, native actor contexts and paired channels in ordinary CI.
 Existing coverage floor stays 85% combined line/branch. Source-string tests
-alone cannot establish native actor or no-secret-backup behavior.
+alone cannot establish native actor or the distinct Core/App backup contract.
 
 Opt-in live evidence requires **16 cases** through the actual bridge, with exact
 Core/Supervisor/App/integration/browser versions and dedicated read-only consent:
@@ -372,7 +388,7 @@ Core/Supervisor/App/integration/browser versions and dedicated read-only consent
 | L12 | Core/App restart abandons volatile secrets; unknown exchange is not replayed |
 | L13 | Immutable account, exact scope and App-only single-flight refresh pass |
 | L14 | Profile/key/version mismatch and unpair block new consent, without player authority |
-| L15 | HA/App backup, restore, debug logs and diagnostics contain no plaintext credential canaries |
+| L15 | Backups contain no plaintext provider grant/code/verifier; all App OAuth private keys are excluded; correct decryption may reveal the Core pairing key, wrong password fails; logs/diagnostics expose no credential/key |
 | L16 | Disconnect and uninstall show local erasure versus external revocation; native Spotify is unaffected |
 
 Each named case needs its negative subcases. The old direct-callback matrix
@@ -409,6 +425,28 @@ and separate loopback success cannot substitute for these bridge observations.
 10. Given restore/removal/disconnect, pairing and grants follow their distinct
     documented cleanup rules and never silently revive native/trial credentials.
 
+11. Given a valid private key, restart reopens the same identity; wrong owner,
+    mode, link/type, size, version or key blocks credential operations without
+    rekey, data loss or secret output. Explicit setup discloses trusted-host
+    custody and requires encrypted HA backups.
+12. Given a protected Core archive, correct decryption may recover the pairing
+    identity and a wrong password fails. After Core restore the operator revokes
+    the previous App pair and re-pairs; copied identities are not self-detecting.
+13. Given App restore without excluded keys, credentials remain locked and
+    non-secret library/history survives. Only authenticated explicit reset
+    fences old authority and creates new pairing/consent; startup and health
+    cannot reset, and no external Spotify revocation is falsely claimed.
+
+The selected local-key profile is defined by [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md)
+and the [key contract](../docs/architecture/local-key-custody-rfc.md). Private-file
+keys trust the host/service identity; they are not hardware-sealed. Its bounded
+[lab evidence](../docs/development/local-key-custody-lab-2026-10-25.md) is separate
+from this SDD's unchanged production test budget and release acceptance.
+
+The follow-up also proves eight synthetic file/SQL process-death points and
+four additional key/publication fences. This is single-record/quiescent research;
+full rotation, live collection and authenticated reset admission remain open.
+
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
@@ -417,6 +455,7 @@ and separate loopback success cannot substitute for these bridge observations.
 | `SYM-SEC-012` | fresh actor and completion authorization | scenarios 2–4; L05–L07 | identity contract/RFC |
 | `SYM-SEC-013`, `SYM-SEC-007` | one owner, status and refresh fences | scenarios 3, 5, 8; L11–L13 | recovery guide |
 | `SYM-SEC-003`–`SYM-SEC-005`, `SYM-SEC-014` | App secret owner, redaction/cleanup | scenarios 7–8, 10; L13–L16 | key/backup and disconnect guide |
+| `SYM-SEC-015` | private key/startup/reset and operator restore lifecycle | scenarios 11–13, L15; bounded follow-up evidence, final fault/reset tests pending | ADR 0008, key RFC and recovery guide |
 | `SYM-HA-004`–`SYM-HA-007`, `SYM-PROV-009` | isolated adapters/typed channel | scenarios 6–7; L14–L15 | architecture/RFC |
 | `SYM-ACC-002`, `SYM-ACC-004`–`SYM-ACC-006`, `SYM-PROV-022` | account/scope/disclosure presentation | scenarios 2–3, 6, 9–10 | user guide |
 | `SYM-PROV-012`, `SYM-PROV-013` | deterministic vs opt-in verification | section 14 release matrix | contributor guide |
@@ -425,7 +464,9 @@ and separate loopback success cannot substitute for these bridge observations.
 
 1. Close `RG-008` native-hook/topology/key/compatibility proof and relevant
    `RG-002`/`RG-001` secret/provider blockers. Accept reviewed protocol details.
-2. Obtain explicit owner implementation approval after this SDD is ready.
+2. Verify this SDD is ready and the final scope remains within the owner's
+   standing implementation/testing authorization; seek new approval only for
+   a material scope or access change. Readiness is not established by consent.
 3. Add failing conformance/dependency tests, pure binding states and App ports.
 4. Implement protected pairing/native flow and staged-code bridge; App secret
    publication and provider lifecycle remain their owning capability contracts.
@@ -447,7 +488,8 @@ and separate loopback success cannot substitute for these bridge observations.
 
 ## 20. References and decisions
 
-ADR 0007 accepts the companion authority direction only. The RFC and numeric
+ADRs 0007 and 0008 accept the companion authority and local-key trust directions,
+respectively. The RFC and numeric
 transport proposal await conformance/security review. ADR 0003's App-primary
 and ADR 0006's narrow playback decisions continue under that refinement.
 Standalone, confidential-client/other-provider profiles, full library/copy

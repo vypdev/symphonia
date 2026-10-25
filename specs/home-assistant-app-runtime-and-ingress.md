@@ -5,10 +5,10 @@
 - Catalog capability ID: `home-assistant-app-runtime`
 - Owners: Symphonia maintainers
 - Scope: define the install, lifecycle, authentication, persistence, recovery, upgrade, backup, and diagnostics contract for the primary Supervisor-managed App.
-- Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-HA-011`–`SYM-HA-012`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-014`
+- Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-HA-011`–`SYM-HA-012`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-015`
 - Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform), [UI foundation](home-assistant-native-ui.md)
 - Required review gates: product UX, architecture, Home Assistant platform, testing, documentation, security/operations
-- Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; App/HA encryption-key/backup contract; `RG-008` internal OAuth companion pairing/profile/lifecycle conformance; standalone release timing from `OQ-005`
+- Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; final local-key package/adapter and reset/rotation/restore conformance under accepted ADR 0008; `RG-008` internal OAuth companion pairing/profile/lifecycle conformance; standalone release timing from `OQ-005`
 
 ## 1. Executive summary
 
@@ -51,7 +51,7 @@ The current foundation is intentionally limited to reversible composition, persi
 - Platform evidence: current App, Ingress, persistent `/data`, backup, and security documentation linked from [provider research](../docs/providers/provider-research.md#home-assistant-platform); Home Assistant's [local App testing guide](https://developers.home-assistant.io/docs/apps/testing/) (reviewed 2026-10-04) describes its maintained Supervisor devcontainer. The [dated local lab](../docs/development/ha-app-lab.md) proves a build, installed App, non-root service process, SQLite creation, healthy container, authenticated Home Assistant App entry, and Core-to-Supervisor Ingress session/proxy behavior on one disposable macOS/OrbStack profile. Its separately scoped [operational dashboard](operational-dashboard.md) now renders in the browser; this does not establish a supported platform matrix, user identity propagation, or the complete runtime lifecycle.
 - Comparative evidence: Music Assistant uses a server/App plus separate HA integration; see the [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md).
 - Security evidence: a direct unauthenticated service port can bypass Ingress, as recorded in the ecosystem review.
-- Unknowns: exact image/toolchain, supported architectures, encryption key source, online backup primitive, and first standalone release.
+- Unknowns: exact image/toolchain, supported architectures, final key adapter/package and reset/rotation conformance, online backup primitive, and first standalone release.
 
 The [2026-10-25 actual-installation callback preflight](../docs/development/app-oauth-session-preflight-2026-10-25.md)
 records Core/Supervisor 2026.10.3 and HA OS 18.3 from the owner's Chrome UI.
@@ -83,8 +83,11 @@ installed and removed only a hidden research fixture. Actual Core-to-App interna
 TLS, no host ports, App key-directory exclusion and App-only backup restoration
 to a locked/stopped state were observed. This does not prove the production
 secret-key source or complete HA restore: a private Core storage file was still
-plaintext and its control was readable in an unprotected backup. The runtime
-therefore remains Draft with key/cold-start/recovery and platform gates open.
+plaintext and its control was readable in an unprotected backup. The later [key-custody follow-up](../docs/development/local-key-custody-lab-2026-10-25.md)
+proves install-local reopen in a second container, private Core identity reopen
+in a new process and actual protected Core archives. ADR 0008 accepts this
+automatic-start trust direction; final package/adapter, reset/rotation/full
+restore and platform gates remain open. The runtime stays Draft.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -300,9 +303,10 @@ Status is textual and announced when it changes; focus remains stable during pol
 3. The service process runs non-root where supported; the container entrypoint may briefly own the Supervisor-mounted `/data` directory and known SQLite files before irreversibly dropping groups, GID, and UID. The App image has no privileged/broad mounts or host networking. The separate Supervisor development container is privileged only inside the disposable lab.
 4. App options, logs, diagnostics, backups, and image layers contain no plaintext provider grants.
 5. Restore and diagnostic inputs are size-bounded, schema-validated, and never interpreted as code, paths outside owned storage, or arbitrary URLs.
-6. Native OAuth keys/profile and pending attempt lifecycle follow `SYM-SEC-012`–`014`.
-   No provider grant is stored in HA and pairing-key backup protection is a gate,
-   not an assumed property of config entries. No new broad Core API permission is requested.
+6. Native OAuth keys/profile and pending attempt lifecycle follow `SYM-SEC-012`–`015`.
+   HA stores no provider grant. ADR 0008 defines the local-key/backup trust profile;
+   final adapter/restore conformance remains gated. Config entries are not encrypted
+   keystores. No new broad Core API permission is requested.
 
 ## 12. Observability and operational UX
 
@@ -367,8 +371,27 @@ new-consent behavior without corrupting active App grants.
 12. Given the HA OAuth profile, artifact/network checks find no public App
     callback, tunnel or broad Core token; internal bridge traffic requires its
     own enrolled authority and cannot reach browser-management routes.
-13. Given companion mismatch/removal or restored pairing state, new OAuth is
-    blocked pending repair; existing App grant/key policy remains authoritative.
+13. Given companion mismatch/removal or operator revocation after Core restore,
+    new OAuth is blocked pending repair; existing App grant/key policy remains
+    authoritative. A copied Core identity cannot self-detect cloning.
+14. Given valid private key state, restart uses the same keys without manual
+    unlock. Invalid/missing existing keys block credentials, not non-secret
+    history, with no silent rekey.
+15. Given an ordinary App backup, all App OAuth private keys are excluded and
+    grants are encrypted. Restoring without keys leaves credentials locked;
+    authenticated explicit reset fences old refs and requires new pairing/consent.
+    Protected Core backups may retain the pairing identity with disclosure and
+    operator revoke/re-pair procedure; no blanket archive-exclusion claim exists.
+
+The selected local-key profile is defined by [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md)
+and the [key contract](../docs/architecture/local-key-custody-rfc.md). Private-file
+keys trust the host/service identity; they are not hardware-sealed. Its bounded
+[lab evidence](../docs/development/local-key-custody-lab-2026-10-25.md) is separate
+from this SDD's unchanged production test budget and release acceptance.
+
+The follow-up also proves eight synthetic file/SQL process-death points and
+four additional key/publication fences. This is single-record/quiescent research;
+full rotation, live collection and authenticated reset admission remain open.
 
 ## 17. Requirements traceability
 
@@ -377,7 +400,8 @@ new-consent behavior without corrupting active App grants.
 | `SYM-HA-001`–`SYM-HA-003` | App composition/platform adapter | artifact + disposable HA smoke | install/upgrade/backup guides |
 | `SYM-HA-004` | dependency rule | static architecture test | contributor architecture |
 | `SYM-HA-011` | optional broker lifecycle isolation | unavailable/incompatible broker and no-Core-proxy fixture; scenario 7 | setup/operator guide |
-| `SYM-HA-012`, `SYM-SEC-012`–`SYM-SEC-014` | OAuth companion lifecycle/key boundary | scenarios 12–13 + companion conformance | OAuth setup/recovery guide |
+| `SYM-HA-012`, `SYM-SEC-012`–`SYM-SEC-015` | OAuth companion lifecycle/key boundary | scenarios 12–13 + companion conformance | OAuth setup/recovery guide |
+| `SYM-SEC-015` | key startup/backup/reset and operator lifecycle | scenarios 14–15; actual archive canaries plus final reset/fault/restart tests | ADR 0008, key RFC and recovery guide |
 | `SYM-SEC-008`–`SYM-SEC-011` | listeners/image composition | route/port/privilege abuse tests | security/setup guide |
 | `SYM-ARCH-003`, `SYM-ARCH-006`, `SYM-ARCH-007` | migration/backup use cases | release-fixture migration + restore tests | recovery guide |
 | `SYM-DEP-001`–`SYM-DEP-010` | release artifact | metadata/package/smoke matrix | release support policy |
@@ -410,5 +434,6 @@ new-consent behavior without corrupting active App grants.
 - Related SDDs: [provider authorization](provider-connections-and-authorization.md), [durable operations](durable-operations-and-recovery.md), [listening and playback control](listening-and-playback-control.md).
 - Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: App is the primary deployment boundary; core remains HA-independent; UI follows the owned Home Assistant-native compatibility layer.
+- Accepted key-custody direction: [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md); automatic restart, encrypted Core identity backups and excluded App OAuth keys, with final adapter/recovery conformance gated.
 - Rejected: all logic in a custom integration; unauthenticated management port; fresh database fallback after migration failure.
 - Selected OAuth direction: ADR 0007 and the Draft companion SDD; protocol and key/lifecycle proof precede implementation. Standalone and native projections beyond the separately selected OAuth/playback profiles remain follow-up work.

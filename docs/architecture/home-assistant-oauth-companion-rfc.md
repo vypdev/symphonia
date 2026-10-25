@@ -101,16 +101,22 @@ authenticate either side. This is a proposed transport, not a proven topology.
 4. OAuth and playback enroll separately with distinct keys/profile permissions.
    No message, credential or config-entry migration can enable playback by
    merely enabling OAuth. Sharing a future channel requires separate authorization.
-5. Pairing keys need protected storage on both sides. A HA config entry is
-   **not presumed encrypted**. The proposed entry contains a reference to a
-   sealed key record; key source, exclusion/encryption in HA backups and restore
-   behavior are blocking decisions, shared with the playback pairing review.
-   Setup refuses until that storage contract exists; an ordinary `.storage`
-   plaintext key or App option is not a workaround.
+5. [ADR 0008](../decisions/0008-install-local-oauth-keys-and-backups.md) selects
+   automatic startup with install-local keys under the trusted host identity.
+   Core uses a private key file and safe entry reference; its encrypted HA backup
+   may retain that identity. The App excludes all its OAuth private keys from
+   ordinary backups and encrypts grants separately. Config entries are not
+   encrypted keystores. See `SYM-SEC-015` and the [key contract](local-key-custody-rfc.md)
+   for permissions, fail-closed startup, disclosure and distinct recovery rules.
+   Final packaging/reset/rotation/publication proof remains required; an App
+   option or silently generated replacement key is not a workaround.
 6. Revoking a pair increments its epoch, closes active sessions and invalidates
    pending attempts. It does not erase already active provider grants implicitly;
-   disconnect is a separate explicit App action. Reinstall/restore requires
-   explicit re-pairing; no discovery-driven automatic credential restoration.
+   disconnect is a separate explicit App action. After Core restore the operator
+   must revoke the old pair on the App and explicitly re-pair; a copied Core
+   identity cannot detect its own cloning. Missing App keys block credentials
+   until authenticated reset/new consent, preserving non-secret history. No
+   discovery-driven automatic credential restoration is permitted.
 
 ## Native flow identity, not an inferred Ingress session
 
@@ -250,16 +256,21 @@ Native current-request actor and main reconfigure/reauth hooks now have real
 framework HTTP evidence. Pre-issued PKI tests show the private route can reject
 wrong pins, clients, profiles and epochs; they do not prove production enrollment
 or renewal. Actual App backup exclusion and a locked restore work. However,
-private Core files remain plaintext, and record/backup encryption does not
-establish the wrapping-key source. CSR lifecycle, persistent key custody,
-unseal/restore policy, production activation/recovery and full live/browser
-conformance therefore remain gates; the protocol is still proposed.
+private Core files remain plaintext. The owner subsequently selected the
+trusted-host automatic-start profile in ADR 0008; [follow-up research](../development/local-key-custody-lab-2026-10-25.md)
+proves persistent local-key mechanics and actual protected Core backups, not
+hardware sealing. CSR lifecycle, final key adapter/package, rotation/reset,
+production activation/recovery and full live/browser conformance remain gates;
+the complete protocol is still proposed.
 
 1. Prove native flow hooks, per-attempt PKCE isolation, no default Core token
    persistence, callback-only staging and fresh same-admin confirmation.
 2. Prove internal topology, pinned mutual TLS, pairing keys, rate/size limits,
-   profile/version isolation and HA/App backup/restore without reusable secrets.
-3. Approve the App secret/key/backup contract and staged-secret recovery.
+   profile/version isolation and HA/App backup/restore under `SYM-SEC-015`: no
+   provider plaintext or App private key in ordinary archives, while protected
+   Core backups may retain the native pairing identity.
+3. Prove the ADR 0008 key adapter/package and reset/rotation/publication contract
+   under the accepted trust direction; do not treat the bounded fixture as production.
 4. After SDD readiness and explicit implementation approval, build the minimum
    profile and run the 16-case live matrix in the SDD using a dedicated app.
 5. Later approve library/copy scopes separately. Reauthorize rather than import

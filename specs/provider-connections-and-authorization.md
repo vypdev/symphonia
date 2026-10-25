@@ -5,10 +5,10 @@
 - Catalog capability ID: `provider-connections-and-authorization`
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
-- Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-014`, `SYM-HA-012`
+- Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-015`, `SYM-HA-012`
 - Related decisions/research: [provider specification](../docs/providers/provider-specification.md), [official API research](../docs/providers/provider-research.md), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `OQ-001`, `OQ-004`, `RG-001`, `RG-002`
 - Required review gates: product UX, architecture, provider feasibility, testing, documentation, security/privacy
-- Open decisions blocking readiness: native companion redirect/actor/pairing conformance (`RG-002`/`RG-008`); provider-specific registration/scopes/token lifecycle; App token exchange/refresh/revocation and encrypted secret-store publication/recovery; unofficial YouTube Music MVP decision; App/HA key source and backup contract
+- Open decisions blocking readiness: native companion redirect/actor/pairing conformance (`RG-002`/`RG-008`); provider-specific registration/scopes/token lifecycle; App token exchange/refresh/revocation and encrypted secret-store publication/recovery; unofficial YouTube Music MVP decision; final key adapter/package and reset/rotation/publication conformance under accepted ADR 0008
 
 ## 1. Executive summary
 
@@ -21,7 +21,7 @@ The App remains the durable grant/exchange/refresh owner. The
 [companion SDD](home-assistant-oauth-companion.md) and
 [RFC](../docs/architecture/home-assistant-oauth-companion-rfc.md) propose staged
 code/PKCE delivery over a paired private channel and fresh native same-admin
-confirmation. The protocol is not yet proven or authorized for implementation.
+confirmation. The protocol is not yet ready for production implementation.
 Provider tokens never enter App options, URLs, logs, HA config entries or
 ordinary UI state; the callback's transient authorization code is not a token.
 
@@ -79,7 +79,7 @@ not a claim that the connection capability is implemented.
 - Provider-independent contract: [provider specification](../docs/providers/provider-specification.md).
 - As-built foundation evidence: [authorization application](../src/symphonia/application/authorization.py), [application repository ports](../src/symphonia/application/ports.py), [attempt repository](../src/symphonia/infrastructure/sqlite_authorization.py), [connection service](../src/symphonia/application/provider_connections.py), [connection repository](../src/symphonia/infrastructure/sqlite_connections.py), [direct-callback spike](../docs/development/oauth-callback-spike.md), and [implementation baseline](../docs/development/implementation-baseline.md).
 - Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), [architecture boundary tests](../tests/test_architecture_boundaries.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
-- Unknowns: native flow/actor conformance and internal paired transport, secret encryption/key/backup, Google/YouTube product scope, exact scopes, token expiry/revocation under test accounts, and provider-specific client-registration policy.
+- Unknowns: native flow/actor conformance and internal paired transport, final key/package/reset/publication conformance under ADR 0008, Google/YouTube product scope, exact scopes, token expiry/revocation under test accounts, and provider-specific client-registration policy.
 
 The subsequent [companion lab validation](../docs/development/ha-oauth-companion-lab-2026-10-25.md)
 adds bounded native-framework actor/reauth/PKCE and actual internal mTLS/backup
@@ -124,9 +124,9 @@ callback-only Quick Tunnel option and actual lab installation/transport
 evidence. Its named bindings concern the Supervisor Ingress session and App
 browser session. A subsequent authorized owner-installation trial rendered
 the hash-verified research App through real HTTPS Ingress and reached its
-callback-only tunnel. Start failed before consent because of a browser Origin
-compatibility issue; a document-policy correction is prepared and separately
-reproduced with synthetic Chrome forms. The corrected owner trial still
+callback-only tunnel. Start failed before consent; the original rejection
+cause remains unidentified. A possible browser Origin mechanism was separately
+observed with synthetic Chrome forms; it does not establish that cause. The corrected owner trial still
 rejected manual start. Approved trial.3 passed the bounded private-context
 check with the tunnel off and on, then admitted authorization start. Its
 provider handoff remained incomplete and the trial was stopped and cleaned up;
@@ -165,7 +165,7 @@ endpoint, secret-store contract or readiness status changes.
 1. Provider type alone is never account identity.
 2. Unknown/degraded capability is never treated as supported.
 3. Authorization callbacks bind attempt, provider, initiating administrator/session, exact redirect, nonce/state, and expiry, and are single-use.
-4. Secret plaintext never crosses presentation/log/diagnostic/ordinary backup boundaries.
+4. Provider credential/code/verifier plaintext never crosses presentation/log/diagnostic/ordinary backup boundaries. Local key custody follows `SYM-SEC-015`: decrypted protected Core archives may retain its native pairing identity; all App OAuth private keys are excluded from ordinary App backups.
 5. An unofficial adapter is distinct, opt-in, visibly labeled, and independently disableable.
 6. Disconnect stops admissions immediately and cannot erase user-authored identity decisions merely because provider payloads are removed.
 
@@ -302,7 +302,7 @@ borrows native HA Spotify credentials. OAuth and playback enroll separately.
 - Static tests reject provider/HA/secret implementation imports from domain/application policy.
 - Adapter contract tests require manifest completeness, typed error mapping, scope/capability probes, and secret-safe failures.
 - Route tests prove callbacks cannot reach management handlers or redirect outside an allowlist.
-- Canary tests search logs, errors, DB non-secret columns, API/UI, metrics, traces, diagnostics, and backups for credential values.
+- Canary tests search logs, errors, DB non-secret columns, API/UI, metrics, traces, diagnostics and backups for provider credentials/codes/verifiers. Separately verify App OAuth private-key exclusion and the intentionally recoverable Core identity in protected HA archives; do not require the Core pairing key to be absent after correct archive decryption.
 
 ## 9. UI/UX and content contract
 
@@ -370,7 +370,7 @@ Risk/support is textual, not icon-only. Consent-return errors receive focus and 
 2. Callback state is signed/opaque, short-lived, single-use, and bound to initiator, provider, redirect, and attempt.
 3. Secret material is encrypted at rest, versioned for rotation, absent from general database exports, and redacted through canary tests.
 4. Provider/adapter URLs and schemes are allowlisted; user/provider data cannot choose filesystem paths, modules, callbacks, or unrestricted egress.
-5. The companion uses independently authenticated encrypted pairing and a one-use code/PKCE completion contract; it stores no provider user grant and never reads another integration's credentials. See `SYM-SEC-012`–`SYM-SEC-014` and the companion SDD for fresh actor, exchange fence and backup requirements.
+5. The companion uses independently authenticated encrypted pairing and a one-use code/PKCE completion contract; it stores no provider user grant and never reads another integration's credentials. See `SYM-SEC-012`–`SYM-SEC-015` and the companion SDD for fresh actor, exchange fence and backup requirements.
 6. Browser-cookie access, if accepted, requires a dedicated threat model, explicit primary-account warning, deletion/revocation steps, and independent release kill switch.
 
 ## 12. Observability and operational UX
@@ -442,6 +442,24 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
     unsafe pair keys/backups or an incompatible protocol, setup blocks rather
     than persisting grants in Core or enabling a direct App callback fallback.
 
+16. Given restart with valid install-local keys, encrypted App grants remain
+    usable without manual unlock. Unsafe/missing existing keys block credential
+    work; no silent key replacement or non-secret data loss occurs.
+17. Given App restore without excluded keys, only explicit authenticated reset
+    can fence previous references and require fresh consent. Given Core restore,
+    operator pair revocation/re-pair is required; encrypted Core identity backups
+    are disclosed and cloned-key detection is not claimed.
+
+The selected local-key profile is defined by [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md)
+and the [key contract](../docs/architecture/local-key-custody-rfc.md). Private-file
+keys trust the host/service identity; they are not hardware-sealed. Its bounded
+[lab evidence](../docs/development/local-key-custody-lab-2026-10-25.md) is separate
+from this SDD's unchanged production test budget and release acceptance.
+
+The follow-up also proves eight synthetic file/SQL process-death points and
+four additional key/publication fences. This is single-record/quiescent research;
+full rotation, live collection and authenticated reset admission remain open.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Test or evidence | Documentation |
@@ -451,7 +469,8 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 | `SYM-PROV-015`–`SYM-PROV-020` | manifest and presentation | schema/opt-in/label tests | provider support policy |
 | `SYM-SEC-001`–`SYM-SEC-007` | auth/secret ports | replay/race/canary/rotation tests | security and provider setup |
 | `SYM-SEC-008`–`SYM-SEC-010` | listener/callback/provider adapters | route/redirect/path/egress abuse tests | callback operations guide |
-| `SYM-HA-012`, `SYM-SEC-012`–`SYM-SEC-014` | native bridge + App exchange/secret owner | scenarios 13–15 and companion live matrix | companion RFC/setup guide |
+| `SYM-HA-012`, `SYM-SEC-012`–`SYM-SEC-015` | native bridge + App exchange/secret owner | scenarios 13–15 and companion live matrix | companion RFC/setup guide |
+| `SYM-SEC-015` | local-key lifecycle and recovery policy | scenarios 16–17, companion scenarios 11–13/L15; final reset/rotation fault fixtures | ADR 0008, key RFC and operator guide |
 | `SYM-TEST-005`, `SYM-TEST-011`, `SYM-TEST-012` | verification tooling | release gates | contributor testing guide |
 
 ## 18. Implementation sequence
@@ -482,4 +501,5 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 - Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: capability and risk disclosure before authorization; opaque secret references; distinct unofficial adapters.
 - Accepted HA direction: [ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md), native OAuth companion plus App-only grant lifecycle; protocol/secret/readiness gates remain open.
+- Accepted key-custody direction: [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md), automatic restart with private local keys, encrypted Core identity backups and excluded App OAuth keys; final adapter/recovery conformance remains open.
 - Rejected: tokens in App options; pasted callback URLs as tokens; generic retry of invalid grants; treating private APIs as official.

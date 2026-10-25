@@ -305,7 +305,7 @@ There are three distinct concerns:
 - **SYM-SEC-001:** Provider authorization MUST use the currently recommended authorization-code flow for the deployment/client type, CSRF `state`, exact redirect validation, and PKCE where applicable.
 - **SYM-SEC-002:** Symphonia MUST request the minimum scopes needed for enabled capabilities and show them before consent.
 - **SYM-SEC-003:** Tokens and client secrets MUST be encrypted at rest with key material kept outside the data database/ordinary export. If a platform cannot provide a separate secret, setup MUST make the trade-off explicit.
-- **SYM-SEC-004:** Plaintext secrets MUST exist only for the shortest practical call boundary and MUST be redacted from logs, exceptions, metrics, traces, UI state, fixtures, and support bundles.
+- **SYM-SEC-004:** Plaintext provider credentials, codes and verifiers MUST exist only for the shortest practical call boundary and MUST be redacted from logs, exceptions, metrics, traces, UI state, fixtures, and support bundles. Installation-local pairing/wrapping keys MUST follow `SYM-SEC-015` and the same output-redaction rules.
 - **SYM-SEC-005:** Disconnect MUST revoke grants when supported, erase local credential material, disable jobs, and start provider-data cleanup.
 - **SYM-SEC-006:** Authorization callbacks MUST bind provider, connection attempt, initiating user/session, state, redirect target, and an expiry; callbacks are single-use.
 - **SYM-SEC-007:** Credential refresh MUST use a single-flight lock per connection to avoid destructive refresh-token races.
@@ -316,6 +316,8 @@ There are three distinct concerns:
 - **SYM-SEC-012:** In the HA OAuth companion profile, completion MUST require a fresh server-validated administrator action by the initiating actor, bound to the native flow, paired HA/App identities and pair epoch, provider/profile, exact redirect and unexpired App attempt. A public callback, submitted actor/flow ID or Ingress user header alone MUST NOT authorize exchange. Exact original-browser/Core-login continuity MUST NOT be claimed without independent proof.
 - **SYM-SEC-013:** A staged OAuth return MUST NOT itself exchange or activate credentials. The App MUST durably fence one exchange owner before provider I/O; lost acknowledgements use safe status lookup and unknown outcomes MUST NOT replay the code automatically. Cross-store secret activation MUST have recoverable orphan cleanup and disconnect/reauthorization fencing.
 - **SYM-SEC-014:** The App MUST be the sole durable provider-grant and refresh owner in the HA companion profile. The integration MUST NOT persist provider codes, PKCE verifiers or user grants, create a token-bearing HA entry or refresh session, borrow other integrations' credentials, or imply playback/general Core authority. Pairing credentials require their own protected storage/backup contract.
+
+- **SYM-SEC-015:** The automatic-start HA OAuth profile MUST use separately referenced install-local keys under the trusted host/service identity, owned 0700 key directories and regular single-link 0600 files with bounded no-follow access. Core pairing keys MAY be included in encrypted HA backups, with explicit setup disclosure; they MUST NOT enter config-entry payloads, logs, diagnostics or UI DTOs. All App OAuth private keys MUST be excluded from ordinary App backups/exports, with provider grants encrypted separately. Invalid/missing existing key state MUST lock credential operations without silent rekey or non-secret data loss. App recovery MUST require an authenticated explicit reset that fences prior authority and requires new pairing/consent. Core restore MUST require operator revocation of the previous App pair and explicit re-pairing; a copied identity MUST NOT be advertised as automatically detectable. See [ADR 0008](../decisions/0008-install-local-oauth-keys-and-backups.md) and the [key contract](local-key-custody-rfc.md).
 
 ### OAuth callback risk in Home Assistant mode
 
@@ -368,7 +370,7 @@ The MVP may render metrics in its UI and logs; choosing Prometheus/OpenTelemetry
 | Backend language/framework | Provider SDK maturity, job ergonomics, footprint, HA App maintainability | Thin vertical spike and maintainer preference |
 | SQLite versus PostgreSQL | Concurrency, backup, migration, and library scale unmeasured | Storage/job lease spike and target sizes |
 | Job library versus internal durable runner | Retry/idempotency needs are specific; external brokers add operations | Failure/restart spike |
-| Secret encryption/key source | HA App secret facilities and portable standalone behavior differ | Threat model and backup/restore test |
+| Secret implementation and recovery | HA automatic-start local-key/backup trust direction accepted in ADR 0008; standalone separate | Final crypto/package, rotation/reset/publication and restore conformance |
 | Companion integration transport | Need push, authentication, discovery, and version compatibility | Home Assistant integration RFC |
 | Public API/event protocol | Only internal UI needs are currently concrete | UI and companion-integration contract design |
 
