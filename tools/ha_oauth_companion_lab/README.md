@@ -23,8 +23,12 @@ state precisely which parts passed and which remain blocked.
    It removes its exact Core control file and created backups in `finally`.
    It never restores Core or imports a production backup.
 
-The transport App metadata is named `config.fixture.json` deliberately, so a
-normal HA App repository scan cannot discover/install it. Only lab staging
+The transport App metadata is named `app-metadata.fixture.json` deliberately, so a
+normal HA App repository scan cannot discover/install it. Supervisor 2026.10.4
+recursively scans `config.*` with a supported extension; an extra word between
+`config.` and `.json` would still match. The fixture filename avoids that
+[discovery pattern](https://github.com/home-assistant/supervisor/blob/2026.10.4/supervisor/store/data.py#L157-L163).
+Only lab staging
 renames it to `config.yaml`. Its source has no host ports, mounts or Core/API
 permissions. It runs for at most 1,200 seconds. All key values are generated;
 none are printed, committed or passed as CLI arguments.
@@ -76,7 +80,7 @@ paths; do not replace another App or modify existing HA credentials.
 
 1. Create a new `/mnt/supervisor/apps/local/symphonia_oauth_lab_transport` inside
    the devcontainer. Copy the three `app/` fixture files, renaming only
-   `config.fixture.json` to `config.yaml`. The App does not run from the checkout.
+   `app-metadata.fixture.json` to `config.yaml`. The App does not run from the checkout.
 2. Run `ha store reload`, then `ha apps install local_symphonia_oauth_lab_transport`
    through `docker exec symphonia-ha-lab`. Installation builds the pinned Python
    base; no package manager or additional library is used in this App.

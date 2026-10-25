@@ -59,7 +59,8 @@ class CompanionLabFixtureTests(unittest.TestCase):
         self.assertEqual(self.pair.request({**self.enroll, "profile": "unknown"}, b"client"), 403)
 
     def test_fixture_app_has_no_public_ports_mounts_or_core_permissions(self):
-        path = Path(__file__).resolve().parents[1] / "tools/ha_oauth_companion_lab/app/config.fixture.json"
+        path = Path(__file__).resolve().parents[1] / "tools/ha_oauth_companion_lab/app/app-metadata.fixture.json"
+        self.assertEqual(list(path.parent.rglob("config.*")), [])
         data = json.loads(path.read_text())
         self.assertEqual(data["ports"], {})
         self.assertEqual(data["boot"], "manual")

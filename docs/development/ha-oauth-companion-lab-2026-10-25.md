@@ -76,7 +76,11 @@ is not retroactively cancelled by this claim.
 The actual alias `local-symphonia-oauth-lab-transport` resolved from Core. Docker
 reported `{}` host port bindings and bridge networking. The fixture has no
 Core/Supervisor API grants or extra mounts; metadata is staged only in the lab,
-and its repository filename deliberately prevents ordinary App-store discovery.
+and its repository filename `app-metadata.fixture.json` prevents ordinary
+App-store discovery. Supervisor 2026.10.4 scans
+[`**/config.*` with a supported extension](https://github.com/home-assistant/supervisor/blob/2026.10.4/supervisor/store/data.py#L157-L163),
+so `config.fixture.json` would still be discovered; the final fixture name avoids
+that pattern and a regression assertion checks its source directory.
 
 | Real TLS request | Observation |
 | --- | --- |
