@@ -114,8 +114,10 @@ the hash-verified research App through real HTTPS Ingress and reached its
 callback-only tunnel. Start failed before consent because of a browser Origin
 compatibility issue; a document-policy correction is prepared and separately
 reproduced with synthetic Chrome forms. The corrected owner trial still
-rejected manual start, so a bounded private-context diagnostic is prepared;
-the remaining cause is unknown. Real provider return/finalization,
+rejected manual start. Approved trial.3 passed the bounded private-context
+check with the tunnel off and on, then admitted authorization start. Its
+provider handoff remained incomplete and the trial was stopped and cleaned up;
+the earlier rejection category remains unknown. Real provider return/finalization,
 Core login revocation and the full live matrix remain unproven. No production
 endpoint, secret-store contract or readiness status changes.
 

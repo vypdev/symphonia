@@ -286,6 +286,49 @@ trial-App and three exporter tests. Combined line/branch coverage is **89%**
 against the unchanged 85% floor. Specification validation, whitespace and
 manual SDD/catalog consistency checks passed. Its aarch64 Docker build is
 `sha256:6a302bad0c800812eec2fd30110cff4fd6a808be9ccb997c22bc0177a9050aeb`.
-The new private probe and diagnostic codes have not yet run on the owner's
-installation. Neither the synthetic iframe success nor these tests establish
-real Home Assistant session-bound OAuth completion.
+The subsequent owner run below exercises the private probe. Neither the
+synthetic iframe success nor these tests establish real Home Assistant
+session-bound OAuth completion.
+
+## Private context verified on the owner's installation
+
+The owner approved revision `ad7328ac3011aab8e1dae0e172543e6f117aef96`,
+version **0.1.0-trial.3**, with a tunnel-disabled private check first and a
+conditional callback tunnel of at most twenty minutes. The remote head
+matched before updating. Supervisor installed trial.3 and its real Chrome
+Ingress page displayed the expected server SHA-256:
+`60e46805208a8f6a5e4467943c47e5e9be4391f55b9b211d30ba1f3d4c6cca08`.
+
+**Verificar sesion privada passed with the tunnel off.** The page reported
+`private_context_verified: true` and `result: tunnel_disabled`. This exercises
+the exact actor, Ingress-session fingerprint, App cookie, Origin and CSRF
+checks on the owner's browser; it does not establish Core-login revocation.
+
+After stopping, enabling the approved callback option and restarting at
+about **11:32:56 UTC**, the same private check passed again. The generated
+exact redirect was saved and verified in the dedicated Spotify application.
+**Autorizar Spotify was admitted**: refreshing the original App page showed
+`waiting_for_spotify` with the private-context flag still true. Unlike the
+two earlier runs, this run establishes successful private authorization-start
+admission. The precise earlier generic rejection remains unidentified.
+
+The new consent tab initially had no valid URL available to browser control;
+it was not inspected through another surface. Manual handoff was requested.
+A concurrent public `/complete` GET probe returned the expected generic
+callback rejection and was then closed because it could confuse that handoff.
+The owner's first reported identical error cannot safely be attributed to
+the actual provider return. No successful callback, exchange, refresh or
+bound completion was observed. The owner then questioned the tunnel topology;
+the attempt was stopped for that design discussion rather than treating the
+incomplete handoff as a successful or definitively failed provider callback.
+
+Supervisor showed **Detenido** and the public hostname returned Cloudflare
+1033 by **11:39:53 UTC**, less than seven minutes after starting. The option
+was saved back to `tunnel_enabled: false`; Spotify's saved redirects were
+verified to contain only the original loopback URI. The App remains installed
+and stopped, with boot, watchdog and automatic updates off. No native Spotify
+integration was changed. Provider revocation was not performed.
+
+The 16-case matrix still needs actual callback correlation and initiating
+session finalization. These bounded successes do not change either Draft SDD,
+the production callback direction, token-storage decisions or readiness gates.

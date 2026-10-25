@@ -63,8 +63,10 @@ installed the reviewed research revision: real Chrome HTTPS Ingress rendered
 its matching server hash and the temporary callback was reachable. The OAuth
 start failed before consent; the trial was stopped and its temporary redirect
 removed. The corrected artifact installed with its expected hash but still
-rejected manual start; private-context diagnostics are prepared before
-another tunnel. This is not session-bound OAuth completion evidence and does not clear
+rejected manual start. Approved trial.3 then passed its exact private-context
+check with the tunnel off and on, and admitted authorization start; the
+provider handoff remained incomplete. The trial was stopped and cleaned up
+within seven minutes. This is not session-bound OAuth completion evidence and does not clear
 the runtime's production readiness or platform/recovery gates.
 
 The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
