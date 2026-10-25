@@ -1,7 +1,7 @@
 # Product specification
 
 **Status:** proposed baseline for owner review
-**Last reviewed:** 2026-09-28
+**Last reviewed:** 2026-10-25 (HA OAuth setup direction)
 
 ## Vision
 
@@ -64,6 +64,15 @@ Provider-backed browsing/search for a selected playback source is part of listen
 3. The user completes the provider's supported authorization flow.
 4. Symphonia validates the grant and records a connection without exposing secrets.
 5. The first import is scheduled and its progress is visible.
+
+For the Home Assistant profile, [ADR 0007](../decisions/0007-home-assistant-oauth-companion.md)
+selects native setup through a thin auxiliary integration and the existing
+Core/My OAuth callback. No Cloudflare setup or public App callback is required.
+The App retains the verified grant and refreshes it; connecting/reconnecting
+requires the integration, while existing grants can support App jobs during a
+Core outage. OAuth setup grants no playback authority and does not reuse the
+native HA Spotify integration's credentials. This is design direction only;
+the [companion SDD](../../specs/home-assistant-oauth-companion.md) remains Draft.
 
 ### Explore the library
 

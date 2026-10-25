@@ -1,20 +1,27 @@
 # Home Assistant App runtime and Ingress
 
 - Status: Draft
-- Date: 2026-09-28
+- Date: 2026-10-25
 - Catalog capability ID: `home-assistant-app-runtime`
 - Owners: Symphonia maintainers
 - Scope: define the install, lifecycle, authentication, persistence, recovery, upgrade, backup, and diagnostics contract for the primary Supervisor-managed App.
-- Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-HA-011`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-011`
+- Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-HA-011`–`SYM-HA-012`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-014`
 - Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform), [UI foundation](home-assistant-native-ui.md)
 - Required review gates: product UX, architecture, Home Assistant platform, testing, documentation, security/operations
-- Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; encryption-key/backup contract; standalone release timing from `OQ-005`
+- Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; App/HA encryption-key/backup contract; `RG-008` internal OAuth companion pairing/profile/lifecycle conformance; standalone release timing from `OQ-005`
 
 ## 1. Executive summary
 
 Symphonia's primary artifact is a Supervisor-managed Home Assistant App whose administrative UI is available through authenticated Ingress. The App owns the long-running service, durable state, background operations, and provider adapters; Home Assistant is the deployment/authentication boundary, not the music domain.
 
 The recommended runtime is one least-privileged, non-root App instance with durable `/data`, no host network or broad mounts, and no provider writes until migrations and recovery complete.
+
+[ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md) requires a
+thin auxiliary integration for new HA OAuth consent/reauthorization, using
+Core/My callbacks without Cloudflare or a public App callback. The App remains
+the grant/refresh and durable service owner. Its proposed internal OAuth-only
+channel has independent authentication; it is not an Ingress UI bypass. The
+[companion SDD](home-assistant-oauth-companion.md) owns protocol/actor proof.
 
 ```text
 Install App -> validate configuration -> migrate/recover durable state
@@ -46,7 +53,38 @@ The current foundation is intentionally limited to reversible composition, persi
 - Security evidence: a direct unauthenticated service port can bypass Ingress, as recorded in the ecosystem review.
 - Unknowns: exact image/toolchain, supported architectures, encryption key source, online backup primitive, and first standalone release.
 
+The [2026-10-25 actual-installation callback preflight](../docs/development/app-oauth-session-preflight-2026-10-25.md)
+records Core/Supervisor 2026.10.3 and HA OS 18.3 from the owner's Chrome UI.
+At that initial inspection, Symphonia was absent from installed Apps and
+configured store repositories; no dedicated HTTPS callback route was available. Its separate loopback session
+experiment uses synthetic identity only and does not prove real Ingress
+actor/session binding or a deployable callback listener.
+
+The later [installable OAuth trial](../docs/development/ha-oauth-trial-2026-10-25.md)
+is a separate experimental App under `tools/`, not a change to the production
+App scaffold. It has manual boot, a twenty-minute lifetime, no host ports or
+HA API privileges, and a default-off callback-only tunnel. Its bounded
+root-owned options read is followed by irreversible UID/GID/group dropping;
+actual lab process evidence confirms service UID 10001. The owner later
+installed the reviewed research revision: real Chrome HTTPS Ingress rendered
+its matching server hash and the temporary callback was reachable. The OAuth
+start failed before consent; the trial was stopped and its temporary redirect
+removed. The corrected artifact installed with its expected hash but still
+rejected manual start. Approved trial.3 then passed its exact private-context
+check with the tunnel off and on, and admitted authorization start; the
+provider handoff remained incomplete. The trial was stopped and cleaned up
+within seven minutes. This is not session-bound OAuth completion evidence and does not clear
+the runtime's production readiness or platform/recovery gates.
+
 The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
+
+The later [OAuth companion lab experiment](../docs/development/ha-oauth-companion-lab-2026-10-25.md)
+installed and removed only a hidden research fixture. Actual Core-to-App internal
+TLS, no host ports, App key-directory exclusion and App-only backup restoration
+to a locked/stopped state were observed. This does not prove the production
+secret-key source or complete HA restore: a private Core storage file was still
+plaintext and its control was readable in an unprotected backup. The runtime
+therefore remains Draft with key/cold-start/recovery and platform gates open.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -55,7 +93,7 @@ The PR #1 documentation correction aligns the inherited UI-foundation reference 
 | Home Assistant administrator | Install, configure, operate, upgrade, back up, and restore Symphonia | App repository and App page | App configuration, logs, Ingress panel, backup UI |
 | Symphonia user | Manage provider connections and music operations | Ingress panel | Symphonia UI and operation history |
 | Operator/contributor | Diagnose lifecycle or packaging faults | App logs/diagnostics and repository | Health/readiness, sanitized bundle, release notes |
-| Companion integration | Broker HA playback when separately implemented; potentially expose later native surfaces | Versioned authenticated local contract | Listening availability, later entities/actions/events |
+| Companion integration | Native OAuth setup and separately enrolled HA playback when implemented | Independently authenticated/versioned authority profiles | Native OAuth setup/reauth, listening availability; later projections deferred |
 
 **Health** means the process can answer a liveness probe. **Readiness** means configuration, storage, migrations, and recovery are safe enough to serve requests without claiming that every provider is online. **Ingress listener** is the trusted proxied management surface. **Direct listener** is any separately exposed callback or standalone endpoint and never inherits Ingress identity.
 
@@ -77,7 +115,7 @@ The PR #1 documentation correction aligns the inherited UI-foundation reference 
 
 ### 4.3 Fixed invariants
 
-1. Ingress is the only management UI/API authentication boundary in App mode.
+1. Ingress is the only browser management UI/API boundary in App mode. The native OAuth companion has a separate, narrowly authenticated internal protocol under ADR 0007; it exposes no ordinary App management routes.
 2. A direct listener cannot trust Ingress headers or expose management routes anonymously.
 3. Domain and application modules cannot import Home Assistant/Supervisor libraries.
 4. No startup, restore, or downgrade path may perform provider writes before recovery is complete.
@@ -129,10 +167,15 @@ Text equivalent: startup validates configuration, migrates, and recovers before 
 ### 6.2 Alternative and boundary paths
 
 - A provider outage degrades only that connection/capability; it does not make local history unavailable.
-- Home Assistant Core or the playback companion may be unavailable while the App continues safe provider work; only listening is disabled.
+- Home Assistant Core or the playback profile may be unavailable while existing
+  verified App grants continue safe provider work; listening is unavailable.
+- OAuth companion unavailability blocks new consent/reauthorization; existing
+  verified grants can continue App-owned provider calls and refresh. It does
+  not activate a public App callback or broad Core credential fallback.
 - A migration or restore incompatibility keeps the service `blocked`; no fresh empty database replaces user-authored state.
 - An unsupported downgrade is detected before workers start.
-- A callback listener, if selected by the authorization SDD, exposes only its bounded callback routes.
+- The selected HA OAuth profile exposes no public App callback. Any separately
+  approved standalone callback listener must satisfy its own isolation contract.
 
 ### 6.3 State machine
 
@@ -159,7 +202,7 @@ No final App option names are accepted yet. The first implementation RFC should 
 | --- | --- | --- | --- | --- |
 | Log verbosity | enum | `info` | `error`, `warning`, `info`, time-bounded `debug` | App option; reread on restart |
 | Display timezone | IANA zone | Home Assistant-configured zone when safely available, otherwise explicit setup value | Valid IANA identifier | persisted; operations store UTC instants |
-| Direct callback exposure | bounded mode | `disabled` until the authorization SDD accepts it | `disabled` or one accepted callback-only profile | App option; restart required |
+| HA OAuth bridge | bounded internal profile | unavailable until paired/proven | proposed internal TLS listener; OAuth-only scope, no host mapping | paired integration/App protected configuration |
 
 Invalid or unknown values fail closed before workers start. Authentication, non-root execution, secret redaction, audit history, and mount/network restrictions are not configurable.
 
@@ -183,7 +226,7 @@ records the existing persistence and backup tests that enforce this boundary.
 | HTTP/Ingress presentation | Base-path routing, trusted identity adaptation, status views | Provider/domain decisions |
 | Persistence/job adapters | Schema, transactions, leases, recovery | Presentation or HA identity |
 | Composition | Concrete profile and startup/shutdown order | New business rules |
-| Companion integration | Versioned authenticated playback broker; optional native projections | Database/token-store access, broad App-to-Core authority, or duplicate orchestration |
+| Companion integration | Native OAuth/callback adapter and separately authorized playback broker | Database/token-store access, durable provider grants, broad App-to-Core authority, or duplicate orchestration |
 
 ### 8.2 Contracts, durable state, and trust boundaries
 
@@ -191,6 +234,10 @@ records the existing persistence and backup tests that enforce this boundary.
 - Ports: configuration, persistence health, migration ledger, operation recovery, clock, diagnostics, platform metadata.
 - Durable state: schema version/ledger, operations, leases, application version/config; exact store is open.
 - Trust boundaries: Ingress headers are trusted only on the verified listener; App options and restore files are untrusted configuration; direct network input is untrusted.
+- Internal OAuth transport uses independently enrolled keys, pinning, pair epoch
+  and strict operation/profile/version checks. Proposed port 8098 is not a host
+  port or management listener; concrete topology/key storage is blocked by
+  `RG-008`, not implicitly approved by Supervisor internal networking.
 - Idempotency: startup/recovery can repeat after interruption without duplicating migrations or writes.
 
 ### 8.3 Executable architecture constraints
@@ -244,6 +291,7 @@ Status is textual and announced when it changes; focus remains stable during pol
 | Backup cannot quiesce | backup not declared valid | operations remain authoritative | bounded retry | retry later | no partial backup claim |
 | Ingress unavailable | UI unavailable | service/jobs remain durable | platform recovery | inspect HA | no provider rollback |
 | Direct listener misconfiguration | authorization disabled | management surface remains closed | no | correct network/callback setup | close listener |
+| OAuth companion/pair/version unavailable | new consent paused | existing App grants/history intact | bounded authenticated reconnect | pair/update/repair | abandon pending secret material; no direct callback fallback |
 
 ## 11. Security, permissions, and privacy
 
@@ -252,6 +300,9 @@ Status is textual and announced when it changes; focus remains stable during pol
 3. The service process runs non-root where supported; the container entrypoint may briefly own the Supervisor-mounted `/data` directory and known SQLite files before irreversibly dropping groups, GID, and UID. The App image has no privileged/broad mounts or host networking. The separate Supervisor development container is privileged only inside the disposable lab.
 4. App options, logs, diagnostics, backups, and image layers contain no plaintext provider grants.
 5. Restore and diagnostic inputs are size-bounded, schema-validated, and never interpreted as code, paths outside owned storage, or arbitrary URLs.
+6. Native OAuth keys/profile and pending attempt lifecycle follow `SYM-SEC-012`–`014`.
+   No provider grant is stored in HA and pairing-key backup protection is a gate,
+   not an assumed property of config entries. No new broad Core API permission is requested.
 
 ## 12. Observability and operational UX
 
@@ -282,9 +333,14 @@ Minimum **58 distinct cases**:
 | Integration/security/migration | 14 | install/restart/backup/restore/upgrade/downgrade, direct-port isolation |
 | **Total** | **58** | No double counting |
 
-All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. A maintained Home Assistant Apps devcontainer profile is prepared at [the playback lab setup](../docs/development/playback-lab/README.md#supervisor-app-and-ingress-smoke-lane) for disposable Supervisor/App/Ingress smoke. Its first install/start/Ingress pass is still pending; it does not replace the required backup/restore/upgrade evidence on the supported deployment matrix. Manual evidence covers desktop/mobile and light/dark startup/error views.
+All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. The maintained devcontainer at [the playback lab setup](../docs/development/playback-lab/README.md#supervisor-app-and-ingress-smoke-lane) has dated install/start/Ingress evidence in [the App lab](../docs/development/ha-app-lab.md), refreshed by the [2026-10-25 OAuth/HA proof](../docs/development/spotify-oauth-proof-2026-10-25.md) on Supervisor 2026.10.4. These disposable passes do not replace backup/restore/upgrade evidence on the supported deployment matrix. Manual evidence covers desktop/mobile and light/dark startup/error views.
 
 The eight feature-specific UI cases above supplement rather than replace the 92-case UI-foundation budget. The runtime release also inherits component-catalog, arbitrary-base-path, host-context fallback, safe-area, accessibility, responsive-geometry, hostile-content, and dated visual-reference gates from that SDD.
+
+The separate OAuth companion **80-case** budget supplements these 58 runtime
+cases; runtime fixtures must additionally enumerate its internal listener,
+absence of host/public callback mappings, safe paired lifecycle and blocked
+new-consent behavior without corrupting active App grants.
 
 ## 15. Documentation and discoverability
 
@@ -308,6 +364,11 @@ The eight feature-specific UI cases above supplement rather than replace the 92-
 9. Given hostile restored/config/diagnostic values, no path escape, arbitrary URL, secret output, or code execution occurs.
 10. Given Supervisor stop, new admissions stop and shutdown leaves every lease recoverable within the bounded time.
 11. Given supported Home Assistant theme/locale/direction/safe-area context or its absence, every lifecycle state uses the shared Home Assistant-native components, preserves focus/status/actions at phone and wide widths, and falls back without touching readiness or authorization.
+12. Given the HA OAuth profile, artifact/network checks find no public App
+    callback, tunnel or broad Core token; internal bridge traffic requires its
+    own enrolled authority and cannot reach browser-management routes.
+13. Given companion mismatch/removal or restored pairing state, new OAuth is
+    blocked pending repair; existing App grant/key policy remains authoritative.
 
 ## 17. Requirements traceability
 
@@ -316,6 +377,7 @@ The eight feature-specific UI cases above supplement rather than replace the 92-
 | `SYM-HA-001`–`SYM-HA-003` | App composition/platform adapter | artifact + disposable HA smoke | install/upgrade/backup guides |
 | `SYM-HA-004` | dependency rule | static architecture test | contributor architecture |
 | `SYM-HA-011` | optional broker lifecycle isolation | unavailable/incompatible broker and no-Core-proxy fixture; scenario 7 | setup/operator guide |
+| `SYM-HA-012`, `SYM-SEC-012`–`SYM-SEC-014` | OAuth companion lifecycle/key boundary | scenarios 12–13 + companion conformance | OAuth setup/recovery guide |
 | `SYM-SEC-008`–`SYM-SEC-011` | listeners/image composition | route/port/privilege abuse tests | security/setup guide |
 | `SYM-ARCH-003`, `SYM-ARCH-006`, `SYM-ARCH-007` | migration/backup use cases | release-fixture migration + restore tests | recovery guide |
 | `SYM-DEP-001`–`SYM-DEP-010` | release artifact | metadata/package/smoke matrix | release support policy |
@@ -349,4 +411,4 @@ The eight feature-specific UI cases above supplement rather than replace the 92-
 - Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: App is the primary deployment boundary; core remains HA-independent; UI follows the owned Home Assistant-native compatibility layer.
 - Rejected: all logic in a custom integration; unauthenticated management port; fresh database fallback after migration failure.
-- Follow-up: standalone release and native projections beyond the selected playback broker; the broker's own contract is specified by the listening SDD.
+- Selected OAuth direction: ADR 0007 and the Draft companion SDD; protocol and key/lifecycle proof precede implementation. Standalone and native projections beyond the separately selected OAuth/playback profiles remain follow-up work.

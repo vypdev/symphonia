@@ -111,6 +111,7 @@ Readiness is necessary but not authorization to implement. The owner must still 
 | Operational dashboard | [Operational dashboard](operational-dashboard.md) | Bounded administrator view of live persisted App state while the full UI foundation remains under review |
 | Listening and playback control | [Listening and playback control](listening-and-playback-control.md) | Explicit source/player/output selection, now playing, supported controls, and command confirmation without an audio engine |
 | Provider connections | [Provider connections and authorization](provider-connections-and-authorization.md) | OAuth/cookies, secrets, callback boundary, effective capabilities |
+| HA OAuth companion | [Home Assistant OAuth companion](home-assistant-oauth-companion.md) | Native consent/Core callback, private pairing, current-admin binding and App-only grant lifecycle without Cloudflare |
 | Provider imports | [Library import and provider projections](library-import-and-provider-projections.md) | Completeness, provenance, unavailable items, retention |
 | Recording identity | [Recording identity resolution](recording-identity-resolution.md) | Conservative matching, evidence, manual decisions |
 | Playlist copy | [One-time playlist copy](one-time-playlist-copy.md) | Immutable plan, strict readiness, safe external writes |

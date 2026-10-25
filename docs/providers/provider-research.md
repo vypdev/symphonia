@@ -10,6 +10,26 @@ This snapshot separates what Symphonia needs from what an official API documents
 
 Existing Home Assistant and community implementations are reviewed separately in [Home Assistant music ecosystem review](home-assistant-ecosystem-review.md). They provide valuable implementation evidence but do not replace an official provider contract.
 
+## 2026-10-25 — Native Home Assistant OAuth companion
+
+Official documentation/source reviewed on this date; no new live companion
+test was run. The [design RFC](../architecture/home-assistant-oauth-companion-rfc.md)
+is a Symphonia proposal, not behavior guaranteed by these sources.
+
+| Official source | Dated fact / practical limit |
+| --- | --- |
+| [HA Spotify setup](https://www.home-assistant.io/integrations/spotify/) | Uses the My OAuth redirect; documents a direct Core callback alternative. App Ingress does not inherit it. |
+| [My Home Assistant](https://www.home-assistant.io/integrations/my/) | Browser navigation selects the user's instance; this is not a reverse tunnel to an App. |
+| [HA OAuth/application-credentials guide](https://contributors.home-assistant.io/core/integrations/oauth2/) | Provides native flows, custom implementations, PKCE and reauthentication. Default completion stores a token; custom flow behavior needs separate validation. |
+| [Core 2026.10.3 OAuth helper](https://github.com/home-assistant/core/blob/2026.10.3/homeassistant/helpers/config_entry_oauth2_flow.py) | Exports the My/Core redirect paths and a PKCE implementation. The callback resumes a flow; that alone does not establish fresh admin/browser identity. Default creation/refresh owns Core-stored tokens. |
+| [Spotify redirect rules](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri) | HTTPS except literal loopback; do not adopt generic LAN-HTTP fallback examples from HA docs as Spotify guarantees. |
+| [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow) | Public client, S256 and verifier-bound exchange are documented; exact registration/scopes still need dedicated-account proof. |
+
+Community implementation findings remain [separate](home-assistant-ecosystem-review.md#2026-10-25--oauth-companion-evidence).
+HA config entries are not established here as an encrypted secret store. A
+code-only handoff, fresh native admin confirmation, grant publication, private
+pairing and key/backup behavior remain `RG-002`/`RG-008` proof obligations.
+
 ## 2026-09-28 playback and Home Assistant API update
 
 This is a dated official-documentation check, not a live account/device feasibility result. Listening is a separate capability from library import and provider playlist writes.

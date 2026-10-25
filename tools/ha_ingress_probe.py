@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import json
 import os
+from pathlib import Path
 import re
 import urllib.error
 import urllib.request
@@ -21,6 +22,30 @@ TOKEN = re.compile(r"[A-Za-z0-9_-]+\Z")
 ASSET = re.compile(r"assets/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.js\Z")
 Response = tuple[int, bytes]
 Requester = Callable[[str, str, bytes | None, str | None], Response]
+
+
+def lab_owner_id(auth_path: Path = Path("/config/.storage/auth")) -> str:
+    """Select the disposable Core owner metadata, never a browser credential.
+
+    Supervisor 2026.10 requires a user-bound Ingress session. This internal
+    lab probe is not evidence of browser authentication or actor binding.
+    """
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    data = auth.get("data") if isinstance(auth, dict) else None
+    users = data.get("users") if isinstance(data, dict) else None
+    if not isinstance(users, list):
+        raise ValueError("invalid lab user metadata")
+    owners = [user for user in users if isinstance(user, dict) and user.get("is_owner") is True]
+    if len(owners) != 1 or owners[0].get("is_active") is not True:
+        raise ValueError("one active disposable lab owner is required")
+    user_id = owners[0].get("id")
+    _validate_user_id(user_id)
+    return user_id
+
+
+def _validate_user_id(user_id: object) -> None:
+    if not isinstance(user_id, str) or re.fullmatch(r"[a-f0-9]{32}", user_id) is None:
+        raise ValueError("invalid lab user identifier")
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -49,9 +74,11 @@ def proxy_path(ingress_url: object, endpoint: str) -> str:
     return f"/ingress/{route_token}/{endpoint}"
 
 
-def probe(request: Requester) -> dict[str, object]:
+def probe(request: Requester, *, user_id: str) -> dict[str, object]:
     """Verify session enforcement, live dashboard, and relative UI assets."""
-    session_status, session_body = request("/ingress/session", "POST", b"{}", None)
+    _validate_user_id(user_id)
+    session_payload = json.dumps({"user_id": user_id}).encode("utf-8")
+    session_status, session_body = request("/ingress/session", "POST", session_payload, None)
     if session_status != 200:
         raise RuntimeError("Supervisor did not create an Ingress session")
     session = json.loads(session_body)["data"]["session"]
@@ -128,8 +155,8 @@ def supervisor_request(path: str, method: str, data: bytes | None, session: str 
 
 def main() -> int:
     try:
-        result = probe(supervisor_request)
-    except (KeyError, ValueError, RuntimeError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
+        result = probe(supervisor_request, user_id=lab_owner_id())
+    except (KeyError, ValueError, RuntimeError, OSError, urllib.error.URLError, json.JSONDecodeError) as error:
         # Do not stringify exceptions: urllib may include a secret-bearing URL.
         print(json.dumps({"error": type(error).__name__}))
         return 1
