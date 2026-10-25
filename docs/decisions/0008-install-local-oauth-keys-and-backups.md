@@ -76,6 +76,20 @@ remaining gates are resolved. The owner authorized continuing through those
 gates and implementation/testing; that authorization does not itself make an
 SDD ready or establish release conformance.
 
+The [successor recovery/CSR research](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+adds twenty-one three-record reset/rotation/publication process deaths, four real
+missing/wrong-key cases, three CSR-issuance deaths and thirty-six real native
+HTTP/signature observations. Separately, thirty-four actual Core/Supervisor wire
+observations establish CSR enrollment/renewal and native signed reset/resume
+through App Ingress after key loss. This narrows mechanism uncertainty; the
+short-lived recovery approval's pairing-authority/UX disclosure still needs
+review. Manual HTTP cookies do not establish browser semantics. No new recovery
+permission is accepted by this evidence, and the custody direction is unchanged.
+One additional actual post-reset-commit death proves startup revocation before
+TLS without rekeying. This remains bounded research.
+Final adapter/package, concurrency, restore and live provider/browser conformance
+remain open.
+
 ## Alternatives and consequences
 
 - Manual unlock after restart keeps the wrapping key off disk but was not the

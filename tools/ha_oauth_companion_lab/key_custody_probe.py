@@ -73,7 +73,7 @@ class PrivateFiles:
                 raise Locked("private_file_too_large")
             return value
 
-    def publish(self, name, value, *, exclusive=False):
+    def publish(self, name, value, *, exclusive=False, checkpoint=lambda point: None):
         self._name(name)
         if not isinstance(value, bytes) or len(value) > MAX_RECORD:
             raise Locked("invalid_private_value")
@@ -83,9 +83,12 @@ class PrivateFiles:
         try:
             with os.fdopen(descriptor, "wb") as destination:
                 os.fchmod(destination.fileno(), 0o600)
+                checkpoint("private_opened")
                 destination.write(value)
+                checkpoint("private_written")
                 destination.flush()
                 os.fsync(destination.fileno())
+                checkpoint("private_durable")
             if exclusive:
                 # link is an atomic no-replace publication; remove the temporary
                 # link before opening the file through the nlink=1 reader.
@@ -93,7 +96,9 @@ class PrivateFiles:
                         follow_symlinks=False)
             else:
                 os.replace(temporary, name, src_dir_fd=self.fd, dst_dir_fd=self.fd)
+            checkpoint("private_named")
             os.fsync(self.fd)
+            checkpoint("private_named_durable")
         finally:
             try:
                 os.unlink(temporary, dir_fd=self.fd)

@@ -120,6 +120,33 @@ authenticate either side. This is a proposed transport, not a proven topology.
 
 ## Native flow identity, not an inferred Ingress session
 
+### CSR lifecycle candidate and bounded result
+
+The [successor research](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+now exercises generated P-256/SHA-256 CSRs, server-owned certificate subject/
+extensions, a private local issuer and durable challenge consumption before
+issuance. Pending issuance is resumed explicitly; status does not mint keys or
+certificates. An admitted renewal requires current-key possession: a domain-separated signature
+binds the issued-certificate digest, replacement CSR digest and epoch in the
+research fixture, in addition to actual mTLS. The exact certificate must exist
+in the issuer ledger; its public metadata cannot admit renewal. Renewal is
+fenced by the previous serial and epoch;
+only the committed certificate is active. Revoking a pair invalidates its
+epoch independently of a still-valid TLS certificate.
+
+The candidate uses a five-minute challenge and ten-minute synthetic client
+certificate. The latter is a research lifetime, not a ratified production
+renewal schedule. Three real process-death points and newly issued client TLS
+pass on the pinned image. A separate [actual-wire campaign](../development/oauth-recovery-and-pairing-lab-2026-10-25.md#actual-coresupervisor-csr-and-ingress-reset)
+now proves generated CSR enrollment and renewal, previous-certificate rejection,
+key-loss handling and fresh native reset/resume admission through real Supervisor
+Ingress. The Core key-file adapter, concurrent renewal/revocation deployment races,
+recovery authority/UX review and supported package/browser matrix still need
+conformance. HTTP clients manually supply cookies; this is not Chrome proof. No bootstrap or renewal route
+is exposed in the production App by these tools.
+
+### Native flow and actor contract
+
 Proposed entry layout: one `symphonia` pair config entry per App installation,
 holding safe connection references. The initial native flow pairs and creates
 that entry. Provider connect/reconnect then runs as a **main config flow** for

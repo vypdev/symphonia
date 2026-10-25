@@ -391,7 +391,27 @@ from this SDD's unchanged production test budget and release acceptance.
 
 The follow-up also proves eight synthetic file/SQL process-death points and
 four additional key/publication fences. This is single-record/quiescent research;
-full rotation, live collection and authenticated reset admission remain open.
+final rotation/lease, collection and authenticated reset admission remain open.
+
+
+The [recovery/CSR follow-up](../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+adds twenty-one three-record publication/rotation/reset process-death points,
+four actual missing/wrong-key cases and twenty-five fake-AEAD policy cases.
+Dynamic CSR research passes thirty-six observations including three issuance
+process deaths. A separate real-Core HTTP/signature prototype passes thirty-six
+observations plus fourteen ordinary binding/resume cases. The guarded
+Core 2026.9.4/Supervisor 2026.10.4 wire repeat passes thirty-four Boolean observations:
+CSR enrollment/renewal, stale-certificate denial, App-key loss with live Ingress,
+fresh native admin approval, actual App Origin/CSRF enforcement and interrupted
+reset with a new signed resume. A separate actual child death after reset commit
+before pair revocation passes ten observations: startup revokes idempotently
+before TLS, serializes renewal/reset and never rearms a consumed challenge.
+Thirteen ordinary boundary/operator/renewal cases are
+separate. Ingress still returned 200 after user deactivation; native HTTP denied
+that user. Manual lab cookies are not browser/HTTPS proof. The signed recovery
+authority/UX remains proposed; final package/restore, production concurrency and
+browser/provider conformance remain open. No result establishes readiness or
+counts toward the unchanged production budgets.
 
 ## 17. Requirements traceability
 

@@ -76,7 +76,13 @@
         "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
         "tests/test_ha_oauth_key_custody_fixture.py",
         "tools/ha_oauth_companion_lab/key_publication_probe.py",
-        "tests/test_ha_oauth_key_publication_fixture.py"
+        "tests/test_ha_oauth_key_publication_fixture.py",
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/enrollment_probe.py",
+        "tools/ha_oauth_companion_lab/recovery_probe.py",
+        "tests/test_ha_oauth_recovery_fixture.py",
+        "tools/ha_oauth_companion_lab/native_reset_probe.py",
+        "tests/test_ha_native_reset_fixture.py"
       ],
       "implementationEvidence": {
         "code": [
@@ -129,9 +135,9 @@
       "blockers": [
         "RG-004 storage and recovery spike",
         "Supported Home Assistant versions and CPU architectures",
-        "Final local-key adapter/package, rotation/reset and backup/restore conformance under accepted ADR 0008",
+        "Final local-key adapter/package, production concurrency/reset UX and backup/restore conformance under accepted ADR 0008",
         "OQ-005 standalone release timing and authentication",
-        "RG-008 production CSR/pair lifecycle and full recovery beyond bounded persistent-key and protected-backup proof"
+        "RG-008 production lifecycle/recovery and package matrix beyond bounded CSR/renewal/native-Ingress reset wire proof"
       ]
     },
     {
@@ -391,7 +397,13 @@
         "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
         "tests/test_ha_oauth_key_custody_fixture.py",
         "tools/ha_oauth_companion_lab/key_publication_probe.py",
-        "tests/test_ha_oauth_key_publication_fixture.py"
+        "tests/test_ha_oauth_key_publication_fixture.py",
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/enrollment_probe.py",
+        "tools/ha_oauth_companion_lab/recovery_probe.py",
+        "tests/test_ha_oauth_recovery_fixture.py",
+        "tools/ha_oauth_companion_lab/native_reset_probe.py",
+        "tests/test_ha_native_reset_fixture.py"
       ],
       "implementationEvidence": {
         "code": [
@@ -427,7 +439,7 @@
       },
       "blockers": [
         "RG-002 native Core/My callback and provider authorization conformance",
-        "RG-008 production enrollment/key adapter/reset/rotation and complete HA/App/provider/browser conformance (trust direction accepted; bounded mechanisms proven)",
+        "RG-008 final enrollment/key adapter, concurrency/reset UX and complete HA/App/provider/browser conformance beyond bounded native CSR/Ingress reset wire proof",
         "RG-001 provider-specific scopes and account constraints",
         "Authenticated actor/session binding and provider token/secret lifecycle integration",
         "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
@@ -491,7 +503,13 @@
         "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
         "tests/test_ha_oauth_key_custody_fixture.py",
         "tools/ha_oauth_companion_lab/key_publication_probe.py",
-        "tests/test_ha_oauth_key_publication_fixture.py"
+        "tests/test_ha_oauth_key_publication_fixture.py",
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/enrollment_probe.py",
+        "tools/ha_oauth_companion_lab/recovery_probe.py",
+        "tests/test_ha_oauth_recovery_fixture.py",
+        "tools/ha_oauth_companion_lab/native_reset_probe.py",
+        "tests/test_ha_native_reset_fixture.py"
       ],
       "implementationEvidence": {
         "code": [],
@@ -500,8 +518,8 @@
       },
       "blockers": [
         "RG-008 production package/browser/deployment conformance beyond isolated native HTTP proof on Core 2026.9.4 and 2026.10.3",
-        "RG-008 production enrollment/renewal, durable pairing and full wire/size/rate conformance beyond pre-issued PKI TLS proof",
-        "Final local-key adapter/package, CSR/rotation/reset/publication and full backup/restore conformance under accepted ADR 0008",
+        "RG-008 final enrollment/renewal adapter, deployment concurrency and full size/rate conformance beyond actual generated-CSR/Supervisor wire proof",
+        "Final local-key adapter/package, production rotation/publication concurrency, recovery authority/UX and full backup/restore conformance under accepted ADR 0008",
         "RG-002 App-only provider exchange, secret publication, uncertain-outcome and disconnect recovery",
         "RG-001 production PKCE-only client UX and exact provider capability/scope profiles",
         "80 planned production cases and 16 live bridge cases remain unimplemented/unproven; research fixtures are separate"

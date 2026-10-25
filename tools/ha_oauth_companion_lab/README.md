@@ -225,3 +225,74 @@ the pinned-container campaign provides the separate real-AEAD evidence. Inspect
 the exact twelve owned case markers and volume labels/consumers before removing
 that volume; never delete another application's data. The report records the
 performed campaign and its remaining fault-plan gaps.
+
+## Recovery and CSR successor
+
+The [dated successor](../../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+documents `recovery_probe.py`, `enrollment_probe.py` and their exact limitations.
+Stage both beside the regular `tools/__init__.py`, private-file/publication
+fixtures and `app/server.py`, read-only at `/research`. Use the same pinned image,
+fresh labelled volumes, no exterior network/host ports and UID/GID 10001 after
+preparing only each fresh mount. The CSR campaign binds container loopback.
+
+```text
+python3 /research/tools/ha_oauth_companion_lab/enrollment_probe.py
+python3 /research/tools/ha_oauth_companion_lab/recovery_probe.py
+```
+
+The CSR campaign has three deliberate child exits 83. The recovery campaign
+has twenty-one, including seven reset/retirement fences and four inside-publication points,
+plus four missing/wrong-key cases. Parent exit 0 and all Boolean
+observations true are required. `test_ha_oauth_recovery_fixture.py` uses an
+explicitly fake codec and test admission boolean; neither is native identity
+or encryption proof. The scripts are not production endpoints or an installable
+integration. The separate actual-wire experiment below now proves bounded
+enrollment/renewal and native reset admission; final production/browser
+conformance remains open.
+Inspect exact volume labels, owned CSR/case markers, private file types/modes and
+absence of consumers before removing only these synthetic volumes. Preserve
+safe receipts/source hashes, never private material or challenges.
+
+`native_reset_probe.py` is a third, independent native-HTTP experiment. Run it
+in a fresh networkless pinned Core container, with read-only `/research`,
+`PYTHONPATH=/research` and temporary `/tmp` and `/config` only. It bootstraps
+its own Core and never mounts the owner's or guarded lab's existing config.
+The actual Core actor/signature observations are separate from its explicit
+Ingress/browser/Origin/CSRF stubs. No default production recovery permission
+or native integration is installed by this script.
+
+
+## Actual Supervisor CSR, renewal and native reset wire
+
+`wire_lab_operator.py` stages the hidden `wire_app/` and temporary
+`wire_core_fixture.py` component only in the exact pinned disposable lab. It
+refuses another Core image/outer container. Follow the
+[full recipe and teardown](../../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md#reproduction-and-cleanup),
+using a fresh private receipts directory and always `cleanup` after
+`receipt`. It preserves exact original Core configuration, creates/removes only
+its synthetic users and owns its explicit App/component namespaces. No existing
+user auth token is read. Core's internal Supervisor token stays in process.
+The App has no host ports, broad mounts or API privileges; its fixed lifetime is
+twenty minutes. The key-loss gate is bounded to 180 seconds after pairing.
+
+Unlike the older isolated prototype, this experiment crosses actual Supervisor
+Ingress and Core-to-App CSR/renewal TLS. Renewal independently requires a
+current-key signature over the exact issued certificate, replacement CSR and
+epoch. Public certificate bytes alone cannot renew. The final campaign passes
+36 isolated CSR and 34 real-wire Boolean observations. Its manually supplied
+cookies over HTTP are explicitly not Chrome/HTTPS or provider proof. Production
+recovery authority/UX and final package rollout still need review.
+
+`wire_reset_probe.py` adds one actual child death after credential reset commit
+before issuer revocation. Stage it and `wire_app/server.py` with the complete
+research package in the pinned networkless image and a fresh owned volume as
+UID10001. Ten observations verify startup revokes before TLS, is idempotent,
+preserves history and never rekeys. Its admission Boolean is a test stub.
+Post-reset wire fixtures require explicit fresh provisioning; they never expose
+a consumed challenge or silently re-arm enrollment after restart.
+
+`wire_cancellation_probe.py` cancels the real asyncio task with explicitly fake
+HA/auth APIs and a synthetic process-only Supervisor credential in the pinned
+networkless image. Six observations distinguish interrupted/failed receipts
+from success and verify scoped fake-user cleanup. No live Core config/user,
+real credential, provider or native authorization is exercised.

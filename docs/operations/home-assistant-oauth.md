@@ -100,6 +100,20 @@ The [key contract](../architecture/local-key-custody-rfc.md) and
 [bounded lab results](../development/local-key-custody-lab-2026-10-25.md) state
 which mechanisms passed; full reset/rotation/restore conformance remains gated.
 
+The [next recovery campaign](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+shows why an interrupted reset must remain pending: restarting or visiting
+health cannot finish it. A future operator must explicitly resume through the
+authenticated management surface, then pair and consent again. The file/SQL laboratory
+uses stubbed admission; a separate guarded Core/Supervisor campaign now proves
+native fresh-admin approval and actual Ingress Origin/CSRF reset/resume after
+key loss. Neither is an available production admin recovery endpoint.
+Dynamic CSR/certificate recovery is also research, not an installable helper.
+A proposed recovery variant asks the initiating administrator for a fresh
+native HA confirmation and returns a short-lived approval to the App's protected
+form. The native actor/signature and App Ingress mechanisms have real-framework
+HTTP proof. Browser UX, final packaging and pairing-permission disclosure still
+need review; manually supplied lab cookies do not establish Chrome semantics.
+
 **Unpair/remove auxiliary integration** disables new consent and pending bridge
 authority. It does not mean an existing App grant was erased. If the App is
 offline, cleanup is visibly pending until the operator revokes the pair there.
