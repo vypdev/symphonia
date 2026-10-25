@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import secrets
 import signal
+import socket
 import stat
 import subprocess
 import threading
@@ -345,14 +346,44 @@ class Trial:
 
 
 class TrialServer(HTTPServer):
-    def __init__(self, address, trial, *, callback=False):
+    def __init__(self, address, trial, *, callback=False, parse_seconds=2.0):
         self.trial, self.callback = trial, callback
+        self.parse_seconds, self._parsing = parse_seconds, None
         super().__init__(address, TrialHandler)
 
     def get_request(self):
         connection, address = super().get_request()
         connection.settimeout(2)
+        expired = threading.Event()
+
+        def expire():
+            expired.set()
+            try:
+                connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+        # HTTPServer handles one request at a time. A fixed parsing window,
+        # unlike an idle timeout, cannot be extended by trickling bytes.
+        deadline = threading.Timer(self.parse_seconds, expire)
+        deadline.daemon = True
+        self._parsing = (connection, deadline, expired)
+        deadline.start()
         return connection, address
+
+    def parsing_complete(self, connection, *, check_expiry=True):
+        current = self._parsing
+        if current is None or current[0] is not connection:
+            return
+        self._parsing = None
+        current[1].cancel()
+        current[1].join(timeout=1)
+        if check_expiry and current[2].is_set():
+            raise TimeoutError("trial_parse_deadline")
+
+    def shutdown_request(self, connection):
+        self.parsing_complete(connection, check_expiry=False)
+        super().shutdown_request(connection)
 
 
 class TrialHandler(BaseHTTPRequestHandler):
@@ -372,8 +403,8 @@ class TrialHandler(BaseHTTPRequestHandler):
             "Content-Security-Policy": "default-src 'none'; form-action 'self' https://accounts.spotify.com; frame-ancestors 'self'; base-uri 'none'",
             "Connection": "close", **(headers or {})}.items():
             self.send_header(name, value)
-        self.end_headers()
         try:
+            self.end_headers()
             self.wfile.write(body)
         except (OSError, TimeoutError):
             pass
@@ -383,6 +414,7 @@ class TrialHandler(BaseHTTPRequestHandler):
         return self.server.trial.identity(self.client_address[0], self.headers)
 
     def do_GET(self):
+        self.server.parsing_complete(self.connection)
         trial = self.server.trial
         if self.server.callback:
             try:
@@ -437,10 +469,15 @@ class TrialHandler(BaseHTTPRequestHandler):
             lengths = self.headers.get_all("Content-Length", [])
             if len(lengths) != 1 or not lengths[0].isdigit() or not 0 < int(lengths[0]) <= 256 or self.headers.get("Transfer-Encoding"):
                 raise Rejected("invalid_request_size")
-            body = self.rfile.read(int(lengths[0])).decode("ascii")
+            raw = self.rfile.read(int(lengths[0]))
+            if len(raw) != int(lengths[0]):
+                raise Rejected("invalid_request_size")
+            body = raw.decode("ascii")
             data = parse_qs(body, keep_blank_values=True, max_num_fields=1)
             if set(data) != {"csrf"} or len(data["csrf"]) != 1 or len(self.headers.get_all("Origin", [])) != 1:
                 raise Rejected("invalid_form")
+            # Provider I/O has its own transport deadlines after parsing ends.
+            self.server.parsing_complete(self.connection)
             target = self.server.trial.post(self.path, identity, self.headers.get("Cookie", ""), self.headers["Origin"], data["csrf"][0])
             self.send(303, b"", headers={"Location": target or identity.base_path + "/"})
         except Rejected as error:

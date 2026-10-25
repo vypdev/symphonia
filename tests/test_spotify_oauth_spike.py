@@ -94,6 +94,8 @@ class SpotifyOAuthProofTests(unittest.TestCase):
         self.assertEqual((status, result["result"]), (200, "consent_denied"))
         self.assertFalse(self.proof._cookie)
         self.assertFalse(self.proof._verifier)
+        self.assertTrue(result["local_credentials_erased"])
+        self.assertEqual(self.complete()[0], 400)
         self.transport.assert_not_called()
 
     def test_exchange_profile_refresh_and_same_account_are_verified_without_retaining_secrets(self):

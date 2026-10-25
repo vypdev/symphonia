@@ -186,3 +186,5 @@ research App was uninstalled; its staged sources were removed only after byte
 comparison with the checkout. The guarded lab was stopped, its original named
 volumes retained. No production source, dependencies, workflows or owner-HA
 configuration changed.
+
+The subsequent historical-trial parsing-deadline correction passes **490 tests, no skips, and 89% coverage**. It adds loopback slow-client/truncated-body/provider-deadline regressions; trial.6 remains uninstalled on the owner HA. A denial-cleanup alert was verified as a false positive against the existing try/finally and passing denial test; its erasure/replay assertions were strengthened. This does not add a native-companion live pass.

@@ -4,8 +4,10 @@ from html.parser import HTMLParser
 import http.client
 import json
 from pathlib import Path
+import socket
 import threading
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
@@ -371,6 +373,87 @@ class HAInstalledTrialTests(unittest.TestCase):
             {"management_origin": "https://ha.test/path"}, {"client_id": ""}, {"tunnel_enabled": "true"}, {"secret": "canary"}):
             with self.assertRaises(ValueError):
                 configuration({**OPTIONS, **changes})
+
+    def test_trickling_callback_headers_cannot_starve_the_next_request(self):
+        server = TrialServer(("127.0.0.1", 0), self.trial, callback=True, parse_seconds=0.15)
+        worker = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+        worker.start()
+        stop = threading.Event()
+        stalled = socket.create_connection(server.server_address, timeout=2)
+        stalled.sendall(b"GET /oauth/callback HTTP/1.1\r\nX-Drip: ")
+
+        def trickle():
+            while not stop.wait(0.02):
+                try:
+                    stalled.sendall(b"x")
+                except OSError:
+                    break
+
+        sender = threading.Thread(target=trickle, daemon=True)
+        sender.start()
+        healthy = http.client.HTTPConnection(*server.server_address, timeout=1.5)
+        try:
+            healthy.request("GET", "/")
+            response = healthy.getresponse()
+            self.assertEqual(response.status, 400)
+            response.read()
+            self.assertIsNone(self.trial.flow)
+        finally:
+            stop.set()
+            sender.join(timeout=1)
+            stalled.close()
+            healthy.close()
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=2)
+
+    def test_short_half_closed_body_cannot_authorize_a_private_action(self):
+        server = TrialServer(("127.0.0.1", 0), self.trial)
+        worker = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+        worker.start()
+        client = socket.create_connection(server.server_address, timeout=2)
+        body = urlencode({"csrf": self.csrf}).encode()
+        try:
+            with patch.object(TrialHandler, "ingress", return_value=self.identity):
+                request = ("POST /check HTTP/1.1\r\nHost: fixture\r\n"
+                    "Content-Type: application/x-www-form-urlencoded\r\n"
+                    f"Origin: {OPTIONS['management_origin']}\r\nCookie: {self.cookie}\r\n"
+                    f"Content-Length: {len(body) + 1}\r\n\r\n").encode() + body
+                client.sendall(request)
+                client.shutdown(socket.SHUT_WR)
+                response = http.client.HTTPResponse(client)
+                response.begin()
+                self.assertEqual(response.status, 403)
+                response.read()
+            self.assertFalse(any(session["checked"] for session in self.trial.sessions.values()))
+        finally:
+            client.close()
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=2)
+
+    def test_parsing_deadline_does_not_cut_off_authorized_provider_work(self):
+        _, path = self.begin()
+        self.trial.receive(path, urlsplit(ORIGIN).netloc)
+        self.trial.exchange = lambda *args: time.sleep(0.15)
+        server = TrialServer(("127.0.0.1", 0), self.trial, parse_seconds=0.05)
+        worker = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+        worker.start()
+        client = http.client.HTTPConnection(*server.server_address, timeout=2)
+        try:
+            with patch.object(TrialHandler, "ingress", return_value=self.identity):
+                client.request("POST", "/complete", urlencode({"csrf": self.csrf}),
+                    headers={"Cookie": self.cookie, "Origin": OPTIONS["management_origin"],
+                             "Content-Type": "application/x-www-form-urlencoded"})
+                response = client.getresponse()
+                self.assertEqual(response.status, 303)
+                response.read()
+            self.assertEqual(self.trial.report["result"], "spotify_pkce_verified")
+        finally:
+            client.close()
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=2)
 
     def test_opaque_client_id_is_encoded_without_overwriting_redirect(self):
         client = "UPPER_id&redirect_uri=https://example.invalid"

@@ -164,3 +164,5 @@ owner's HA; the earlier stopped trial and its historical results are unchanged.
 The selected native companion design does not use this callback/tunnel trial.
 
 The prepared `0.1.0-trial.5` revision also anchors every form and refresh link to the verified Ingress base path, including documents opened without a trailing slash. Client IDs are opaque printable-ASCII values with a local 1–256 character tooling bound, not an assumed Spotify hexadecimal format; URL/form encoding keeps them in one parameter. This is not a new live-provider result or an owner-instance installation.
+
+Prepared trial.6 gives each connection a fixed two-second header/body parsing window, in addition to its idle timeout. Trickled bytes cannot extend it. The parsing watchdog is cancelled before authorized provider I/O, whose own request deadlines remain in force; short bodies are rejected. This is a bounded parsing regression, not a general public-service DoS certification. Trial.6 has not been installed or started on the owner HA.
