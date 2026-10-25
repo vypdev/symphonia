@@ -105,7 +105,7 @@ IDs, cookies, Ingress route tokens or private URLs.
 
 ## Verification and live trial gates
 
-[29 App tests](../../tests/test_ha_oauth_trial.py) cover actor/session/browser
+[30 App tests](../../tests/test_ha_oauth_trial.py) cover actor/session/browser
 separation, peer/header ambiguity, HTTPS, CSRF/Origin, exact callback host and
 route, expiry, replay, concurrency, denial/cancellation, restart, bounded
 options, token/scope/account checks, real loopback listener isolation and
@@ -123,8 +123,9 @@ limited tunnel; register its exact redirect; and run the
 The [App procedure](../../tools/ha_oauth_trial/README.md) includes stop,
 uninstall, redirect removal and dedicated-grant cleanup.
 
-The package is preparation, not evidence of a public callback or real HA
-session binding. Those remain pending until actually run and recorded.
+The initial package was preparation only. The subsequent owner-installation
+trial below proves bounded HTTPS reachability, but real provider return and
+session-bound finalization remain pending.
 The runtime and authorization SDDs remain Draft with unchanged blockers.
 No accepted production architecture contract or ADR is changed by this trial.
 
@@ -132,13 +133,91 @@ Local verification passed **463 Python tests**, with **89%** combined
 line/branch coverage against the unchanged 85% floor. Specification validation,
 whitespace and manual catalog/SDD checks passed. The lab trial was explicitly
 stopped; its fixed lifecycle output confirmed local credential disposal.
-Real Chrome HTTPS remains pending: the browser policy rejected the value
+During preparation, real Chrome HTTPS remained pending: the browser policy rejected the value
 returned by the masked remote-link copy control as an invalid URL. No
 alternate egress route was attempted; the owner was asked to open the intended
 HTTPS page manually. No trial App or public tunnel was installed/started on
-the owner's instance during preparation.
+the owner's instance during that preparation phase. The owner subsequently
+supplied the exact HTTPS URL and authorized the bounded installation/trial.
 
 Traceability: `SYM-SEC-001`–`SYM-SEC-007` cover the bounded PKCE, session,
 replay/expiry and local disposal probes; `SYM-SEC-008`–`SYM-SEC-010` cover listener,
 origin and redirect isolation; `SYM-HA-009` covers bounded actual Ingress
 transport evidence. These results do not close the complete SDD budgets.
+
+
+## Owner installation and first HTTPS trial
+
+The owner explicitly authorized installing revision
+`4a42e48faa896a4d5fff8d4906a2021f971a7c64` and running the callback-only tunnel
+for at most twenty minutes. The local and remote branch heads matched that
+revision immediately before installation. Chrome added the managed branch
+repository and Supervisor installed **Symphonia OAuth Trial 0.1.0-trial.1**.
+Boot, watchdog and automatic updates remained off.
+
+The first start used the dedicated public test Client ID, the owner's existing
+HTTPS management origin and `tunnel_enabled: false`. The real authenticated
+Ingress iframe rendered the private App page. Its server SHA-256 matched the
+immutable export manifest:
+`fac77d524ffedda8cc8682e9f450455e8a73d814b35b170cf44a94d670021c33`.
+No browser cookie or HA credential value was extracted.
+
+The App was stopped, then started with the approved tunnel enabled at about
+08:58 UTC. Chrome reached its generated HTTPS callback with trusted TLS;
+a callback without correlation, `/` and `/complete` all returned the fixed
+callback rejection instead of management UI. The exact temporary redirect
+was registered in the dedicated Spotify development app. No native HA
+Spotify registration or grant was changed.
+
+**The real provider flow did not pass.** Selecting **Autorizar Spotify**
+returned the App's fixed rejection before Spotify consent. Reloading the
+private form and opening it as a complete Ingress tab also failed. The private
+report remained `register_callback_then_start`: no authorization attempt was
+admitted and no Spotify token exchange or refresh was performed by this App.
+A narrowly inspected diagnostic POST displayed `Origin: null`; no cookies,
+CSRF values or full request headers were copied into evidence.
+
+[Core 2026.10.3 header middleware](https://github.com/home-assistant/core/blob/2026.10.3/homeassistant/components/http/headers.py)
+overwrites the upstream `Referrer-Policy` response header with `no-referrer`.
+The trial had set its private response header to `same-origin`, but had no
+corresponding document metadata. This explains the observed Origin failure;
+the exact failure category of the first generic rejection was not logged.
+A separate Chrome loopback fixture, without HA/Spotify data, reproduced the
+browser behavior while keeping the HTTP header fixed at `no-referrer`:
+
+| Synthetic browser case | `origin_exact` | `origin_null` |
+| --- | --- | --- |
+| Response header only | false | true |
+| Private document `<meta name=referrer content=same-origin>` | true | false |
+
+Version **0.1.0-trial.2** adds that metadata only to the private management
+page. It retains exact Origin and CSRF validation, including rejection of
+`null`; callback responses retain `no-referrer`. The new HTTP regression
+parses the served form, rejects a null-origin start, accepts the exact-origin
+start and makes no provider call. This is a prepared fix, not a passing real
+HA/Spotify result; updating/running the revised research artifact needs its
+applicable installation authorization.
+
+The first App/tunnel was explicitly stopped before the 09:08:21 UTC public
+closure check, within eleven minutes. Supervisor showed **Detenido**, the public hostname returned
+Cloudflare tunnel error 1033, `tunnel_enabled` was restored to false, and the
+temporary Spotify redirect was removed and verified absent. The installed
+App is retained stopped for the corrected trial. Local grants were never
+created in this run; provider revocation was not performed. The earlier
+separate loopback grant proof remains separate evidence.
+
+This live run partially exercises matrix cases 1/2 (callback reachability
+from the current Chrome network, no independent off-LAN browser), 10 (GET
+route isolation) and 16 (stop and temporary-redirect cleanup). Initiating
+session completion, real App exchange/refresh, other users/browsers,
+revocation, negative callback correlation, concurrency and the rest of the
+16-case matrix remain unproven on the owner's installation.
+
+
+The corrected revision passed **464 Python tests** (30 trial-App and three
+exporter tests included), with **89%** combined line/branch coverage against
+the unchanged 85% floor. Specification validation, whitespace and manual
+catalog/SDD consistency checks passed. Its local aarch64 Docker image built
+successfully as
+`sha256:643ac21513635915176244fd9c83830d306dd9c17aab8bfd90025122b217434f`.
+This build does not establish the revised App's real Ingress/provider flow.

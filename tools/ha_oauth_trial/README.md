@@ -110,6 +110,15 @@ boundaries. Immediate revocation of the underlying Core login is explicitly
 retain the Secure, HttpOnly, SameSite=Strict App cookie must fail completion.
 Do not weaken cookie, Origin, peer or actor checks to make a trial pass.
 
+Core overwrites the Ingress response's `Referrer-Policy` with `no-referrer`.
+The private document therefore declares `same-origin` metadata before its
+forms so Chrome retains the exact Origin for private POSTs. Cross-origin
+requests still receive no Referer. The callback keeps `no-referrer`; it never
+renders the private policy or an Ingress URL. A null Origin remains rejected.
+Version `0.1.0-trial.1` lacked this document policy and failed the owner's
+first HTTPS authorization start; use the reviewed `0.1.0-trial.2` correction
+for the next trial. See the [dated result](../../docs/development/ha-oauth-trial-2026-10-25.md#owner-installation-and-first-https-trial).
+
 ## Stop and remove
 
 Stop **Symphonia OAuth Trial** in its App page. This ends the public URL and

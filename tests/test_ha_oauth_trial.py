@@ -1,16 +1,18 @@
 from concurrent.futures import ThreadPoolExecutor
 from email.message import Message
+from html.parser import HTMLParser
 import http.client
 import json
 from pathlib import Path
 import threading
 import tempfile
 import unittest
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from tools.ha_oauth_trial.server import (
     CALLBACK, COOKIE, FLOW_SECONDS, RUN_SECONDS, PROFILE, TOKEN, Rejected,
-    Trial, TrialServer, configuration, request_json, tunnel_command,
+    Trial, TrialHandler, TrialServer, configuration, request_json, tunnel_command,
     read_options, validate_grant, valid_token, verify_spotify,
 )
 
@@ -271,6 +273,48 @@ class HAInstalledTrialTests(unittest.TestCase):
         self.assertEqual(dockerfile.count("@sha256:"), 2)
         self.assertIn("http://127.0.0.1:8100", tunnel_command())
         self.assertIn("127.0.0.1:20241", tunnel_command())
+
+    def test_private_form_preserves_origin_under_core_referrer_header_override(self):
+        class FormParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.meta, self.csrf = [], None
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if tag == "meta":
+                    self.meta.append(values)
+                if tag == "input" and values.get("name") == "csrf":
+                    self.csrf = values["value"]
+        server = TrialServer(("127.0.0.1", 0), self.trial)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        client = http.client.HTTPConnection(*server.server_address, timeout=2)
+        try:
+            # Synthetic trusted adapter only inside this fixture. No HA session.
+            with patch.object(TrialHandler, "ingress", return_value=self.identity):
+                client.request("GET", "/")
+                response = client.getresponse()
+                self.assertEqual(response.status, 200)
+                cookie = response.getheader("Set-Cookie").split(";", 1)[0]
+                parser = FormParser()
+                parser.feed(response.read().decode())
+                # Core overwrites the HTTP header with no-referrer. The private
+                # document therefore needs its own same-origin policy too.
+                self.assertIn({"name": "referrer", "content": "same-origin"}, parser.meta)
+                body = urlencode({"csrf": parser.csrf})
+                for origin, expected in (("null", 403), (OPTIONS["management_origin"], 303)):
+                    client.request("POST", "/start", body, headers={"Cookie": cookie,
+                        "Origin": origin, "Content-Type": "application/x-www-form-urlencoded"})
+                    response = client.getresponse()
+                    self.assertEqual(response.status, expected)
+                    response.read()
+                self.assertEqual(self.trial.report["result"], "waiting_for_spotify")
+                self.assertEqual(self.calls, [])
+        finally:
+            client.close()
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     def test_options_reject_http_credentials_paths_and_unknown_fields(self):
         for changes in ({"management_origin": "http://ha.local"}, {"management_origin": "https://user:pass@ha.test"},

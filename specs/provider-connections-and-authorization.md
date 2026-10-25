@@ -99,8 +99,8 @@ local browser binding is not authenticated HA actor/session binding. This
 evidence leaves Draft status, the 82-case budget and all blockers unchanged.
 
 The [actual-installation preflight and isolated session experiment](../docs/development/app-oauth-session-preflight-2026-10-25.md)
-add a synthetic two-step callback/finalization policy proof. The owner's
-installation has no Symphonia App or selected HTTPS callback route. A trusted
+add a synthetic two-step callback/finalization policy proof. At that initial preflight, the owner's
+installation had no Symphonia App or selected HTTPS callback route. A trusted
 Ingress user ID is not by itself a browser/Core login-session binding; the
 real adapter, session semantics and live matrix remain open. This evidence
 does not authorize production implementation or clear `RG-002`.
@@ -109,9 +109,13 @@ The [separate installable OAuth trial](../docs/development/ha-oauth-trial-2026-1
 adds an owner-requested disposable research artifact with a default-off,
 callback-only Quick Tunnel option and actual lab installation/transport
 evidence. Its named bindings concern the Supervisor Ingress session and App
-browser session; Core login revocation and the owner's real browser/provider
-matrix remain unproven. No production endpoint, secret-store contract or
-readiness status changes.
+browser session. A subsequent authorized owner-installation trial rendered
+the hash-verified research App through real HTTPS Ingress and reached its
+callback-only tunnel. Start failed before consent because of a browser Origin
+compatibility issue; a document-policy correction is prepared and separately
+reproduced with synthetic Chrome forms. Real provider return/finalization,
+Core login revocation and the full live matrix remain unproven. No production
+endpoint, secret-store contract or readiness status changes.
 
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |

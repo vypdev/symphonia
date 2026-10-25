@@ -1,6 +1,6 @@
 {
   "name": "Symphonia OAuth Trial",
-  "version": "0.1.0-trial.1",
+  "version": "0.1.0-trial.2",
   "slug": "symphonia_oauth_trial",
   "description": "Disposable Spotify PKCE and Ingress session research; stops after 20 minutes",
   "arch": ["amd64", "aarch64"],

@@ -378,7 +378,10 @@ class TrialHandler(BaseHTTPRequestHandler):
             with trial.lock:
                 callback = trial.callback_origin + CALLBACK if trial.callback_origin else "Tunnel disabled or waiting"
                 status = json.dumps(trial.report, sort_keys=True)
-            body = "<!doctype html><meta charset=utf-8><title>Symphonia OAuth Trial</title><h1>Symphonia OAuth Trial</h1>"
+            # Core replaces the response Referrer-Policy with no-referrer.
+            # Set the private document policy too: same-origin POSTs keep their
+            # Origin while cross-origin consent requests get no Referer.
+            body = "<!doctype html><meta charset=utf-8><meta name=referrer content=same-origin><title>Symphonia OAuth Trial</title><h1>Symphonia OAuth Trial</h1>"
             body += "<p>Prueba temporal: solo lectura de perfil y una renovacion. Sin biblioteca, reproduccion ni tokens persistentes. Se detiene a los 20 minutos.</p>"
             body += "<p>Registra esta URI exacta en la app de prueba de Spotify:</p><pre>" + html.escape(callback) + "</pre>"
             body += "<pre>" + html.escape(status) + "</pre><a href='./'>Actualizar estado</a>"

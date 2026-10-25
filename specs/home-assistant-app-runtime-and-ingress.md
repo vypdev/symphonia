@@ -48,8 +48,8 @@ The current foundation is intentionally limited to reversible composition, persi
 
 The [2026-10-25 actual-installation callback preflight](../docs/development/app-oauth-session-preflight-2026-10-25.md)
 records Core/Supervisor 2026.10.3 and HA OS 18.3 from the owner's Chrome UI.
-Symphonia is absent from installed Apps and configured store repositories;
-no dedicated HTTPS callback route is available. Its separate loopback session
+At that initial inspection, Symphonia was absent from installed Apps and
+configured store repositories; no dedicated HTTPS callback route was available. Its separate loopback session
 experiment uses synthetic identity only and does not prove real Ingress
 actor/session binding or a deployable callback listener.
 
@@ -58,7 +58,11 @@ is a separate experimental App under `tools/`, not a change to the production
 App scaffold. It has manual boot, a twenty-minute lifetime, no host ports or
 HA API privileges, and a default-off callback-only tunnel. Its bounded
 root-owned options read is followed by irreversible UID/GID/group dropping;
-actual lab process evidence confirms service UID 10001. This does not clear
+actual lab process evidence confirms service UID 10001. The owner later
+installed the reviewed research revision: real Chrome HTTPS Ingress rendered
+its matching server hash and the temporary callback was reachable. The OAuth
+start failed before consent; the trial was stopped and its temporary redirect
+removed. This is not session-bound OAuth completion evidence and does not clear
 the runtime's production readiness or platform/recovery gates.
 
 The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).

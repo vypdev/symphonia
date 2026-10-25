@@ -2,7 +2,7 @@
 
 **Observed:** 2026-10-25. **Work:** [issue #26](https://github.com/vypdev/symphonia/issues/26),
 [draft PR #27](https://github.com/vypdev/symphonia/pull/27).
-**Status:** isolated research; real App callback and session binding remain unproven.
+**Status:** isolated research; HTTPS callback reachability was later observed, but real provider return and session-bound finalization remain unproven.
 
 ## Actual installation, inspected in Chrome
 
@@ -158,9 +158,13 @@ a pass.
 
 ## Required live acceptance matrix
 
-Every row below is **not run** on the owner's installation. A future trial
-needs at least **16 distinct live cases**, supplementing the offline suite and
-the authorization SDD's unchanged 82-case budget.
+The subsequent [owner installation trial](ha-oauth-trial-2026-10-25.md#owner-installation-and-first-https-trial)
+partially exercises cases 1/2, 10 and 16. HTTPS transport and bounded GET route
+rejection passed; authorization start failed before consent, so real callback
+correlation, finalization and refresh did not run. All other live cases below
+remain **not run**. Full acceptance still needs at least **16 distinct live
+cases**, supplementing the offline suite and the authorization SDD's unchanged
+82-case budget.
 
 | Case | Required observation |
 | --- | --- |
