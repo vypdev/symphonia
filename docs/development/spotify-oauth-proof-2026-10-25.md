@@ -37,6 +37,12 @@ Spotify integration showed a configured Premium account without a visible
 setup error. No integration, credential or playback state was changed. This
 observation is not a fresh OAuth test or a Symphonia connection.
 
+The subsequent [App callback/session preflight](app-oauth-session-preflight-2026-10-25.md)
+records the owner's actual Core/Supervisor versions, absent Symphonia App,
+missing HTTPS callback route, a separate runnable synthetic session experiment,
+and deployment prerequisites. It does not upgrade this local provider proof
+to a real Home Assistant actor/session-binding pass.
+
 ## Official evidence checked on 2026-10-25
 
 No community implementation establishes the following provider contract.

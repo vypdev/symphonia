@@ -98,6 +98,13 @@ client under `tools/`. The App callback and connection routes remain absent;
 local browser binding is not authenticated HA actor/session binding. This
 evidence leaves Draft status, the 82-case budget and all blockers unchanged.
 
+The [actual-installation preflight and isolated session experiment](../docs/development/app-oauth-session-preflight-2026-10-25.md)
+add a synthetic two-step callback/finalization policy proof. The owner's
+installation has no Symphonia App or selected HTTPS callback route. A trusted
+Ingress user ID is not by itself a browser/Core login-session binding; the
+real adapter, session semantics and live matrix remain open. This evidence
+does not authorize production implementation or clear `RG-002`.
+
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |
 | Home Assistant administrator | Configure provider client credentials and approve account access | Ingress connection setup | Provider disclosure, credential form, authorization return, connection status |

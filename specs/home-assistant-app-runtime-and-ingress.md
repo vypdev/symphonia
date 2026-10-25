@@ -46,6 +46,13 @@ The current foundation is intentionally limited to reversible composition, persi
 - Security evidence: a direct unauthenticated service port can bypass Ingress, as recorded in the ecosystem review.
 - Unknowns: exact image/toolchain, supported architectures, encryption key source, online backup primitive, and first standalone release.
 
+The [2026-10-25 actual-installation callback preflight](../docs/development/app-oauth-session-preflight-2026-10-25.md)
+records Core/Supervisor 2026.10.3 and HA OS 18.3 from the owner's Chrome UI.
+Symphonia is absent from installed Apps and configured store repositories;
+no dedicated HTTPS callback route is available. Its separate loopback session
+experiment uses synthetic identity only and does not prove real Ingress
+actor/session binding or a deployable callback listener.
+
 The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
 ## 3. Actors, surfaces, and terminology
