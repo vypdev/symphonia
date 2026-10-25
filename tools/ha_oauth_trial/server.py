@@ -136,7 +136,13 @@ def configuration(value):
         raise ValueError("invalid_management_port")
     if type(value["tunnel_enabled"]) is not bool:
         raise ValueError("invalid_tunnel_option")
-    return value.copy()
+    # Browser Origin serialization omits default HTTPS port 443 and prints
+    # non-default ports as decimal integers without leading zeroes. Normalize
+    # only trusted configuration; incoming Origin still requires exact equality.
+    result = value.copy()
+    result["management_origin"] = "https://" + parsed.hostname + (
+        ":" + str(parsed.port) if parsed.port not in (None, 443) else "")
+    return result
 
 
 def read_options(path=Path("/data/options.json")):

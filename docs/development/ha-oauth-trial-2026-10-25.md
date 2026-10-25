@@ -337,3 +337,9 @@ integration was changed. Provider revocation was not performed.
 The 16-case matrix still needs actual callback correlation and initiating
 session finalization. These bounded successes do not change either Draft SDD,
 the production callback direction, token-storage decisions or readiness gates.
+
+## PR review follow-up: canonical management ports
+
+The prepared `0.1.0-trial.4` source canonicalizes configured HTTPS ports to browser Origin serialization: explicit 443 is omitted and non-default ports use decimal form without leading zeroes. Received Origin and CSRF checks remain exact. Three new cases prove default-port private checks, non-default port isolation and decimal canonicalization without mutating the input configuration. The complete PR suite passes 483 tests at 89% coverage.
+
+This correction does not identify the cause of the earlier owner-instance rejection. Trial.4 has not been installed, started or authorized against Spotify on the owner instance; the previous research App remains stopped. The selected native OAuth companion does not use this direct-callback/tunnel artifact.

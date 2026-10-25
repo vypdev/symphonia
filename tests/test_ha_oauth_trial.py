@@ -358,6 +358,31 @@ class HAInstalledTrialTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 configuration({**OPTIONS, **changes})
 
+    def test_explicit_default_https_port_accepts_browser_origin_for_private_check(self):
+        options = {**OPTIONS, "management_origin": "https://ha.example.test:443"}
+        trial = Trial(options)
+        identity = trial.identity("172.30.32.2", headers())
+        nonce, csrf = trial.browser(identity, headers()["Cookie"], create=True)
+        cookie = headers()["Cookie"] + "; " + COOKIE + "=" + nonce
+        self.assertIsNone(trial.post("/check", identity, cookie, "https://ha.example.test", csrf))
+        self.assertEqual(options["management_origin"], "https://ha.example.test:443")
+
+    def test_non_default_https_port_is_required_in_browser_origin(self):
+        trial = Trial({**OPTIONS, "management_origin": "https://ha.example.test:8443"})
+        identity = trial.identity("172.30.32.2", headers())
+        nonce, csrf = trial.browser(identity, headers()["Cookie"], create=True)
+        cookie = headers()["Cookie"] + "; " + COOKIE + "=" + nonce
+        with self.assertRaisesRegex(Rejected, "invalid_request_origin"):
+            trial.post("/check", identity, cookie, "https://ha.example.test", csrf)
+        self.assertIsNone(trial.post("/check", identity, cookie, "https://ha.example.test:8443", csrf))
+
+    def test_configured_https_ports_use_browser_decimal_serialization(self):
+        for configured, expected in (("0443", ""), ("08443", ":8443")):
+            with self.subTest(port=configured):
+                self.assertEqual(configuration({**OPTIONS,
+                    "management_origin": "https://ha.example.test:" + configured})["management_origin"],
+                    "https://ha.example.test" + expected)
+
     def test_options_reader_refuses_symlinks_and_oversized_files(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "options.json"

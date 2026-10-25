@@ -156,3 +156,9 @@ Official sources reviewed 2026-10-25:
 [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/),
 [Spotify redirects](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri),
 [HA Ingress](https://contributors.home-assistant.io/apps/guides/ingress/).
+
+The review-only `0.1.0-trial.4` revision canonicalizes configured HTTPS ports to
+match browser Origin serialization (default 443 omitted, other ports decimal).
+Incoming Origin checks remain exact. It has not been installed or run on the
+owner's HA; the earlier stopped trial and its historical results are unchanged.
+The selected native companion design does not use this callback/tunnel trial.
