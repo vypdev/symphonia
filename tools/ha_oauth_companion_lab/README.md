@@ -225,3 +225,35 @@ the pinned-container campaign provides the separate real-AEAD evidence. Inspect
 the exact twelve owned case markers and volume labels/consumers before removing
 that volume; never delete another application's data. The report records the
 performed campaign and its remaining fault-plan gaps.
+
+## Recovery and CSR successor
+
+The [dated successor](../../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+documents `recovery_probe.py`, `enrollment_probe.py` and their exact limitations.
+Stage both beside the regular `tools/__init__.py`, private-file/publication
+fixtures and `app/server.py`, read-only at `/research`. Use the same pinned image,
+fresh labelled volumes, no exterior network/host ports and UID/GID 10001 after
+preparing only each fresh mount. The CSR campaign binds container loopback.
+
+```text
+python3 /research/tools/ha_oauth_companion_lab/enrollment_probe.py
+python3 /research/tools/ha_oauth_companion_lab/recovery_probe.py
+```
+
+The CSR campaign has three deliberate child exits 83. The recovery campaign
+has fourteen, including four reset fences. Parent exit 0 and all Boolean
+observations true are required. `test_ha_oauth_recovery_fixture.py` uses an
+explicitly fake codec and test admission boolean; neither is native identity
+or encryption proof. The scripts are not production endpoints or an installable
+integration. Real enrollment/renewal wire and Ingress reset admission remain gates.
+Inspect exact volume labels, owned CSR/case markers, private file types/modes and
+absence of consumers before removing only these synthetic volumes. Preserve
+safe receipts/source hashes, never private material or challenges.
+
+`native_reset_probe.py` is a third, independent native-HTTP experiment. Run it
+in a fresh networkless pinned Core container, with read-only `/research`,
+`PYTHONPATH=/research` and temporary `/tmp` and `/config` only. It bootstraps
+its own Core and never mounts the owner's or guarded lab's existing config.
+The actual Core actor/signature observations are separate from its explicit
+Ingress/browser/Origin/CSRF stubs. No default production recovery permission
+or native integration is installed by this script.

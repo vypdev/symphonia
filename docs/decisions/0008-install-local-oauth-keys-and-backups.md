@@ -76,6 +76,15 @@ remaining gates are resolved. The owner authorized continuing through those
 gates and implementation/testing; that authorization does not itself make an
 SDD ready or establish release conformance.
 
+The [successor recovery/CSR research](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+adds fourteen three-record reset/rotation/publication process deaths, three
+CSR-issuance deaths and twenty-two real native HTTP/signature observations.
+Ingress/browser reset inputs remain explicit stubs; the proposed short-lived
+native recovery approval and its pairing-authority/UX disclosure still need
+review. This evidence does not amend the accepted custody direction or approve
+that new recovery surface. Final native wire, packaging, restore and live
+provider/browser conformance remain open.
+
 ## Alternatives and consequences
 
 - Manual unlock after restart keeps the wrapping key off disk but was not the

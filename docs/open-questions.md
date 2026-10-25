@@ -193,6 +193,12 @@ proves local key reopen in a second container, private Core identity reopen in a
 new process and actual protected Core archives. Final adapters/package, CSR,
 reset/rotation/publication and supported-version/browser/provider acceptance
 remain open. Core restore itself and cloned-identity detection were not tested.
+The [recovery/CSR follow-up](development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+adds dynamic issuance, three certificate-process crashes, fourteen multi-record
+recovery crashes and nineteen policy cases. The real native enrollment/renewal
+wire and Ingress reset admission are still gates; a test-only reset boolean is
+not fresh HA authority. Full lease, package, restore and browser/provider
+conformance remains open.
 
 Before [the companion SDD](../specs/home-assistant-oauth-companion.md) can leave
 Draft, prove the [RFC](architecture/home-assistant-oauth-companion-rfc.md) in a

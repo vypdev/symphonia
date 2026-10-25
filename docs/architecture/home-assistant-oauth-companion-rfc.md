@@ -120,6 +120,26 @@ authenticate either side. This is a proposed transport, not a proven topology.
 
 ## Native flow identity, not an inferred Ingress session
 
+### CSR lifecycle candidate and bounded result
+
+The [successor research](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+now exercises generated P-256/SHA-256 CSRs, server-owned certificate subject/
+extensions, a private local issuer and durable challenge consumption before
+issuance. Pending issuance is resumed explicitly; status does not mint keys or
+certificates. An admitted renewal is fenced by the previous serial and epoch;
+only the committed certificate is active. Revoking a pair invalidates its
+epoch independently of a still-valid TLS certificate.
+
+The candidate uses a five-minute challenge and ten-minute synthetic client
+certificate. The latter is a research lifetime, not a ratified production
+renewal schedule. Three real process-death points and newly issued client TLS
+pass on the pinned image. Core private-key publication, complete native wire/
+renewal/revocation races, trusted setup/reset admission and the supported
+package/browser matrix still need conformance. No bootstrap or renewal route
+is exposed in the production App by these tools.
+
+### Native flow and actor contract
+
 Proposed entry layout: one `symphonia` pair config entry per App installation,
 holding safe connection references. The initial native flow pairs and creates
 that entry. Provider connect/reconnect then runs as a **main config flow** for

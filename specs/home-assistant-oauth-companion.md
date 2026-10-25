@@ -445,7 +445,20 @@ from this SDD's unchanged production test budget and release acceptance.
 
 The follow-up also proves eight synthetic file/SQL process-death points and
 four additional key/publication fences. This is single-record/quiescent research;
-full rotation, live collection and authenticated reset admission remain open.
+final rotation/lease, collection and authenticated reset admission remain open.
+
+
+The [recovery/CSR follow-up](../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+adds fourteen three-record publication/rotation/reset process-death points,
+nineteen ordinary policy cases with fake AEAD, dynamic CSR issuance and three
+issuance process-death points with real crypto. A newly issued certificate
+crosses loopback TLS. Native enrollment/renewal wire, real Ingress reset
+admission, final package/restore and browser/provider conformance remain open;
+the reset boolean is explicitly a test stub. A separate real-Core HTTP/signature
+prototype passes twenty-two fresh-admin observations, with eleven parsing/binding
+cases; its Ingress/browser inputs are still explicitly stubbed. The signed
+recovery approval authority/UX is proposed, not accepted or installed. These
+results do not establish readiness or count toward the unchanged production budgets.
 
 ## 17. Requirements traceability
 

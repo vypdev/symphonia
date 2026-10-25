@@ -28,9 +28,9 @@ A cloned/restored Core identity cannot be distinguished solely using an identifi
 
 Strict exclusion from all Core archives would require volatile Core keys with repeated pairing or a separate external facility; the owner did not select that profile. Never disguise a key as a cache/log/archive or patch Core's backup implementation.
 
-## Rotation, publication and reset candidate — not yet proven
+## Rotation, publication and reset candidate — final conformance pending
 
-This sequence defines the next disposable fault campaign, not an implemented
+This sequence defines the disposable fault campaign contract, not an implemented
 transaction or an accepted production package. It refines `SYM-SEC-013`/`015`;
 no two independent file/SQL writes are assumed atomic.
 
@@ -92,6 +92,40 @@ exact crypto/runtime/package and distinguish synthetic state from owner HA.
 
 ## Planned acceptance before production
 
+### Fresh reset authority candidate — not accepted or implemented
+
+The inspected Supervisor 2026.10.3 ingress implementation caches resolved user
+records. `panel_admin` and a trusted user header therefore do not alone prove
+that an existing session's actor is still active/admin at reset time. See
+[API lookup/cache](https://github.com/home-assistant/supervisor/blob/2026.10.3/supervisor/api/ingress.py#L359-L395)
+and [cache lifetime](https://github.com/home-assistant/supervisor/blob/2026.10.3/supervisor/ingress.py#L37-L40).
+This is dated implementation evidence, not a new HA guarantee.
+
+Candidate recovery requires two bound surfaces. Admin-only App Ingress creates
+a short-lived non-secret request identifier bound to its browser/CSRF context,
+App installation, current pair/epoch and exact reset-or-resume purpose. A native
+companion flow validates a fresh current administrator at begin and confirmation,
+matching that actor to the request. Its existing protected Core key signs the
+bounded request/actor/purpose/deadline. The explicit native setup view may show
+this short-lived approval document for return to the App; it contains no private
+key/provider credential and never enters URLs, logs or config entries.
+
+Final admission stays in trusted Ingress, with exact Origin, browser/CSRF,
+actor, request/pair/epoch/purpose, signature, expiry and consume-once checks.
+The App verifies against its retained public pairing identity; missing App
+private keys do not permit a plaintext management fallback or a new listener.
+Only then does the durable reset fence precede new key publication. An expired
+or interrupted approval needs a new native confirmation; startup/health cannot
+approve or resume. A copied or missing Core identity needs the separately
+reviewed operator recovery procedure; no anonymous fallback is proposed.
+
+This extends recovery UX and the disclosed pairing authority and needs security,
+HA-platform and UX review before acceptance/readiness. A native HTTP/signature
+prototype can test fresh identity separately from real Supervisor/Ingress and
+browser admission; stubs must be named and cannot close the complete gate.
+
+### Planned checks
+
 1. Explicit provisioning only; automatic restart reads the same key and grant.
 2. Wrong key/owner/mode/type/link/profile/install/version/size cannot unlock state.
 3. Actual Supervisor backups contain encrypted App grants and no App local key.
@@ -113,3 +147,13 @@ single-record generation-switch mechanics and quiescent orphan handling,
 not every planned fault point, full production key rotation, live writer
 collection, reset admission or the final adapter/package. The remaining gates
 above are retained; none of these counts replaces a production test budget.
+
+The [successor campaign](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
+adds fourteen real process deaths across three-record publication/rotation and
+durable reset ordering, plus nineteen ordinary policy cases with fake AEAD.
+Admitted owners pin staged files; a complete SQL reference set switches at once.
+Interrupted reset remains pending until explicit resume and preserves history.
+Its authorization boolean is explicitly a test stub: real native Ingress,
+Origin/CSRF and active-admin admission are unproven. Writes inside fsync,
+complete live lease/reader/reset concurrency, final packaging/backup/restore and
+the native/browser/provider paths remain gates. SDD status stays Draft.

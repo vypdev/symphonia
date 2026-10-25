@@ -76,7 +76,13 @@
         "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
         "tests/test_ha_oauth_key_custody_fixture.py",
         "tools/ha_oauth_companion_lab/key_publication_probe.py",
-        "tests/test_ha_oauth_key_publication_fixture.py"
+        "tests/test_ha_oauth_key_publication_fixture.py",
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/enrollment_probe.py",
+        "tools/ha_oauth_companion_lab/recovery_probe.py",
+        "tests/test_ha_oauth_recovery_fixture.py",
+        "tools/ha_oauth_companion_lab/native_reset_probe.py",
+        "tests/test_ha_native_reset_fixture.py"
       ],
       "implementationEvidence": {
         "code": [
@@ -391,7 +397,13 @@
         "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
         "tests/test_ha_oauth_key_custody_fixture.py",
         "tools/ha_oauth_companion_lab/key_publication_probe.py",
-        "tests/test_ha_oauth_key_publication_fixture.py"
+        "tests/test_ha_oauth_key_publication_fixture.py",
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/enrollment_probe.py",
+        "tools/ha_oauth_companion_lab/recovery_probe.py",
+        "tests/test_ha_oauth_recovery_fixture.py",
+        "tools/ha_oauth_companion_lab/native_reset_probe.py",
+        "tests/test_ha_native_reset_fixture.py"
       ],
       "implementationEvidence": {
         "code": [
@@ -491,7 +503,13 @@
         "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
         "tests/test_ha_oauth_key_custody_fixture.py",
         "tools/ha_oauth_companion_lab/key_publication_probe.py",
-        "tests/test_ha_oauth_key_publication_fixture.py"
+        "tests/test_ha_oauth_key_publication_fixture.py",
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/enrollment_probe.py",
+        "tools/ha_oauth_companion_lab/recovery_probe.py",
+        "tests/test_ha_oauth_recovery_fixture.py",
+        "tools/ha_oauth_companion_lab/native_reset_probe.py",
+        "tests/test_ha_native_reset_fixture.py"
       ],
       "implementationEvidence": {
         "code": [],
