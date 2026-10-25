@@ -10,6 +10,14 @@ Symphonia combines library management and interoperability with a proposed liste
 
 **Implementation foundation stage. Provider adapters, durable import/copy execution, and an experimental Home Assistant App metadata scaffold exist; no published App image, complete UI, or OAuth flow is available yet.**
 
+The selected HA OAuth design now uses a thin auxiliary integration and the
+native Core/My callback, without Cloudflare or a public App callback. The App
+keeps provider grants and refresh ownership. See [ADR 0007](docs/decisions/0007-home-assistant-oauth-companion.md),
+the [Draft companion SDD](specs/home-assistant-oauth-companion.md), its
+[protocol RFC](docs/architecture/home-assistant-oauth-companion-rfc.md) and
+[setup/recovery preview](docs/operations/home-assistant-oauth.md). This is design
+only; integration code, installation and production authorization remain gated.
+
 The current work combines a reviewable source of truth with the first owner-approved, dependency-free domain/persistence slice. Official provider feasibility still needs validation: Google's public YouTube Data API can manage YouTube video playlists, but the research performed for this specification did not identify an official API exposing the complete YouTube Music library model.
 
 ### Current adapter boundaries

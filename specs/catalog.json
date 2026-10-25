@@ -43,7 +43,11 @@
         "SYM-DEP-007",
         "SYM-DEP-008",
         "SYM-DEP-009",
-        "SYM-DEP-010"
+        "SYM-DEP-010",
+        "SYM-HA-012",
+        "SYM-SEC-012",
+        "SYM-SEC-013",
+        "SYM-SEC-014"
       ],
       "evidence": [
         "docs/decisions/0003-home-assistant-app-primary.md",
@@ -57,7 +61,12 @@
         "docs/development/pr1-review-2026-10-25.md",
         "docs/development/spotify-oauth-proof-2026-10-25.md",
         "docs/development/app-oauth-session-preflight-2026-10-25.md",
-        "docs/development/ha-oauth-trial-2026-10-25.md"
+        "docs/development/ha-oauth-trial-2026-10-25.md",
+        "docs/decisions/0007-home-assistant-oauth-companion.md",
+        "docs/architecture/home-assistant-oauth-companion-rfc.md",
+        "specs/home-assistant-oauth-companion.md",
+        "docs/operations/home-assistant-oauth.md",
+        "docs/development/ha-oauth-companion-design-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -111,7 +120,8 @@
         "RG-004 storage and recovery spike",
         "Supported Home Assistant versions and CPU architectures",
         "Secret-encryption key source and backup/restore behavior",
-        "OQ-005 standalone release timing and authentication"
+        "OQ-005 standalone release timing and authentication",
+        "RG-008 internal OAuth bridge pairing/profile, protected keys and lifecycle conformance"
       ]
     },
     {
@@ -339,7 +349,11 @@
         "SYM-SEC-010",
         "SYM-TEST-005",
         "SYM-TEST-011",
-        "SYM-TEST-012"
+        "SYM-TEST-012",
+        "SYM-HA-012",
+        "SYM-SEC-012",
+        "SYM-SEC-013",
+        "SYM-SEC-014"
       ],
       "evidence": [
         "docs/providers/provider-specification.md",
@@ -352,7 +366,12 @@
         "docs/development/pr1-review-2026-10-21.md",
         "docs/development/spotify-oauth-proof-2026-10-25.md",
         "docs/development/app-oauth-session-preflight-2026-10-25.md",
-        "docs/development/ha-oauth-trial-2026-10-25.md"
+        "docs/development/ha-oauth-trial-2026-10-25.md",
+        "docs/decisions/0007-home-assistant-oauth-companion.md",
+        "docs/architecture/home-assistant-oauth-companion-rfc.md",
+        "specs/home-assistant-oauth-companion.md",
+        "docs/operations/home-assistant-oauth.md",
+        "docs/development/ha-oauth-companion-design-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -387,11 +406,73 @@
         ]
       },
       "blockers": [
-        "RG-002 direct App callback reachability and OAuth boundary validation",
-        "RG-002 Home Assistant OAuth callback spike",
+        "RG-002 native Core/My callback and provider authorization conformance",
+        "RG-008 native actor/flow, paired channel, App-only grant and HA/App key/backup proof",
         "RG-001 provider-specific scopes and account constraints",
         "Authenticated actor/session binding and provider token/secret lifecycle integration",
         "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
+      ]
+    },
+    {
+      "id": "home-assistant-oauth-companion",
+      "title": "Home Assistant OAuth companion",
+      "status": "draft",
+      "scope": "Native HA consent and Core/My callback with paired one-use code delivery and App-owned grants, without Cloudflare or a public App callback",
+      "owner": "Symphonia maintainers",
+      "specification": "specs/home-assistant-oauth-companion.md",
+      "requirements": [
+        "SYM-ACC-002",
+        "SYM-ACC-004",
+        "SYM-ACC-005",
+        "SYM-ACC-006",
+        "SYM-HA-002",
+        "SYM-HA-004",
+        "SYM-HA-005",
+        "SYM-HA-006",
+        "SYM-HA-007",
+        "SYM-HA-012",
+        "SYM-SEC-001",
+        "SYM-SEC-002",
+        "SYM-SEC-003",
+        "SYM-SEC-004",
+        "SYM-SEC-005",
+        "SYM-SEC-006",
+        "SYM-SEC-007",
+        "SYM-SEC-008",
+        "SYM-SEC-010",
+        "SYM-SEC-012",
+        "SYM-SEC-013",
+        "SYM-SEC-014",
+        "SYM-PROV-009",
+        "SYM-PROV-012",
+        "SYM-PROV-013",
+        "SYM-PROV-022"
+      ],
+      "evidence": [
+        "docs/decisions/0007-home-assistant-oauth-companion.md",
+        "docs/architecture/home-assistant-oauth-companion-rfc.md",
+        "specs/home-assistant-oauth-companion.md",
+        "docs/operations/home-assistant-oauth.md",
+        "docs/architecture/system-architecture.md",
+        "docs/product/product-specification.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md",
+        "docs/open-questions.md",
+        "docs/development/ha-oauth-trial-2026-10-25.md",
+        "docs/development/ha-oauth-companion-design-review-2026-10-25.md"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "tests": [],
+        "documentation": []
+      },
+      "blockers": [
+        "RG-008 supported native flow extension points and fresh current-admin binding",
+        "RG-008 internal paired TLS, version/profile isolation and supported deployment matrix",
+        "Protected HA/App pairing key source and backup/restore contract",
+        "RG-002 App-only exchange, secret publication, uncertain-outcome and disconnect recovery",
+        "RG-001 PKCE-only client UX and exact provider capability/scope profiles",
+        "80 planned offline cases and 16 live bridge cases remain unimplemented/unproven"
       ]
     },
     {

@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
 **Status:** open items and resolved decisions are marked individually
-**Last reviewed:** 2026-10-04
+**Last reviewed:** 2026-10-25 (native OAuth companion direction and proof gates)
 
 ## Owner decisions and recorded outcomes
 
@@ -43,14 +43,19 @@ Options include:
 
 Possibilities include project-owned shared client registrations, bring-your-own client credentials per install, or both. Spotify's five-user Development Mode cap strongly favors bring-your-own credentials for a distributed self-hosted project, but callback registration and support become harder.
 
-Owner direction (2026-09-22): follow the `vypdev/homeassistant-gateway`
-deployment pattern. The Supervisor App owns the provider adapters and the
-Ingress UI/API; a companion integration is not required to broker OAuth for
-the MVP. The working authorization shape is therefore a direct App-owned,
-callback-only flow. `RG-002` still has to prove callback reachability, exact
-redirect registration, state/PKCE/single-use behavior, secret ownership, and
-local/remote Home Assistant operation before the implementation contract is
-ready.
+**Direction updated (2026-10-25, explicit owner request):** prepare native
+OAuth through a thin Symphonia auxiliary integration, without Cloudflare,
+before implementation. [ADR 0007](decisions/0007-home-assistant-oauth-companion.md)
+supersedes the earlier 2026-09-22 direct-App callback direction only for the HA
+OAuth profile. The App still owns providers, durable grants/refresh and Ingress.
+The default is BYO public Spotify client registration plus the fixed My redirect;
+confidential-client and other-provider profiles remain separate decisions.
+
+The [companion SDD](../specs/home-assistant-oauth-companion.md) and
+[RFC](architecture/home-assistant-oauth-companion-rfc.md) propose staged code/PKCE
+handoff, fresh native same-admin confirmation and private paired transport.
+`RG-002`/`RG-008`, secret/key/backup and exact provider scope gates remain open.
+The direction is accepted; no production implementation is authorized.
 
 ### OQ-005 — What authentication/exposure does standalone mode use, and when does it ship?
 
@@ -98,23 +103,26 @@ still required before this gate can close.
 
 If Apple Music is considered as a future provider or fallback for an official music-library surface, run its separate feasibility gates without silently changing the MVP. Community providers may inform test cases but cannot substitute for official-contract evidence.
 
-### RG-002 — OAuth through a Home Assistant App
+### RG-002 — Provider OAuth for the Home Assistant App
 
-Prototype authorization start/callback/error for Spotify and Google using a direct App-owned, callback-only flow. Test:
+Validate the ADR 0007 native companion/Core callback route, with App-owned
+exchange/refresh and the paired protocol from `RG-008`. First prove the minimal
+Spotify PKCE profile; Google needs its own accepted registration/secret/scopes.
+Test:
 
 - local and externally reachable Home Assistant URLs;
 - HTTPS and exact registered redirects;
-- Ingress base path/session and multiple browser users;
+- named native-flow/current-admin/pair identity, multiple users and honest session/revocation limits;
 - OAuth `state`, PKCE where applicable, single use, expiry, denial, and restart;
 - user-provided OAuth client registrations; and
 - token ownership, refresh, revocation, App/integration version skew, and backup/restore;
-- a callback-only direct listener that does not expose management routes; and
+- no public App callback or tunnel, and no internal OAuth channel access to management/playback routes; and
 - no secrets in App options, browser-export files, URL query logs, referrers, or diagnostics.
 
-The result becomes an authentication/secret-storage RFC, not production code.
-The current local evidence is recorded in the [direct App OAuth callback
-spike](development/oauth-callback-spike.md); it proves route isolation and
-durable single-use state but does not close the Home Assistant topology gate.
+The result is conformance evidence for the Draft authentication/secret-storage
+contracts, not permission for production code. Earlier [direct callback](development/oauth-callback-spike.md)
+and [owner trial](development/ha-oauth-trial-2026-10-25.md) results remain dated
+research; they do not close the new companion topology/identity gates.
 
 ### RG-003 — Matching evidence corpus
 
@@ -136,6 +144,10 @@ or production SLO.
 
 Define what belongs in the App UI versus a companion custom integration. Decide transport/auth/version discovery and a minimal entity/action/event surface. Ensure Home Assistant actions create ordinary audited Symphonia operations and that the integration can be unavailable independently.
 
+The OAuth part is now specified by ADR 0007 and the companion SDD; generic
+native entities/actions/events remain deferred. OAuth and playback profiles
+must not expand one another's authority.
+
 ### RG-006 — Home Assistant UI compatibility and host-context spike
 
 The owner has accepted the Home Assistant-native-adjacent direction, independent compatibility layer, and no-private-frontend-dependency boundary in [ADR 0004](decisions/0004-home-assistant-native-ui.md), and selected Lit + TypeScript + Vite in [ADR 0005](decisions/0005-lit-typescript-vite-ui.md). [Current official-source research](development/ui-spike/host-context-evidence.md) finds no theme/locale/timezone fields in the inspected App-properties message. Before the [UI foundation SDD](../specs/home-assistant-native-ui.md) becomes `Ready for implementation`, a documentation/prototype spike must:
@@ -155,6 +167,30 @@ The tooling choice is accepted; the result must still establish a supported matr
 Use a disposable Home Assistant installation and dedicated accounts/devices after the broker protocol/security decision. Record the exact versions and account identities for HA Spotify, Music Assistant, and any proposed community player. Run the [dated source-review proof matrix](providers/playback-integration-source-review.md#rg-007-proof-matrix-before-release) and the [complete-release plan](development/playback-release-gates.md): verify Spotify idle/active/restricted and duplicate-name device behavior, WebSocket versus service browsing and service feature gates, exact-output/start feasibility, MA queue versus external source and per-user/default-user attribution through the **actual companion-broker route**, playlist reference mapping, private/unavailable/large playlist behavior, state-update/device-discovery lag, accepted-but-unobserved commands, external-controller races, HA restart, and credential recovery. If a separate Spotify Connect path is approved, also prove current endpoint access, fresh device IDs, separate read/control grants, account identity, idle-start/output confirmation and revocation without reusing the HA broker credential. Prove whether account identity can be machine-verified; if not, specify a visible user-confirmed but unverified binding and forbid automatic private-playlist mapping. Test hostile entity/media IDs, MA free-text/URL/path fallback rejection, broker pairing/version/replay/secret isolation, and ensure no broker credential reaches Ingress/browser state. Decide freshness/command-confirmation budgets from these observations. Keep community implementation findings separate from official platform evidence and do not infer control of native YouTube Music app sessions.
 
 A [disposable Core/MA Compose lab](development/playback-lab/README.md) is now prepared and its Compose configuration validates locally. It has not been started or used with test accounts/devices; it provides no live pass. Because Home Assistant Container lacks Supervisor/Apps/Ingress, a separate HAOS/Supervisor-compatible environment is still required for broker topology and App authentication proof.
+
+### RG-008 — Native OAuth companion conformance
+
+Before [the companion SDD](../specs/home-assistant-oauth-companion.md) can leave
+Draft, prove the [RFC](architecture/home-assistant-oauth-companion-rfc.md) in a
+disposable HA installation with dedicated public client registration:
+
+1. Supported native config-flow extension points, fresh current administrator
+   at begin/confirm, exact flow binding, per-attempt PKCE, staged-only callback
+   and no default token-bearing config entry/HA refresh owner.
+2. Supervisor-internal alias reachability, pinned mutual TLS, temporary pairing,
+   key protection, epoch revocation, strict OAuth-only schemas and version skew;
+   no host mapping, broad Core credential or authority inherited by playback.
+3. App-only exchange/secret publication, lost acknowledgement, crash/disconnect
+   fencing, uncertain outcomes, sealed-orphan cleanup and single-flight refresh.
+4. HA/App key and backup/restore contracts with credential canaries; config-entry
+   encryption must not be assumed. Re-pair after restore and truthful offline removal.
+5. The 16 live cases, local/remote browser paths, supported direct-Core HTTPS
+   alternative and exact HA/App/integration/browser matrix. A documentation
+   example or the previous direct tunnel trial is not a bridge pass.
+
+No prototype installs on the owner's HA, production component, new scope or
+deployment is authorized merely by this design request. The 80-case offline
+budget is planned and does not replace the authorization/runtime budgets.
 
 ## Future synchronization questions
 
@@ -192,7 +228,7 @@ These need evidence and small RFCs; popularity is not evidence.
 | --- | --- | --- | --- |
 | Official YouTube API does not provide the intended YouTube Music model | High | Critical: symmetric MVP promise fails | `RG-001`, then owner choice `OQ-001` |
 | Unofficial YouTube Music access requires reusable browser-account cookies and moving private endpoints | High | Critical security/account/support risk | Separate opt-in adapter only; threat model; no silent fallback; `OQ-001` |
-| OAuth callback cannot be made reliable/simple through Ingress for bring-your-own clients | Medium-high | Critical: users cannot connect providers safely | `RG-002`; keep callback design open |
+| Native OAuth flow/paired actor and code handoff cannot meet the security contract | Medium-high | Critical: users cannot connect providers safely | ADR 0007, `RG-002`/`RG-008`; no public App callback fallback |
 | A direct callback port accidentally exposes the management API outside Ingress | Medium | Critical compromise risk | Callback-only listener, independent auth, non-root/least privilege, App artifact tests |
 | Spotify Development Mode endpoints/policy change again or required endpoint is restricted | Medium-high | High | Capability probes, dated matrix, graceful disable, avoid hosted assumptions |
 | Spotify six-month refresh-token lifetime creates unexpected reconnect failures | High under current docs | Medium-high | Expiry tracking, warnings, `waiting_user`, easy reauthorization |
@@ -213,11 +249,14 @@ These need evidence and small RFCs; popularity is not evidence.
 ## Recommended next five specification/design tasks
 
 1. **Provider feasibility report (`RG-001`).** Prove or narrow the Spotify ↔ YouTube promise using official APIs and dedicated accounts; feed the evidence into the provider, [import](../specs/library-import-and-provider-projections.md), and [copy](../specs/one-time-playlist-copy.md) SDDs. Report unofficial YT Music evidence separately and keep Apple as an explicit future/contingency spike.
-2. **Close the [authorization SDD](../specs/provider-connections-and-authorization.md) blockers (`RG-002` + `OQ-004`).** Validate the direct App callback flow, then settle bring-your-own credentials, encryption, revocation, and backups.
+2. **Close the [authorization](../specs/provider-connections-and-authorization.md) and [OAuth companion](../specs/home-assistant-oauth-companion.md) blockers (`RG-002`/`RG-008` + `OQ-004`).** Prove the native Core/My flow, private pairing/current actor, App-only grants, BYO profiles, encryption, revocation and backup/restore.
 3. **Close the remaining [copy SDD](../specs/one-time-playlist-copy.md) feasibility blockers.** The strict/create-new policy is accepted; prove target create/add/order/duplicate behavior with dedicated accounts, provider-specific name/visibility validation, unknown-write reconciliation, and partial-failure recovery before implementation readiness.
 4. **Close the [identity SDD](../specs/recording-identity-resolution.md) evidence blockers (`RG-003`).** Build the corpus and settle normalization, candidate sources, evidence, versioned rules, manual decisions, and measurable safety targets.
 5. **Define the [listening](../specs/listening-and-playback-control.md) vertical (`OQ-011`/`RG-007`) alongside [runtime](../specs/home-assistant-app-runtime-and-ingress.md) and [durable-operation](../specs/durable-operations-and-recovery.md) blockers (`RG-004`).** Specify and threat-review the selected companion-broker protocol and prove source/account/player/output behavior before promising Spotify or YouTube Music controls; choose process topology/storage only after crash, lease, migration, backup, and representative-scale evidence.
 
-After those tasks, revisit playlist ownership (`OQ-002`) before creating any persistent-synchronization SDD. The Home Assistant native surface (`RG-005`) can proceed in parallel once the service API shape is stable, but it is not a prerequisite for the copy MVP.
+After those tasks, revisit playlist ownership (`OQ-002`) before creating any
+persistent-synchronization SDD. Generic native projections (`RG-005`) remain
+independent; the selected OAuth auxiliary setup is required for new HA provider
+consent, not for continued use of already verified App grants.
 
 The UI compatibility spike (`RG-006`) can also proceed in parallel as non-production evidence. It must prove the supported host/browser/context matrix and selected Lit/Vite tooling before the broader UI foundation or feature views are implemented; the separately approved read-only operational dashboard is already available, while feature content and behavior remain owned by their SDDs.
