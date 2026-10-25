@@ -5,7 +5,9 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import http.client
 import json
+import socket
 import threading
+import time
 import unittest
 from unittest.mock import patch
 from urllib.parse import urlencode
@@ -34,6 +36,34 @@ class HASessionSpikeTests(unittest.TestCase):
 
     def tearDown(self):
         self.repository.close()
+
+    def test_trickled_headers_release_callback_without_staging_the_state(self):
+        server = IsolatedCallbackServer(self.proof, parse_seconds=0.15)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        client = socket.create_connection(server.server_address, timeout=2)
+        healthy = http.client.HTTPConnection(*server.server_address, timeout=2)
+        try:
+            client.sendall(b"GET /oauth/callback HTTP/1.1\r\nX-Slow: ")
+            for _ in range(12):
+                try:
+                    client.sendall(b"x")
+                except OSError:
+                    break
+                time.sleep(0.02)
+            self.assertIsNone(self.proof._pending)
+            healthy.request("GET", self.path)
+            response = healthy.getresponse()
+            self.assertEqual(response.status, 202)
+            response.read()
+            self.assertEqual(self.exchanges, [])
+            self.assertEqual(self.proof.complete(self.context)[0], 200)
+        finally:
+            client.close()
+            healthy.close()
+            server.shutdown()
+            server.server_close()
+            thread.join(2)
 
     def test_callback_stages_until_initiating_context_completes(self):
         self.assertEqual(self.proof.receive(self.path)[0], 202)

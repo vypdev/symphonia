@@ -12,6 +12,8 @@ from pathlib import Path
 import secrets
 import socket
 import ssl
+import threading
+import time
 
 
 ROOT = Path("/tmp/symphonia-oauth-companion-lab-fixture-v3")
@@ -202,6 +204,33 @@ def stalls():
         assert response.status == 403
         response.read()
     receipt["missing_certificate_rejected_before_body"] = True
+
+    def trickle(name, payload, *, tls=True):
+        connection = connect() if tls else socket.create_connection((ALIAS, 8098), timeout=5)
+        done = threading.Event()
+        def write():
+            try:
+                while not done.wait(0.1):
+                    connection.sendall(b" " if tls else b"\x00")
+            except OSError:
+                pass
+        with connection:
+            connection.sendall(payload)
+            worker = threading.Thread(target=write, daemon=True)
+            worker.start()
+            try:
+                started = time.monotonic()
+                healthy()  # Trickle continues while a valid client waits.
+                assert time.monotonic() - started < 4.5
+                receipt["served_during_trickled_" + name] = True
+            finally:
+                done.set()
+                worker.join(1)
+
+    trickle("tls_handshake", b"\x16\x03\x01\x00\x50\x01\x00\x00\x4c", tls=False)
+    trickle("headers", b"POST /internal/ha-oauth/v1 HTTP/1.1\r\nHost: fixture\r\nX-Slow: ")
+    trickle("body", b"POST /internal/ha-oauth/v1 HTTP/1.1\r\nHost: fixture\r\n"
+            b"Content-Type: application/json\r\nContent-Length: 100\r\n\r\n{")
     print(json.dumps(receipt, sort_keys=True))
 
 

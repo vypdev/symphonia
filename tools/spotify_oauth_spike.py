@@ -14,12 +14,10 @@ from datetime import datetime, timezone
 import hashlib
 import hmac
 from http.cookies import CookieError, SimpleCookie
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 import json
 import re
 import secrets
-import socket
-import threading
 import time
 from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError, URLError
@@ -28,7 +26,7 @@ from urllib.request import Request
 from symphonia.application.authorization import AuthorizationService
 from symphonia.infrastructure import AuthorizationAttemptRepository
 from tools.oauth_callback_spike import handle_callback
-from tools.ha_oauth_trial.server import bounded_provider_response
+from tools.ha_oauth_trial.server import RequestDeadlineServer, bounded_provider_response
 
 
 ORIGIN = "http://127.0.0.1:8765"
@@ -169,50 +167,13 @@ class SpotifyProof:
             # No grant is retained on self, in SQLite, on disk, or in HTTP state.
 
 
-class ResearchServer(HTTPServer):
+class ResearchServer(RequestDeadlineServer):
     def __init__(self, proof: SpotifyProof, *, address=("127.0.0.1", 8765), parse_seconds=2.0, deadline=None):
         self.proof = proof
         self.report = None
         self.result_viewed = False
-        self.parse_seconds, self._parsing = parse_seconds, None
-        self.deadline = deadline
-        super().__init__(address, ResearchHandler)
+        super().__init__(address, ResearchHandler, parse_seconds=parse_seconds, deadline=deadline)
         self.timeout = 1
-
-    def get_request(self):
-        connection, address = super().get_request()
-        connection.settimeout(2)
-        expired = threading.Event()
-
-        def expire():
-            expired.set()
-            try:
-                connection.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-
-        # The serial listener gets a fixed parsing deadline; trickled bytes
-        # cannot extend it. Provider work starts only after parsing completes.
-        seconds = self.parse_seconds if self.deadline is None else min(self.parse_seconds, max(0, self.deadline - time.monotonic()))
-        deadline = threading.Timer(seconds, expire)
-        deadline.daemon = True
-        self._parsing = (connection, deadline, expired)
-        deadline.start()
-        return connection, address
-
-    def parsing_complete(self, connection, *, check_expiry=True):
-        current = self._parsing
-        if current is None or current[0] is not connection:
-            return
-        self._parsing = None
-        current[1].cancel()
-        current[1].join(timeout=1)
-        if check_expiry and current[2].is_set():
-            raise TimeoutError("research_parse_deadline")
-
-    def shutdown_request(self, connection):
-        self.parsing_complete(connection, check_expiry=False)
-        super().shutdown_request(connection)
 
 
 class ResearchHandler(BaseHTTPRequestHandler):

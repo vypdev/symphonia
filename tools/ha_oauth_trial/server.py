@@ -409,11 +409,13 @@ class Trial:
             self.report = {"result": "return_to_ha_and_complete"}
 
 
-class TrialServer(HTTPServer):
-    def __init__(self, address, trial, *, callback=False, parse_seconds=2.0):
-        self.trial, self.callback = trial, callback
+class RequestDeadlineServer(HTTPServer):
+    """Serial research listener with a fixed parsing window per connection."""
+
+    def __init__(self, address, handler, *, parse_seconds=2.0, deadline=None):
         self.parse_seconds, self._parsing = parse_seconds, None
-        super().__init__(address, TrialHandler)
+        self.deadline = deadline
+        super().__init__(address, handler)
 
     def get_request(self):
         connection, address = super().get_request()
@@ -429,7 +431,8 @@ class TrialServer(HTTPServer):
 
         # HTTPServer handles one request at a time. A fixed parsing window,
         # unlike an idle timeout, cannot be extended by trickling bytes.
-        deadline = threading.Timer(self.parse_seconds, expire)
+        seconds = self.parse_seconds if self.deadline is None else min(self.parse_seconds, max(0, self.deadline - time.monotonic()))
+        deadline = threading.Timer(seconds, expire)
         deadline.daemon = True
         self._parsing = (connection, deadline, expired)
         deadline.start()
@@ -443,11 +446,17 @@ class TrialServer(HTTPServer):
         current[1].cancel()
         current[1].join(timeout=1)
         if check_expiry and current[2].is_set():
-            raise TimeoutError("trial_parse_deadline")
+            raise TimeoutError("research_parse_deadline")
 
     def shutdown_request(self, connection):
         self.parsing_complete(connection, check_expiry=False)
         super().shutdown_request(connection)
+
+
+class TrialServer(RequestDeadlineServer):
+    def __init__(self, address, trial, *, callback=False, parse_seconds=2.0):
+        self.trial, self.callback = trial, callback
+        super().__init__(address, TrialHandler, parse_seconds=parse_seconds)
 
 
 class TrialHandler(BaseHTTPRequestHandler):

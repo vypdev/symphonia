@@ -178,3 +178,10 @@ body limit and safe errors. The trial's remaining lifetime further caps each
 request, so provider I/O cannot extend the advertised run indefinitely. This
 also protects the standalone loopback proof. No owner installation or live
 Spotify repeat is claimed.
+
+
+Prepared trial.8 extracts the same parsing watchdog into a shared research
+listener used by the trial, standalone Spotify proof and both synthetic
+callback tools. All retain their own route/identity policies. The internal TLS
+fixture separately applies its absolute deadline before the real handshake.
+Loopback regressions cover each listener. No owner installation is claimed.

@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import socket
 import ssl
 import threading
 import time
@@ -49,22 +50,57 @@ class Pairing:
 
 
 class BoundedTLSHTTPServer(HTTPServer):
-    """Bound idle handshakes/reads before the synchronous handler can block."""
+    """Bound total TLS/HTTP parsing before the serial handler can block."""
 
-    def __init__(self, address, context, pairing, *, connection_timeout=2.0):
+    def __init__(self, address, context, pairing, *, connection_timeout=2.0, parse_seconds=2.0):
         super().__init__(address, Handler)
         self.tls_context = context
         self.pairing = pairing
         self.connection_timeout = connection_timeout
+        self.parse_seconds, self._parsing = parse_seconds, None
 
     def get_request(self):
         raw, address = self.socket.accept()
         raw.settimeout(self.connection_timeout)
+        connection, expired = [raw], threading.Event()
+
+        def expire():
+            expired.set()
+            try:
+                connection[0].shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+        deadline = threading.Timer(self.parse_seconds, expire)
+        deadline.daemon = True
+        self._parsing = (connection, deadline, expired)
+        deadline.start()
         try:
-            return self.tls_context.wrap_socket(raw, server_side=True), address
+            # Retain the wrapped socket before starting the handshake so the
+            # watchdog can interrupt TLS as well as later headers/body reads.
+            connection[0] = self.tls_context.wrap_socket(raw, server_side=True, do_handshake_on_connect=False)
+            connection[0].do_handshake()
+            if expired.is_set():
+                raise TimeoutError("lab_parse_deadline")
+            return connection[0], address
         except BaseException:
-            raw.close()
+            self.parsing_complete(connection[0], check_expiry=False)
+            connection[0].close()
             raise
+
+    def parsing_complete(self, connection, *, check_expiry=True):
+        current = self._parsing
+        if current is None or current[0][0] is not connection:
+            return
+        self._parsing = None
+        current[1].cancel()
+        current[1].join(timeout=1)
+        if check_expiry and current[2].is_set():
+            raise TimeoutError("lab_parse_deadline")
+
+    def shutdown_request(self, connection):
+        self.parsing_complete(connection, check_expiry=False)
+        super().shutdown_request(connection)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -77,11 +113,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:
+            pass
         self.close_connection = True
 
     def do_GET(self):
+        self.server.parsing_complete(self.connection)
         self.respond(404)
 
     def do_POST(self):
@@ -104,6 +144,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(raw) != int(lengths[0]):
                 self.respond(400)
                 return
+            self.server.parsing_complete(self.connection)
             data = json.loads(raw)
         except (ValueError, UnicodeError):
             self.respond(400)

@@ -208,3 +208,21 @@ provider-deadline cases also passed as UID 10001, without external networking,
 on the trial's exact pinned Python base image (`d98cc29d3266e535dd9da1099688d9cb3ca4753813571e071763d17725460962`,
 Python 3.13.17). This is a base-image execution result, not an owner installation
 or complete App build/install result. The temporary `--rm` container exited.
+
+
+The next review follow-up extends the absolute parsing window to the internal
+TLS handshake and HTTP headers/body, and unifies the HTTP watchdog across all
+four callback research listeners. Five additional real-loopback regressions
+bring the current complete PR suite to **503 tests, no skips, 89% coverage**.
+Two TLS cases use actual SSL parsing; HTTP cases explicitly stub only TLS
+identity. This is still bounded research, not the production 80/16-case matrix.
+
+The corrected fixture was then reinstalled in the guarded Supervisor lab.
+Actual Core-to-App TLS again passed the full pin/certificate/profile/epoch/
+enrollment/revocation matrix. The expanded `stalls` probe served a healthy
+Core client while another peer continued trickling TLS-handshake, header or
+body bytes; all three absolute-deadline cases and the earlier idle/early-cert
+cases passed. No provider request or backup ran. The fixture was uninstalled;
+three staged sources matched the checkout before deletion, App data was absent,
+and the 14 marked PKI files (57,344 allocated bytes) were removed. The lab was
+stopped with its pre-existing volumes retained.

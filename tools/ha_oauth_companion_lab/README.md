@@ -128,12 +128,15 @@ Remove generated PKI directories only when their `.owned` marker is exactly
 `symphonia-synthetic-oauth-lab-v1`. Stop the guarded lab with
 `python3 tools/ha_app_lab.py stop`; retain its pre-existing named volumes.
 
-Ordinary CI runs fourteen fixture-policy tests without Core, Docker or external
-network. Four use loopback sockets: a real stalled TLS handshake and HTTP
-header/body stalls, plus rejection without a client certificate before reading
-the body. The HTTP cases replace only TLS wrapping with a test adapter. Accepted
-connections have a two-second idle timeout, including the real TLS handshake;
-this is not a complete slow-drip, concurrency, rate or denial-of-service proof.
+Ordinary CI runs eighteen fixture-policy tests without Core, Docker or external
+network. Eight use loopback sockets: two real TLS handshake cases and six HTTP
+identity-stub cases for idle/trickled headers/body, early certificate rejection
+and a truncated enrollment followed by valid retry. Accepted connections have
+both an idle timeout and a fixed two-second TLS/HTTP parsing window. The
+watchdog covers wrapping/handshake and is cancelled before pairing policy runs.
+The actual `stalls` command additionally keeps a trickling peer active while a
+healthy Core client waits. This is not concurrency, rate or general denial-of-
+service certification.
 
 ```sh
 PYTHONPATH=src:. python3 -m unittest tests.test_ha_oauth_companion_lab -v

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hmac
 import http.client
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 import json
 import re
 import secrets
@@ -25,6 +25,7 @@ from symphonia.infrastructure.sqlite_authorization import AuthorizationAttemptEr
 from symphonia.providers.authorization import AuthorizationState
 from symphonia.runtime.dashboard_surface import trusted_ingress_peer
 from tools.oauth_callback_spike import handle_callback
+from tools.ha_oauth_trial.server import RequestDeadlineServer
 
 
 CALLBACK = "/oauth/callback"
@@ -186,17 +187,12 @@ class SessionProof:
                 self._erase()
 
 
-class IsolatedCallbackServer(HTTPServer):
-    def __init__(self, proof, *, host="127.0.0.1"):
+class IsolatedCallbackServer(RequestDeadlineServer):
+    def __init__(self, proof, *, host="127.0.0.1", parse_seconds=2.0):
         if host != "127.0.0.1":
             raise ValueError("loopback_fixture_only")
         self.proof = proof
-        super().__init__((host, 0), IsolatedCallbackHandler)
-
-    def get_request(self):
-        connection, address = super().get_request()
-        connection.settimeout(2)
-        return connection, address
+        super().__init__((host, 0), IsolatedCallbackHandler, parse_seconds=parse_seconds)
 
 
 class IsolatedCallbackHandler(BaseHTTPRequestHandler):
@@ -220,11 +216,15 @@ class IsolatedCallbackHandler(BaseHTTPRequestHandler):
             "Connection": "close",
         }.items():
             self.send_header(key, value)
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:
+            pass
         self.close_connection = True
 
     def do_GET(self):
+        self.server.parsing_complete(self.connection)
         # Host validation is local-fixture-only; no proxy header is trusted.
         hosts = self.headers.get_all("Host", [])
         if hosts != [f"127.0.0.1:{self.server.server_port}"]:
@@ -234,6 +234,7 @@ class IsolatedCallbackHandler(BaseHTTPRequestHandler):
         self._send(status, message)
 
     def do_POST(self):
+        self.server.parsing_complete(self.connection)
         self._send(404, "not_found")
 
 
