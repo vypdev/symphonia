@@ -10,7 +10,9 @@ The [laboratory validation](../development/ha-oauth-companion-lab-2026-10-25.md)
 now proves some mechanics, not a released package. It confirms that private
 HA file permissions alone do not encrypt a key; unprotected backups can retain
 plaintext. App key exclusion works, but restoration without that key leaves the
-fixture locked. The final key/unseal/restore operator procedure is still a blocker.
+fixture locked. [ADR 0008](../decisions/0008-install-local-oauth-keys-and-backups.md)
+selects automatic startup using private local keys and encrypted HA backups.
+The final reset/rotation/publication implementation still needs proof.
 
 ## Intended normal setup
 
@@ -75,10 +77,28 @@ guarantee in this preview.
 ## Backup, removal and disconnect
 
 The App owns encrypted provider grants and is the only refresh owner. HA stores
-safe pairing/connection references, not the grant. Pairing-key storage and the
-HA/App backup/key restore contract still require review; config entries must
-not be assumed encrypted. Restore to a new installation requires explicit
-re-pairing, with pending flows abandoned.
+safe pairing/connection references, not the grant. Its pairing key is a separate
+private local file, readable by Core and host root; config entries are not
+encrypted keystores. The selected automatic-start profile requires encrypted
+HA backups. A decrypted Core backup may contain this native identity. Keep the
+HA backup decryption key safe; the current destination setting does not certify
+every historical or manual archive. The App needs no backup-inspection privilege.
+
+After **Core restore or cloning**, first revoke the previous pair in the App and
+then explicitly re-pair. The copied identity cannot reliably detect its own
+cloning; restoring Core alone does not automatically revoke an old pair. If the
+App is offline, new setup must wait for this operator procedure.
+
+The App excludes all OAuth private keys from ordinary backups and encrypts its
+provider grant records. After **App restore without those keys**, credentials
+stay locked while non-secret library/history remains. The planned authenticated
+admin action resets the local credential identity, fences previous attempts/
+refresh/references and requires fresh pairing and provider consent. Startup must
+not silently generate replacement keys. A missing key does not prove external
+Spotify revocation. An encrypted recovery-kit export is not an enabled feature.
+The [key contract](../architecture/local-key-custody-rfc.md) and
+[bounded lab results](../development/local-key-custody-lab-2026-10-25.md) state
+which mechanisms passed; full reset/rotation/restore conformance remains gated.
 
 **Unpair/remove auxiliary integration** disables new consent and pending bridge
 authority. It does not mean an existing App grant was erased. If the App is
