@@ -48,6 +48,25 @@ class Pairing:
         return 403
 
 
+class BoundedTLSHTTPServer(HTTPServer):
+    """Bound idle handshakes/reads before the synchronous handler can block."""
+
+    def __init__(self, address, context, pairing, *, connection_timeout=2.0):
+        super().__init__(address, Handler)
+        self.tls_context = context
+        self.pairing = pairing
+        self.connection_timeout = connection_timeout
+
+    def get_request(self):
+        raw, address = self.socket.accept()
+        raw.settimeout(self.connection_timeout)
+        try:
+            return self.tls_context.wrap_socket(raw, server_side=True), address
+        except BaseException:
+            raw.close()
+            raise
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -69,6 +88,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/internal/ha-oauth/v1":
             self.respond(404)
             return
+        cert = self.connection.getpeercert(binary_form=True)
+        if not cert:
+            self.respond(403)
+            return
         lengths = self.headers.get_all("Content-Length", [])
         if len(lengths) != 1 or not lengths[0].isdigit() or not 0 < int(lengths[0]) <= 16384:
             self.respond(400)
@@ -81,8 +104,7 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, UnicodeError):
             self.respond(400)
             return
-        cert = self.connection.getpeercert(binary_form=True)
-        peer = hashlib.sha256(cert).digest() if cert else None
+        peer = hashlib.sha256(cert).digest()
         self.respond(self.server.pairing.request(data, peer))
 
 
@@ -104,9 +126,7 @@ def main():
         os.setgroups([])
         os.setgid(10001)
         os.setuid(10001)
-    server = HTTPServer(("0.0.0.0", 8098), Handler)
-    server.pairing = Pairing(settings["challenge"])
-    server.socket = context.wrap_socket(server.socket, server_side=True)
+    server = BoundedTLSHTTPServer(("0.0.0.0", 8098), context, Pairing(settings["challenge"]))
     stop = threading.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *args: stop.set())

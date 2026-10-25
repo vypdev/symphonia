@@ -180,8 +180,13 @@ CSRF values or full request headers were copied into evidence.
 [Core 2026.10.3 header middleware](https://github.com/home-assistant/core/blob/2026.10.3/homeassistant/components/http/headers.py)
 overwrites the upstream `Referrer-Policy` response header with `no-referrer`.
 The trial had set its private response header to `same-origin`, but had no
-corresponding document metadata. This explains the observed Origin failure;
-the exact failure category of the first generic rejection was not logged.
+corresponding document metadata. This suggested a possible mechanism, not an
+established cause of the real HA rejection: the exact failure category of the
+first generic rejection was not logged. Fetch's
+[Origin-header algorithm](https://fetch.spec.whatwg.org/#append-a-request-origin-header)
+does apply referrer policy to certain non-CORS, non-GET/HEAD requests, so
+`no-referrer` can serialize their Origin as `null`. That rule and the isolated
+fixture do not establish which condition caused the earlier HA failure.
 A separate Chrome loopback fixture, without HA/Spotify data, reproduced the
 browser behavior while keeping the HTTP header fixed at `no-referrer`:
 

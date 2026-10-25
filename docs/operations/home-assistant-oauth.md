@@ -49,9 +49,10 @@ The private instance URL is not a Spotify registration value in the default
 profile. The provider's code/state traverse the normal browser OAuth route;
 do not copy or share the callback URL.
 
-If My is disabled, the separately tested alternative is the exact existing
+If My is disabled, the documented alternative is the exact existing
 trusted HTTPS Core URI `https://<ha-host>/auth/external/callback`. Match the
-base used to start setup. No certificate-warning bypass or newly exposed App
+base used to start setup. Its bridge compatibility remains unproven and gated
+on live case L04; this preview does not enable it. No certificate-warning bypass or newly exposed App
 port is permitted. Spotify's current redirect rules do not allow arbitrary
 LAN HTTP addresses as registered callbacks; literal loopback is the exception.
 Local HTTP/private-network return behavior is a compatibility test, not a

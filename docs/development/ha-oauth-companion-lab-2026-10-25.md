@@ -146,11 +146,32 @@ the companion's 80 cases are still a planned production budget.
 
 ## Verification and cleanup
 
+The later PR #27 review correction adds a two-second idle timeout before each
+accepted socket's TLS handshake and HTTP parsing, and rejects a missing client
+certificate before reading a POST body. Four additional loopback tests cover
+stalled real TLS handshakes, stalled HTTP headers/bodies and early certificate
+denial. HTTP-only cases replace TLS wrapping; these tests do not establish a
+complete slow-drip, concurrency or denial-of-service bound. The original run
+below predates that correction; its real TLS route is repeated separately.
+
+The corrected Supervisor fixture was installed again with fresh synthetic PKI.
+The actual Core-to-App TLS 1.3 route passed all original pin/mTLS/enrollment/
+revocation assertions, plus the reproducible `transport_probe.py stalls` cases:
+an idle real handshake closed; a later valid request was served after stalled
+headers and body; missing client certificate returned 403 without a body.
+No provider call or owner-HA modification occurred. The review revision passes
+**480 tests and 89% coverage**. Twelve successor key-custody tests are separate
+work for issue #28 and are not included in that PR #27 total.
+The repeated App was then uninstalled; its three staged files were removed
+after exact source-hash comparison and its marked 14-file synthetic PKI was
+removed. No new backup was created in this transport-only repeat. The guarded
+lab was stopped again with its pre-existing named volumes retained.
+
 The **10 fixture-policy tests** cover expiry at the boundary, wrong/replayed
 challenge, certificate/epoch revocation, missing identity, version/type/profile
 confusion, arbitrary operations/fields and artifact permissions. They are
 research regressions, not a substitute for real framework/TLS/archive evidence.
-The full repository suite passed **476 tests**, with **89%** combined line/branch
+The original campaign, before the review follow-up above, passed **476 tests**, with **89%** combined line/branch
 coverage against the unchanged 85% floor. Specification validation, whitespace
 and manual SDD/catalog consistency checks passed.
 

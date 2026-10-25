@@ -154,12 +154,63 @@ def probe():
     print(json.dumps(receipt, sort_keys=True))
 
 
+def stalls():
+    """Actual TLS handshake/header/body idle regressions; no pairing secret."""
+    assert (ROOT / ".owned").read_text() == MARKER
+
+    def connect(client=True):
+        context = ssl.create_default_context(cafile=str(ROOT / "ca.crt"))
+        context.minimum_version = ssl.TLSVersion.TLSv1_3
+        if client:
+            context.load_cert_chain(str(ROOT / "client.crt"), str(ROOT / "client.key"))
+        raw = socket.create_connection((ALIAS, 8098), timeout=5)
+        try:
+            return context.wrap_socket(raw, server_hostname=ALIAS)
+        except BaseException:
+            raw.close()
+            raise
+
+    def healthy():
+        with connect() as connection:
+            connection.sendall(b"GET / HTTP/1.1\r\nHost: fixture\r\n\r\n")
+            response = http.client.HTTPResponse(connection)
+            response.begin()
+            assert response.status == 404
+            response.read()
+
+    receipt = {"mode": "actual_core_to_app_stall_regressions", "real_spotify": "not_run"}
+    with socket.create_connection((ALIAS, 8098), timeout=5) as raw:
+        assert raw.recv(1) == b""
+    receipt["idle_real_tls_handshake_closed"] = True
+    healthy()
+    receipt["served_after_handshake_timeout"] = True
+    for name, payload in (
+        ("headers", b"POST /internal/ha-oauth/v1 HTTP/1.1\r\nHost: fixture\r\n"),
+        ("body", b"POST /internal/ha-oauth/v1 HTTP/1.1\r\nHost: fixture\r\n"
+         b"Content-Type: application/json\r\nContent-Length: 100\r\n\r\n{"),
+    ):
+        with connect() as stalled:
+            stalled.sendall(payload)
+            healthy()
+            assert stalled.recv(1) == b""
+        receipt["served_after_" + name + "_timeout"] = True
+    with connect(False) as connection:
+        connection.sendall(b"POST /internal/ha-oauth/v1 HTTP/1.1\r\nHost: fixture\r\n"
+                           b"Content-Type: application/json\r\nContent-Length: 100\r\n\r\n")
+        response = http.client.HTTPResponse(connection)
+        response.begin()
+        assert response.status == 403
+        response.read()
+    receipt["missing_certificate_rejected_before_body"] = True
+    print(json.dumps(receipt, sort_keys=True))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "probe"))
+    parser.add_argument("command", choices=("prepare", "probe", "stalls"))
     args = parser.parse_args()
     try:
-        prepare() if args.command == "prepare" else probe()
+        {"prepare": prepare, "probe": probe, "stalls": stalls}[args.command]()
     except Exception as error:
         print(json.dumps({"probe": "failed", "exception_type": type(error).__name__,
             "tls_verify_code": getattr(error, "verify_code", None)}))

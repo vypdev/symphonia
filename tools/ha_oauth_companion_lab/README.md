@@ -30,7 +30,7 @@ recursively scans `config.*` with a supported extension; an extra word between
 [discovery pattern](https://github.com/home-assistant/supervisor/blob/2026.10.4/supervisor/store/data.py#L157-L163).
 Only lab staging
 renames it to `config.yaml`. Its source has no host ports, mounts or Core/API
-permissions. It runs for at most 1,200 seconds. All key values are generated;
+permissions. Its configured lifetime is 1,200 seconds. All key values are generated;
 none are printed, committed or passed as CLI arguments.
 
 ## Reproduce the isolated native HTTP proof
@@ -102,6 +102,8 @@ docker exec -i symphonia-ha-lab docker exec -i homeassistant python3 - prepare \
 ```sh
 docker exec -i symphonia-ha-lab docker exec -i homeassistant python3 - probe \
   < tools/ha_oauth_companion_lab/transport_probe.py
+docker exec -i symphonia-ha-lab docker exec -i homeassistant python3 - stalls \
+  < tools/ha_oauth_companion_lab/transport_probe.py
 docker exec -i symphonia-ha-lab docker exec -i homeassistant python3 - \
   < tools/ha_oauth_companion_lab/backup_probe.py
 ```
@@ -126,7 +128,12 @@ Remove generated PKI directories only when their `.owned` marker is exactly
 `symphonia-synthetic-oauth-lab-v1`. Stop the guarded lab with
 `python3 tools/ha_app_lab.py stop`; retain its pre-existing named volumes.
 
-Ordinary CI runs the ten fixture-policy tests without Core, Docker or network:
+Ordinary CI runs fourteen fixture-policy tests without Core, Docker or external
+network. Four use loopback sockets: a real stalled TLS handshake and HTTP
+header/body stalls, plus rejection without a client certificate before reading
+the body. The HTTP cases replace only TLS wrapping with a test adapter. Accepted
+connections have a two-second idle timeout, including the real TLS handshake;
+this is not a complete slow-drip, concurrency, rate or denial-of-service proof.
 
 ```sh
 PYTHONPATH=src:. python3 -m unittest tests.test_ha_oauth_companion_lab -v
