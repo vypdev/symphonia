@@ -343,3 +343,11 @@ the production callback direction, token-storage decisions or readiness gates.
 The prepared `0.1.0-trial.4` source canonicalizes configured HTTPS ports to browser Origin serialization: explicit 443 is omitted and non-default ports use decimal form without leading zeroes. Received Origin and CSRF checks remain exact. Three new cases prove default-port private checks, non-default port isolation and decimal canonicalization without mutating the input configuration. The complete PR suite passes 483 tests at 89% coverage.
 
 This correction does not identify the cause of the earlier owner-instance rejection. Trial.4 has not been installed, started or authorized against Spotify on the owner instance; the previous research App remains stopped. The selected native OAuth companion does not use this direct-callback/tunnel artifact.
+
+## PR review follow-up: Ingress paths and opaque client IDs
+
+Prepared trial.5 renders form actions and the refresh link under the server-validated Ingress base path. The rendered-form test resolves every action from document URLs both with and without a final slash and confirms the same App token is retained. It does not retrospectively establish the cause of an earlier owner-instance rejection.
+
+Both callback research tools now accept a bounded opaque printable-ASCII public Client ID and encode it as one parameter. The 1–256 character limit is a tooling bound; it is not claimed as a Spotify format guarantee. [Spotify application documentation](https://developer.spotify.com/documentation/web-api/concepts/apps) identifies the public client identifier; [OAuth 2.0 section 2.2 and Appendix A.1](https://www.rfc-editor.org/rfc/rfc6749#section-2.2) define its role and syntax. Uppercase/reserved-character IDs retain the exact configured redirect and reach the fake exchange; empty, control/non-ASCII, wrong-type and oversized values fail before I/O. No non-hex Spotify registration or new live call was used.
+
+The full PR suite passes **487 tests, no skips, and 89% coverage**. Trial.5 is prepared only; the owner App remains stopped and the selected native companion direction is unchanged.

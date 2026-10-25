@@ -100,7 +100,10 @@ def _validate_grant(grant: dict, *, previous_scope: str | None = None) -> None:
 
 class SpotifyProof:
     def __init__(self, client_id: str, authorization: AuthorizationService, *, transport=request_json, clock=None):
-        if re.fullmatch(r"[a-f0-9]{32}", client_id) is None:
+        # Opaque OAuth identifier, not a promised Spotify hexadecimal format.
+        # The 256-character cap is a research-tool bound, not a provider limit.
+        if (not isinstance(client_id, str) or not 1 <= len(client_id) <= 256
+                or any(not 0x20 <= ord(char) <= 0x7e for char in client_id)):
             raise ValueError("invalid Spotify Client ID")
         self.client_id = client_id
         self.authorization = authorization

@@ -41,6 +41,23 @@ class SpotifyOAuthProofTests(unittest.TestCase):
     def test_pkce_matches_the_rfc7636_s256_vector(self):
         self.assertEqual(challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
 
+    def test_opaque_client_id_stays_one_encoded_parameter_and_reaches_exchange(self):
+        client = "UPPER_id&redirect_uri=https://example.invalid"
+        proof = SpotifyProof(client, AuthorizationService(self.repository),
+            transport=self.transport, clock=self.clock)
+        url, cookie = proof.begin()
+        values = parse_qs(urlsplit(url).query)
+        self.assertEqual(values["client_id"], [client])
+        self.assertEqual(values["redirect_uri"], [REDIRECT])
+        path = CALLBACK + "?" + urlencode({"state": values["state"][0], "code": CANARY})
+        self.assertEqual(proof.callback(path, f"{COOKIE}={cookie}")[0], 200)
+        self.assertEqual(self.transport.call_args_list[0].kwargs["form"]["client_id"], client)
+
+    def test_client_id_controls_types_and_tooling_size_limit_are_rejected(self):
+        for client in (None, 1, "", "bad\nvalue", "bad\x00value", "bad\x7fvalue", "é", "x" * 257):
+            with self.subTest(client=repr(client)), self.assertRaises(ValueError):
+                SpotifyProof(client, AuthorizationService(self.repository))
+
     def test_requests_exact_redirect_and_only_read_only_profile_scope(self):
         self.assertTrue(self.url.startswith(AUTHORIZE + "?"))
         self.assertEqual(self.parameters["redirect_uri"], [REDIRECT])

@@ -161,7 +161,9 @@ an idle real handshake closed; a later valid request was served after stalled
 headers and body; missing client certificate returned 403 without a body.
 No provider call or owner-HA modification occurred. The review revision passes
 **480 tests and 89% coverage** at that correction. The subsequent legacy-trial
-port-serialization fix adds three cases, for **483 tests and 89% coverage**. Twelve successor key-custody tests are separate
+port-serialization fix adds three cases, for **483 tests and 89% coverage**.
+The later Ingress-path/opaque-client-ID correction passes **487 tests and 89%
+coverage**; it adds no native-companion/provider live claim. Twelve successor key-custody tests are separate
 work for issue #28 and are not included in that PR #27 total.
 The repeated App was then uninstalled; its three staged files were removed
 after exact source-hash comparison and its marked 14-file synthetic PKI was

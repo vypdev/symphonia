@@ -8,7 +8,7 @@ import threading
 import tempfile
 import unittest
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 
 from tools.ha_oauth_trial.server import (
     CALLBACK, COOKIE, FLOW_SECONDS, RUN_SECONDS, PROFILE, TOKEN, Rejected,
@@ -303,13 +303,17 @@ class HAInstalledTrialTests(unittest.TestCase):
         class FormParser(HTMLParser):
             def __init__(self):
                 super().__init__()
-                self.meta, self.csrf = [], None
+                self.meta, self.csrf, self.actions, self.links = [], None, [], []
             def handle_starttag(self, tag, attrs):
                 values = dict(attrs)
                 if tag == "meta":
                     self.meta.append(values)
                 if tag == "input" and values.get("name") == "csrf":
                     self.csrf = values["value"]
+                if tag == "form":
+                    self.actions.append(values["action"])
+                if tag == "a":
+                    self.links.append(values["href"])
         server = TrialServer(("127.0.0.1", 0), self.trial)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -326,6 +330,16 @@ class HAInstalledTrialTests(unittest.TestCase):
                 # Core overwrites the HTTP header with no-referrer. The private
                 # document therefore needs its own same-origin policy too.
                 self.assertIn({"name": "referrer", "content": "same-origin"}, parser.meta)
+                expected_actions = {self.identity.base_path + "/" + action
+                    for action in ("check", "start", "complete", "cancel")}
+                self.assertEqual(set(parser.actions), expected_actions)
+                # Real URL resolution retains the token with either document URL.
+                for suffix in ("", "/"):
+                    document = OPTIONS["management_origin"] + self.identity.base_path + suffix
+                    for action in parser.actions:
+                        self.assertEqual(urlsplit(urljoin(document, action)).path, action)
+                    self.assertEqual(urljoin(document, parser.links[0]),
+                        OPTIONS["management_origin"] + self.identity.base_path + "/")
                 body = urlencode({"csrf": parser.csrf})
                 client.request("POST", "/check", body, headers={"Cookie": cookie,
                     "Origin": OPTIONS["management_origin"], "Content-Type": "application/x-www-form-urlencoded"})
@@ -354,9 +368,27 @@ class HAInstalledTrialTests(unittest.TestCase):
 
     def test_options_reject_http_credentials_paths_and_unknown_fields(self):
         for changes in ({"management_origin": "http://ha.local"}, {"management_origin": "https://user:pass@ha.test"},
-            {"management_origin": "https://ha.test/path"}, {"client_id": "bad"}, {"tunnel_enabled": "true"}, {"secret": "canary"}):
+            {"management_origin": "https://ha.test/path"}, {"client_id": ""}, {"tunnel_enabled": "true"}, {"secret": "canary"}):
             with self.assertRaises(ValueError):
                 configuration({**OPTIONS, **changes})
+
+    def test_opaque_client_id_is_encoded_without_overwriting_redirect(self):
+        client = "UPPER_id&redirect_uri=https://example.invalid"
+        trial = Trial({**OPTIONS, "client_id": client})
+        trial.set_callback_origin(ORIGIN)
+        identity = trial.identity("172.30.32.2", headers())
+        nonce, csrf = trial.browser(identity, headers()["Cookie"], create=True)
+        cookie = headers()["Cookie"] + "; " + COOKIE + "=" + nonce
+        trial.post("/check", identity, cookie, OPTIONS["management_origin"], csrf)
+        values = parse_qs(urlsplit(trial.post("/start", identity, cookie,
+            OPTIONS["management_origin"], csrf)).query)
+        self.assertEqual(values["client_id"], [client])
+        self.assertEqual(values["redirect_uri"], [ORIGIN + CALLBACK])
+
+    def test_client_id_controls_types_and_tooling_size_limit_are_rejected(self):
+        for client in (None, 1, "", "bad\nvalue", "bad\x00value", "bad\x7fvalue", "é", "x" * 257):
+            with self.subTest(client=repr(client)), self.assertRaises(ValueError):
+                configuration({**OPTIONS, "client_id": client})
 
     def test_explicit_default_https_port_accepts_browser_origin_for_private_check(self):
         options = {**OPTIONS, "management_origin": "https://ha.example.test:443"}

@@ -127,7 +127,9 @@ def configuration(value):
     if not isinstance(value, dict) or set(value) != {"client_id", "management_origin", "tunnel_enabled"}:
         raise ValueError("invalid_options")
     client, origin = value["client_id"], value["management_origin"]
-    if not isinstance(client, str) or re.fullmatch(r"[a-f0-9]{32}", client) is None:
+    # Opaque OAuth identifier with a local tooling size/syntax bound.
+    if (not isinstance(client, str) or not 1 <= len(client) <= 256
+            or any(not 0x20 <= ord(char) <= 0x7e for char in client)):
         raise ValueError("invalid_client_id")
     if not isinstance(origin, str) or re.fullmatch(r"https://[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?(?::[0-9]{1,5})?", origin) is None:
         raise ValueError("management_requires_https_origin")
@@ -411,11 +413,12 @@ class TrialHandler(BaseHTTPRequestHandler):
             body = "<!doctype html><meta charset=utf-8><meta name=referrer content=same-origin><title>Symphonia OAuth Trial</title><h1>Symphonia OAuth Trial</h1>"
             body += "<p>Prueba temporal: solo lectura de perfil y una renovacion. Sin biblioteca, reproduccion ni tokens persistentes. Se detiene a los 20 minutos.</p>"
             body += "<p>Registra esta URI exacta en la app de prueba de Spotify:</p><pre>" + html.escape(callback) + "</pre>"
-            body += "<pre>" + html.escape(status) + "</pre><a href='./'>Actualizar estado</a>"
+            base = html.escape(identity.base_path, quote=True)
+            body += "<pre>" + html.escape(status) + f"</pre><a href='{base}/'>Actualizar estado</a>"
             body += "<p>Research server SHA-256:</p><pre>" + hashlib.sha256(Path(__file__).read_bytes()).hexdigest() + "</pre>"
             for action, label in (("check", "Verificar sesion privada"), ("start", "Autorizar Spotify"), ("complete", "Completar"), ("cancel", "Cancelar")):
                 target = " target='_blank'" if action == "start" else ""
-                body += f"<form method=post action='./{action}'{target}><input type=hidden name=csrf value='{csrf}'><button>{label}</button></form>"
+                body += f"<form method=post action='{base}/{action}'{target}><input type=hidden name=csrf value='{csrf}'><button>{label}</button></form>"
             self.send(200, body.encode(), headers={"Referrer-Policy": "same-origin", "Set-Cookie":
                 f"{COOKIE}={nonce}; Path={identity.base_path}/; Max-Age={RUN_SECONDS}; HttpOnly; Secure; SameSite=Strict"})
         except (Rejected, ValueError):

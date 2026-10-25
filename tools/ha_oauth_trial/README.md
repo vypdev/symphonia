@@ -162,3 +162,5 @@ match browser Origin serialization (default 443 omitted, other ports decimal).
 Incoming Origin checks remain exact. It has not been installed or run on the
 owner's HA; the earlier stopped trial and its historical results are unchanged.
 The selected native companion design does not use this callback/tunnel trial.
+
+The prepared `0.1.0-trial.5` revision also anchors every form and refresh link to the verified Ingress base path, including documents opened without a trailing slash. Client IDs are opaque printable-ASCII values with a local 1–256 character tooling bound, not an assumed Spotify hexadecimal format; URL/form encoding keeps them in one parameter. This is not a new live-provider result or an owner-instance installation.
