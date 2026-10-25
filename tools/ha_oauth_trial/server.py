@@ -17,11 +17,12 @@ import signal
 import socket
 import stat
 import subprocess
+import sys
 import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+from urllib.request import Request
 
 
 CALLBACK = "/oauth/callback"
@@ -54,12 +55,70 @@ def action_rejection_code(error, trusted):
     return "invalid_request"
 
 
+# A disposable subprocess bounds DNS, TLS, headers and slow response bodies.
+# The request/response travel only through private pipes, never argv or logs.
+# Killing it at the deadline also releases its sockets and transient grant data;
+# an abandoned daemon network thread would retain both until the peer stopped.
+PROVIDER_WORKER = r'''
+import os, sys, json, base64
+os.environ.clear()
+from urllib.request import Request, ProxyHandler, HTTPRedirectHandler, build_opener
+from urllib.error import HTTPError
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
+try:
+    raw = sys.stdin.buffer.read(131073)
+    if len(raw) > 131072:
+        raise ValueError()
+    value = json.loads(raw)
+    data = None if value["data"] is None else base64.b64decode(value["data"], validate=True)
+    request = Request(value["url"], data=data, headers=value["headers"])
+    with build_opener(ProxyHandler({}), NoRedirect).open(request, timeout=10) as response:
+        body = response.read(65537)
+    result = {"status": "ok", "body": base64.b64encode(body).decode("ascii")}
+except HTTPError as error:
+    code = error.code
+    error.close()
+    result = {"status": "http", "code": code}
+except Exception:
+    result = {"status": "unreachable"}
+sys.stdout.buffer.write(json.dumps(result).encode("ascii"))
+'''
 
 
-def request_json(url, *, form=None, bearer=None):
+def bounded_provider_response(request, *, seconds=10):
+    """Internal worker boundary; public callers enforce the endpoint allowlist."""
+    if seconds <= 0:
+        raise TimeoutError("provider_deadline")
+    payload = json.dumps({"url": request.full_url,
+        "data": None if request.data is None else base64.b64encode(request.data).decode("ascii"),
+        "headers": dict(request.header_items())}).encode("ascii")
+    if len(payload) > 131072:
+        raise OSError("provider_request_too_large")
+    try:
+        completed = subprocess.run([sys.executable, "-I", "-c", PROVIDER_WORKER],
+            input=payload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=seconds, check=False)
+    except subprocess.TimeoutExpired:
+        # run() kills and reaps this worker before raising. It creates no children.
+        raise TimeoutError("provider_deadline") from None
+    try:
+        if completed.returncode != 0 or len(completed.stdout) > 100000:
+            raise ValueError()
+        result = json.loads(completed.stdout)
+        if result == {"status": "unreachable"}:
+            raise OSError("provider_unreachable")
+        if result.get("status") == "http" and type(result.get("code")) is int:
+            raise HTTPError(request.full_url, result["code"], "", {}, None)
+        if result.get("status") != "ok" or not isinstance(result.get("body"), str):
+            raise ValueError()
+        return base64.b64decode(result["body"], validate=True)
+    except (ValueError, TypeError, AttributeError):
+        raise OSError("provider_worker_failed") from None
+
+
+def request_json(url, *, form=None, bearer=None, seconds=10):
     if url not in {TOKEN, PROFILE}:
         raise Rejected("unsupported_endpoint")
     headers = {"Accept": "application/json"}
@@ -70,8 +129,7 @@ def request_json(url, *, form=None, bearer=None):
     if bearer is not None:
         headers["Authorization"] = "Bearer " + valid_token(bearer)
     try:
-        with build_opener(ProxyHandler({}), NoRedirect).open(Request(url, data=data, headers=headers), timeout=10) as response:
-            body = response.read(65537)
+        body = bounded_provider_response(Request(url, data=data, headers=headers), seconds=seconds)
     except HTTPError as error:
         error.close()
         raise Rejected("provider_http_error") from None
@@ -195,9 +253,9 @@ class IngressIdentity:
 
 
 class Trial:
-    def __init__(self, options, *, clock=time.monotonic, exchange=verify_spotify):
+    def __init__(self, options, *, clock=time.monotonic, exchange=None):
         self.options = configuration(options)
-        self.clock, self.exchange = clock, exchange
+        self.clock, self.exchange = clock, exchange or self._verify
         self.key = secrets.token_bytes(32)
         self.started = clock()
         self.lock = threading.RLock()
@@ -206,6 +264,12 @@ class Trial:
         self.flow = None
         self.used = False
         self.report = {"result": "tunnel_disabled" if not options["tunnel_enabled"] else "waiting_for_https"}
+
+    def _verify(self, *args):
+        def transport(url, **kwargs):
+            remaining = self.started + RUN_SECONDS - self.clock()
+            return request_json(url, **kwargs, seconds=min(10, remaining))
+        return verify_spotify(*args, transport=transport)
 
     def digest(self, value):
         return hmac.digest(self.key, value.encode(), "sha256")

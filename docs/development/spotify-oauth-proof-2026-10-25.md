@@ -111,6 +111,15 @@ completion of provider work exceeding the parsing window. This correction was
 not rerun against live Spotify. The complete PR suite passes 492 tests with no
 skips and 89% combined coverage.
 
+A subsequent review correction uses a disposable subprocess for each fixed
+provider request, with a total deadline rather than only socket inactivity.
+Timeout kills and reaps that worker; credentials traverse private pipes and
+never its command arguments or application logs. Redirect refusal, TLS checks,
+bounded bodies and fixed errors remain. The ten-minute run deadline further
+caps each provider request and newly accepted parsing window. Actual loopback
+tests cover trickled response headers/body and peer closure after termination;
+there is no new live-provider result.
+
 | Boundary | Offline result | Live result |
 | --- | --- | --- |
 | Exact redirect and minimal scope | Pass | Dedicated-app consent screen reached |

@@ -100,7 +100,11 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(400)
             return
         try:
-            data = json.loads(self.rfile.read(int(lengths[0])))
+            raw = self.rfile.read(int(lengths[0]))
+            if len(raw) != int(lengths[0]):
+                self.respond(400)
+                return
+            data = json.loads(raw)
         except (ValueError, UnicodeError):
             self.respond(400)
             return

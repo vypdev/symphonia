@@ -23,12 +23,12 @@ import threading
 import time
 from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError, URLError
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.request import Request
 
 from symphonia.application.authorization import AuthorizationService
 from symphonia.infrastructure import AuthorizationAttemptRepository
-from tools.ha_ingress_probe import NoRedirect
 from tools.oauth_callback_spike import handle_callback
+from tools.ha_oauth_trial.server import bounded_provider_response
 
 
 ORIGIN = "http://127.0.0.1:8765"
@@ -51,7 +51,7 @@ def challenge(verifier: str) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).rstrip(b"=").decode("ascii")
 
 
-def request_json(url: str, *, form: dict[str, str] | None = None, bearer: str | None = None) -> dict:
+def request_json(url: str, *, form: dict[str, str] | None = None, bearer: str | None = None, seconds=10) -> dict:
     """Fixed TLS endpoints, no redirects/proxies, bounded responses, safe errors."""
     if url not in {TOKEN, PROFILE}:
         raise ValueError("unsupported research endpoint")
@@ -64,8 +64,7 @@ def request_json(url: str, *, form: dict[str, str] | None = None, bearer: str | 
         headers["Authorization"] = "Bearer " + bearer
     request = Request(url, data=data, headers=headers)
     try:
-        with build_opener(ProxyHandler({}), NoRedirect).open(request, timeout=10) as response:
-            body = response.read(65537)
+        body = bounded_provider_response(request, seconds=seconds)
     except HTTPError as error:
         status = error.code
         error.close()
@@ -171,11 +170,12 @@ class SpotifyProof:
 
 
 class ResearchServer(HTTPServer):
-    def __init__(self, proof: SpotifyProof, *, address=("127.0.0.1", 8765), parse_seconds=2.0):
+    def __init__(self, proof: SpotifyProof, *, address=("127.0.0.1", 8765), parse_seconds=2.0, deadline=None):
         self.proof = proof
         self.report = None
         self.result_viewed = False
         self.parse_seconds, self._parsing = parse_seconds, None
+        self.deadline = deadline
         super().__init__(address, ResearchHandler)
         self.timeout = 1
 
@@ -193,7 +193,8 @@ class ResearchServer(HTTPServer):
 
         # The serial listener gets a fixed parsing deadline; trickled bytes
         # cannot extend it. Provider work starts only after parsing completes.
-        deadline = threading.Timer(self.parse_seconds, expire)
+        seconds = self.parse_seconds if self.deadline is None else min(self.parse_seconds, max(0, self.deadline - time.monotonic()))
+        deadline = threading.Timer(seconds, expire)
         deadline.daemon = True
         self._parsing = (connection, deadline, expired)
         deadline.start()
@@ -274,11 +275,14 @@ def main() -> int:
     repository = AuthorizationAttemptRepository()
     server = None
     try:
-        proof = SpotifyProof(args.client_id, AuthorizationService(repository))
-        server = ResearchServer(proof)
-        print(f"Research page: {ORIGIN}/ (expires in 10 minutes)", flush=True)
         deadline = time.monotonic() + 600
+        def transport(url, **kwargs):
+            return request_json(url, **kwargs, seconds=min(10, deadline - time.monotonic()))
+        proof = SpotifyProof(args.client_id, AuthorizationService(repository), transport=transport)
+        server = ResearchServer(proof, deadline=deadline)
+        print(f"Research page: {ORIGIN}/ (expires in 10 minutes)", flush=True)
         while time.monotonic() < deadline and not server.result_viewed:
+            server.timeout = min(1, max(0, deadline - time.monotonic()))
             server.handle_request()
         print(json.dumps(server.report or {"result": "research_timeout"}), flush=True)
         return 0 if server.report and server.report["result"] == "spotify_pkce_verified" else 1

@@ -142,22 +142,15 @@ class SpotifyOAuthProofTests(unittest.TestCase):
         self.assertEqual(self.complete()[1]["result"], "provider_account_changed")
 
     def test_authenticated_redirect_error_never_exposes_body_or_credentials(self):
-        opener = Mock()
-        opener.open.side_effect = HTTPError(TOKEN, 302, CANARY, {}, io.BytesIO(CANARY.encode()))
-        with patch("tools.spotify_oauth_spike.build_opener", return_value=opener):
+        error = HTTPError(TOKEN, 302, CANARY, {}, io.BytesIO(CANARY.encode()))
+        with patch("tools.spotify_oauth_spike.bounded_provider_response", side_effect=error):
             with self.assertRaisesRegex(ProofError, "^provider_http_302$"):
                 request_json(TOKEN, form={"code": CANARY})
 
     def test_no_arbitrary_token_endpoints_or_oversized_provider_body(self):
         with self.assertRaises(ValueError):
             request_json("https://untrusted.invalid/token", form={"code": CANARY})
-        response = Mock()
-        response.__enter__ = Mock(return_value=response)
-        response.__exit__ = Mock(return_value=False)
-        response.read.return_value = b"x" * 65537
-        opener = Mock()
-        opener.open.return_value = response
-        with patch("tools.spotify_oauth_spike.build_opener", return_value=opener), self.assertRaisesRegex(ProofError, "provider_response_too_large"):
+        with patch("tools.spotify_oauth_spike.bounded_provider_response", return_value=b"x" * 65537), self.assertRaisesRegex(ProofError, "provider_response_too_large"):
             request_json(PROFILE, bearer=CANARY)
 
     def test_http_rejects_cross_origin_start_and_management_paths(self):

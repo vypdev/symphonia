@@ -193,3 +193,18 @@ The final loopback research-client review correction applies the same fixed
 parsing window to the standalone Spotify proof. Two additional regressions
 bring the complete PR suite to **492 tests, no skips, and 89% coverage**. No
 owner-HA installation, live Spotify repeat or native-companion pass is claimed.
+
+Another review correction rejects short declared request bodies before JSON
+parsing or pairing changes. A loopback HTTP regression, with TLS identity
+stubbed explicitly, sends complete enrollment JSON with an oversized declared
+length and half-closes: it receives 400, retains the one-use challenge and
+then enrolls successfully with a correctly framed retry. The original actual
+TLS matrix was not repeated for this length check. The separate historical
+trial.7 provider-deadline correction uses killed/reaped subprocesses and real
+loopback slow-response regressions; it adds no companion/provider live pass.
+
+Current complete PR verification: **498 tests, no skips, 89% coverage**. All five
+provider-deadline cases also passed as UID 10001, without external networking,
+on the trial's exact pinned Python base image (`d98cc29d3266e535dd9da1099688d9cb3ca4753813571e071763d17725460962`,
+Python 3.13.17). This is a base-image execution result, not an owner installation
+or complete App build/install result. The temporary `--rm` container exited.

@@ -153,6 +153,31 @@ class FixtureReadTimeoutTests(unittest.TestCase):
         response.read()
         self.assert_next_request_served(server)
 
+    def test_truncated_valid_json_does_not_consume_enrollment_challenge(self):
+        server = self.run_server(self.IdentityTLS())
+        body = json.dumps({"op": "pair.enroll", "version": 1, "profile": "oauth",
+                           "challenge": "synthetic"}).encode()
+        client = socket.create_connection(server.server_address, timeout=2)
+        self.addCleanup(client.close)
+        client.sendall(b"POST /internal/ha-oauth/v1 HTTP/1.1\r\nHost: fixture\r\n"
+                       b"Content-Type: application/json\r\nContent-Length: "
+                       + str(len(body) + 1).encode() + b"\r\n\r\n" + body)
+        client.shutdown(socket.SHUT_WR)
+        response = http.client.HTTPResponse(client)
+        response.begin()
+        self.assertEqual(response.status, 400)
+        response.read()
+        self.assertEqual(server.pairing.challenge, "synthetic")
+        self.assertIsNone(server.pairing.peer)
+        healthy = http.client.HTTPConnection(*server.server_address, timeout=2)
+        self.addCleanup(healthy.close)
+        healthy.request("POST", "/internal/ha-oauth/v1", body=body,
+                        headers={"Content-Type": "application/json"})
+        response = healthy.getresponse()
+        self.assertEqual(response.status, 200)
+        response.read()
+        self.assertIsNone(server.pairing.challenge)
+
 
 if __name__ == "__main__":
     unittest.main()

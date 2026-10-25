@@ -356,4 +356,12 @@ The full PR suite passes **487 tests, no skips, and 89% coverage**. Trial.5 is p
 
 Prepared trial.6 adds a fixed two-second deadline for headers and POST body parsing. A socket watchdog shuts down a connection that keeps trickling bytes, releasing the synchronous listener; parsing completion cancels it before authorized provider work, which retains the existing per-request provider deadlines. Incomplete declared bodies are rejected. Loopback regressions cover trickled headers allowing a subsequent callback request, truncated bodies refusing private actions and provider work legitimately outlasting the parsing window. No tunnel or owner-instance run was performed.
 
+Prepared trial.7 additionally enforces a total provider-request deadline using
+a killed/reaped subprocess and private pipes, including trickled headers/body.
+Each request is capped by the trial's remaining lifetime. Five deadline cases
+pass on the host and as UID 10001 in the exact pinned Python 3.13.17 base image,
+without external networking. Current complete PR suite: **498 tests, no skips,
+89% coverage**. Trial.7 has not been installed or started on the owner HA; no
+tunnel or live Spotify repeat was run.
+
 A separate review alert claiming denial skipped cleanup was a false positive: the denial return was already inside the try/finally that clears both cookie and PKCE verifier. Its existing test already checked both fields; added assertions verify the truthful erasure result and denied replay. The implementation was not changed to satisfy that incorrect alert.
