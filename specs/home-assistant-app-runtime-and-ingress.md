@@ -53,6 +53,14 @@ no dedicated HTTPS callback route is available. Its separate loopback session
 experiment uses synthetic identity only and does not prove real Ingress
 actor/session binding or a deployable callback listener.
 
+The later [installable OAuth trial](../docs/development/ha-oauth-trial-2026-10-25.md)
+is a separate experimental App under `tools/`, not a change to the production
+App scaffold. It has manual boot, a twenty-minute lifetime, no host ports or
+HA API privileges, and a default-off callback-only tunnel. Its bounded
+root-owned options read is followed by irreversible UID/GID/group dropping;
+actual lab process evidence confirms service UID 10001. This does not clear
+the runtime's production readiness or platform/recovery gates.
+
 The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
 ## 3. Actors, surfaces, and terminology

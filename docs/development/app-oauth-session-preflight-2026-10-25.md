@@ -150,6 +150,12 @@ production secret-store, backup, supported-platform or release decisions.
 Production implementation still requires the authorization SDD readiness gates
 and explicit owner approval. No accepted architecture contract or ADR is changed.
 
+The subsequent [installable trial artifact](ha-oauth-trial-2026-10-25.md)
+prepares a separate App, hash-verified source export and opt-in callback-only
+Quick Tunnel, with installation/transport evidence in the disposable lab.
+Its availability does not turn any pending owner-installation live case into
+a pass.
+
 ## Required live acceptance matrix
 
 Every row below is **not run** on the owner's installation. A future trial

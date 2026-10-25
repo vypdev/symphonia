@@ -105,6 +105,14 @@ Ingress user ID is not by itself a browser/Core login-session binding; the
 real adapter, session semantics and live matrix remain open. This evidence
 does not authorize production implementation or clear `RG-002`.
 
+The [separate installable OAuth trial](../docs/development/ha-oauth-trial-2026-10-25.md)
+adds an owner-requested disposable research artifact with a default-off,
+callback-only Quick Tunnel option and actual lab installation/transport
+evidence. Its named bindings concern the Supervisor Ingress session and App
+browser session; Core login revocation and the owner's real browser/provider
+matrix remain unproven. No production endpoint, secret-store contract or
+readiness status changes.
+
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |
 | Home Assistant administrator | Configure provider client credentials and approve account access | Ingress connection setup | Provider disclosure, credential form, authorization return, connection status |

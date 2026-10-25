@@ -1,0 +1,20 @@
+{
+  "name": "Symphonia OAuth Trial",
+  "version": "0.1.0-trial.1",
+  "slug": "symphonia_oauth_trial",
+  "description": "Disposable Spotify PKCE and Ingress session research; stops after 20 minutes",
+  "arch": ["amd64", "aarch64"],
+  "startup": "application",
+  "boot": "manual",
+  "init": false,
+  "stage": "experimental",
+  "ingress": true,
+  "ingress_port": 8099,
+  "panel_admin": true,
+  "panel_icon": "mdi:flask-outline",
+  "homeassistant_api": false,
+  "hassio_api": false,
+  "auth_api": false,
+  "options": {"client_id": "", "management_origin": "", "tunnel_enabled": false},
+  "schema": {"client_id": "str", "management_origin": "str", "tunnel_enabled": "bool"}
+}

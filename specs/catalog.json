@@ -56,7 +56,8 @@
         "docs/development/pr1-review-2026-10-21.md",
         "docs/development/pr1-review-2026-10-25.md",
         "docs/development/spotify-oauth-proof-2026-10-25.md",
-        "docs/development/app-oauth-session-preflight-2026-10-25.md"
+        "docs/development/app-oauth-session-preflight-2026-10-25.md",
+        "docs/development/ha-oauth-trial-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -350,7 +351,8 @@
         "docs/development/bugbot-review-2026-10-21.md",
         "docs/development/pr1-review-2026-10-21.md",
         "docs/development/spotify-oauth-proof-2026-10-25.md",
-        "docs/development/app-oauth-session-preflight-2026-10-25.md"
+        "docs/development/app-oauth-session-preflight-2026-10-25.md",
+        "docs/development/ha-oauth-trial-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
