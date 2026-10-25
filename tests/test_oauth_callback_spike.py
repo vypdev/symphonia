@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import http.client
+import socket
 import threading
+import time
 import unittest
 
 from symphonia.application import AuthorizationService
@@ -31,6 +33,33 @@ class OAuthCallbackSpikeTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.repository.close()
+
+    def test_slow_headers_cannot_starve_the_callback_only_listener(self):
+        server = create_callback_server(authorization=self.service, provider="spotify", clock=lambda: NOW)
+        server.parse_seconds = 0.15
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        slow = socket.create_connection(server.server_address, timeout=2)
+        healthy = http.client.HTTPConnection(*server.server_address, timeout=2)
+        try:
+            slow.sendall(b"GET /oauth/callback HTTP/1.1\r\nX-Slow: ")
+            for _ in range(12):
+                try:
+                    slow.sendall(b"x")
+                except OSError:
+                    break
+                time.sleep(0.02)
+            self.assertEqual(self.repository.get("attempt-1").state, AuthorizationState.CREATED)
+            healthy.request("GET", "/oauth/callback?state=state-for-callback&code=synthetic")
+            response = healthy.getresponse()
+            self.assertEqual(response.status, 200)
+            response.read()
+        finally:
+            slow.close()
+            healthy.close()
+            server.shutdown()
+            server.server_close()
+            thread.join(2)
 
     def test_success_consumes_state_and_does_not_echo_code(self) -> None:
         result = handle_callback(

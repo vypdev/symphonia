@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
+
+from tools.ha_oauth_trial.server import RequestDeadlineServer
 import socket
 from collections.abc import Mapping
 from typing import Any
@@ -91,7 +93,7 @@ def handle_callback(
     )
 
 
-class CallbackOnlyServer(HTTPServer):
+class CallbackOnlyServer(RequestDeadlineServer):
     """A spike server exposing exactly one callback route."""
 
     def __init__(
@@ -115,6 +117,7 @@ class CallbackOnlyRequestHandler(BaseHTTPRequestHandler):
     server: CallbackOnlyServer
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
+        self.server.parsing_complete(self.connection)
         result = handle_callback(
             self.path,
             provider=self.server.provider,
@@ -129,8 +132,11 @@ class CallbackOnlyRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:
+            pass
 
     def log_message(self, format: str, *args: object) -> None:
         return

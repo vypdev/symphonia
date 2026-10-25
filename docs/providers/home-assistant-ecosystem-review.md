@@ -20,6 +20,21 @@ The strongest precedent is Music Assistant: a separate service/App owns the musi
 6. **Do not inherit playback-first shortcuts.** Symphonia must preserve unavailable entries, expose ambiguous matches, prove pagination completeness, and retain auditable user decisions even where an existing playback product can skip, merge, cap, or rescan data.
 7. **Adopt the Gateway's independent Home Assistant-native UI pattern, not its stack by implication.** At the pinned commit reviewed, `vypdev/homeassistant-gateway` reproduces Home Assistant component families and operational density through its own tokens/primitives, catalog, visual references, and responsive/accessibility tests while avoiding private Home Assistant frontend imports. Symphonia accepted that boundary in [ADR 0004](../decisions/0004-home-assistant-native-ui.md); the owner later selected Lit/TypeScript/Vite explicitly in [ADR 0005](../decisions/0005-lit-typescript-vite-ui.md), not as an inference from this review.
 
+## 2026-10-25 — OAuth companion evidence
+
+The owner now requested the auxiliary OAuth integration direction recorded in
+[ADR 0007](../decisions/0007-home-assistant-oauth-companion.md). Earlier comments
+that it was merely a future option describe the older snapshot. Provider/Core
+guarantees are tracked in [official research](provider-research.md#2026-10-25--native-home-assistant-oauth-companion).
+
+[SpotifyPlus config-flow source](https://github.com/thlucas1/homeassistantcomponent_spotifyplus/blob/master/custom_components/spotifyplus/config_flow.py),
+observed 2026-10-25 on its moving `master` branch, subclasses HA's
+`AbstractOAuth2FlowHandler`. This supports the native-flow UX precedent only.
+It does not prove Symphonia's App handoff, security, token ownership or provider
+permissions. No dependency/code reuse or immutable community version is selected.
+The [Symphonia RFC](../architecture/home-assistant-oauth-companion-rfc.md) deliberately
+keeps grants/refresh in the App instead of copying another integration's entry.
+
 ## Projects reviewed
 
 | Project | What it establishes | Useful pattern for Symphonia | Boundary or warning |
@@ -216,7 +231,7 @@ This review does not accept a dependency or new provider into the MVP. It narrow
 1. Extend the provider manifest RFC with independent access-basis, maturity, and product-support classifications so, for example, unofficial-but-mature and official-but-experimental are not conflated.
 2. Make capabilities an intersection of adapter, connection, object, and live health—not provider-wide booleans.
 3. Include provider instance/connection namespace and object type in external-identity analysis.
-4. Validate the direct App-owned, callback-only OAuth flow in the Home Assistant OAuth spike; keep a companion broker as a separately scoped future option.
+4. Validate the selected native OAuth companion flow under ADR 0007 and `RG-002`/`RG-008`; the earlier direct-App trial is historical evidence, not the default HA architecture. Keep OAuth and playback authority separate.
 5. Add an Apple Music test-account spike as a future-provider candidate, focusing on Music User Token acquisition, catalog/library IDs, `canEdit`, playlist append, and absence of remove/reorder.
 6. Require completeness markers for every import/list operation and preserve unavailable entries.
 7. Threat-model every directly exposed App listener and prevent provider-controlled values from acquiring filesystem or executable semantics.

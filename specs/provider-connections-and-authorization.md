@@ -1,25 +1,29 @@
 # Provider connections and authorization
 
 - Status: Draft
-- Date: 2026-09-28
+- Date: 2026-10-25
 - Catalog capability ID: `provider-connections-and-authorization`
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
-- Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`
+- Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-014`, `SYM-HA-012`
 - Related decisions/research: [provider specification](../docs/providers/provider-specification.md), [official API research](../docs/providers/provider-research.md), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `OQ-001`, `OQ-004`, `RG-001`, `RG-002`
 - Required review gates: product UX, architecture, provider feasibility, testing, documentation, security/privacy
-- Open decisions blocking readiness: direct App callback reachability and provider-specific registration/scopes/token lifecycle; authenticated actor/session binding; provider token exchange/refresh/revocation and encrypted secret-store integration; unofficial YouTube Music MVP decision; secret key source and backup contract
+- Open decisions blocking readiness: native companion redirect/actor/pairing conformance (`RG-002`/`RG-008`); provider-specific registration/scopes/token lifecycle; App token exchange/refresh/revocation and encrypted secret-store publication/recovery; unofficial YouTube Music MVP decision; App/HA key source and backup contract
 
 ## 1. Executive summary
 
 Before any external account is connected, Symphonia explains whether the adapter uses an official or reverse-engineered contract, what credentials and dependencies it needs, what access it requests, and how reauthorization works. A successful connection identifies one immutable provider account, stores only encrypted grant material behind a secret reference, probes effective capabilities, and schedules import separately.
 
-Following the accepted App-plus-Ingress deployment direction, the MVP uses a
-direct App-owned, callback-only authorization flow. A future companion
-integration may provide a native authorization broker, but it is not required
-for the MVP and cannot be assumed by provider workflows. Neither boundary may
-expose provider tokens to App options, URLs, logs, diagnostics, or ordinary UI
-state.
+[ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md) refines the
+App-plus-Ingress direction: new HA OAuth consent/reauthorization uses a thin
+native integration and Core/My callback, with no Cloudflare/public App callback.
+The App remains the durable grant/exchange/refresh owner. The
+[companion SDD](home-assistant-oauth-companion.md) and
+[RFC](../docs/architecture/home-assistant-oauth-companion-rfc.md) propose staged
+code/PKCE delivery over a paired private channel and fresh native same-admin
+confirmation. The protocol is not yet proven or authorized for implementation.
+Provider tokens never enter App options, URLs, logs, HA config entries or
+ordinary UI state; the callback's transient authorization code is not a token.
 
 ```text
 Choose adapter -> review access basis/scopes/limitations -> configure client credentials
@@ -75,7 +79,16 @@ not a claim that the connection capability is implemented.
 - Provider-independent contract: [provider specification](../docs/providers/provider-specification.md).
 - As-built foundation evidence: [authorization application](../src/symphonia/application/authorization.py), [application repository ports](../src/symphonia/application/ports.py), [attempt repository](../src/symphonia/infrastructure/sqlite_authorization.py), [connection service](../src/symphonia/application/provider_connections.py), [connection repository](../src/symphonia/infrastructure/sqlite_connections.py), [direct-callback spike](../docs/development/oauth-callback-spike.md), and [implementation baseline](../docs/development/implementation-baseline.md).
 - Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), [architecture boundary tests](../tests/test_architecture_boundaries.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
-- Unknowns: callback reachability, secret encryption key, Google/YouTube product scope, exact scopes, token expiry/revocation behavior under test accounts, and provider-specific client-registration policy.
+- Unknowns: native flow/actor conformance and internal paired transport, secret encryption/key/backup, Google/YouTube product scope, exact scopes, token expiry/revocation under test accounts, and provider-specific client-registration policy.
+
+The subsequent [companion lab validation](../docs/development/ha-oauth-companion-lab-2026-10-25.md)
+adds bounded native-framework actor/reauth/PKCE and actual internal mTLS/backup
+evidence, using synthetic accounts/canaries only. It exposes plaintext private
+HA storage and unprotected archives as unsafe defaults, while demonstrating
+protected archives, sealed-record checks and App-only locked restoration.
+Production enrollment/key custody, secret-store activation/recovery and actual
+provider/browser integration remain unproven. Draft status and the separate
+82/80-case budgets remain unchanged.
 
 The PR #1 correction fences probe publication with the complete observation captured before provider I/O and a compare-and-swap predicate inside the SQLite update, including when concurrent probes have equal timestamps. A competing observation or disconnect wins over a stale success or error; older timestamps cannot replace newer health. Missing capability keys make readiness fail closed. Cross-connection, in-flight success/error and three corruption fixtures cover this foundation boundary. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
@@ -92,12 +105,41 @@ Authenticated server API transports refuse all automatic redirects, including sa
 
 ## 3. Actors, surfaces, and terminology
 
+Research update: the [2026-10-25 OAuth/HA proof](../docs/development/spotify-oauth-proof-2026-10-25.md)
+records master validation, App/Ingress routing and a separate ephemeral PKCE
+client under `tools/`. The App callback and connection routes remain absent;
+local browser binding is not authenticated HA actor/session binding. This
+evidence leaves Draft status, the 82-case budget and all blockers unchanged.
+
+The [actual-installation preflight and isolated session experiment](../docs/development/app-oauth-session-preflight-2026-10-25.md)
+add a synthetic two-step callback/finalization policy proof. At that initial preflight, the owner's
+installation had no Symphonia App or selected HTTPS callback route. A trusted
+Ingress user ID is not by itself a browser/Core login-session binding; the
+real adapter, session semantics and live matrix remain open. This evidence
+does not authorize production implementation or clear `RG-002`.
+
+The [separate installable OAuth trial](../docs/development/ha-oauth-trial-2026-10-25.md)
+adds an owner-requested disposable research artifact with a default-off,
+callback-only Quick Tunnel option and actual lab installation/transport
+evidence. Its named bindings concern the Supervisor Ingress session and App
+browser session. A subsequent authorized owner-installation trial rendered
+the hash-verified research App through real HTTPS Ingress and reached its
+callback-only tunnel. Start failed before consent because of a browser Origin
+compatibility issue; a document-policy correction is prepared and separately
+reproduced with synthetic Chrome forms. The corrected owner trial still
+rejected manual start. Approved trial.3 passed the bounded private-context
+check with the tunnel off and on, then admitted authorization start. Its
+provider handoff remained incomplete and the trial was stopped and cleaned up;
+the earlier rejection category remains unknown. Real provider return/finalization,
+Core login revocation and the full live matrix remain unproven. No production
+endpoint, secret-store contract or readiness status changes.
+
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |
 | Home Assistant administrator | Configure provider client credentials and approve account access | Ingress connection setup | Provider disclosure, credential form, authorization return, connection status |
 | Provider account holder | Grant/revoke the requested provider access | Provider consent UI | Provider-hosted consent and account selection |
 | Symphonia worker | Use a valid grant within declared capabilities | Secret/provider ports | Refresh, probe, import/write calls |
-| Companion integration, if selected | Broker HA-native authorization only | HA config flow/local API | HA integration setup and broker status |
+| Companion integration, required for new HA OAuth | Native consent/callback and fresh bound admin completion | HA config flow + paired OAuth-only protocol | HA setup/reauth and safe bridge status |
 
 **Adapter manifest** describes access basis, maturity, support, dependencies, and capability ceiling. **Connection attempt** is a short-lived authorization transaction. **Provider connection** is one verified immutable external account plus capability/health state and a credential reference. **Effective capability** is the intersection of adapter, connection, object, and live health constraints.
 
@@ -133,7 +175,7 @@ Authenticated server API transports refuse all automatic redirects, including sa
 | --- | --- | --- |
 | Choose | Show available adapters and support/access classifications | User does not confuse community feasibility with official support |
 | Review | Show capabilities, scopes, subscription/client-registration needs, dependencies, token lifetime, and known limits | Informed choice before secrets or consent |
-| Configure | Validate non-secret and secret registration inputs through their correct storage boundary | Invalid callbacks/credentials fail before leaving the App |
+| Configure | Native HA flow validates public registration/profile; future confidential credentials need a separate secret boundary | Invalid registration/pairing fails before provider consent |
 | Authorize | Start one short-lived signed attempt and leave for provider consent | Return is bound to the initiating flow |
 | Verify | Exchange/receive grant, fetch immutable account identity, persist secret reference, probe capabilities | Connection is not declared ready from a token alone |
 | Operate | Refresh single-flight; show health/expiry/action required | Background work pauses safely when authorization fails |
@@ -169,6 +211,13 @@ Text equivalent: an unconfigured adapter starts one authorization attempt; verif
 5. The authorization owner exchanges/validates the result, retrieves immutable account identity, stores encrypted grant material, and passes only a secret reference inward.
 6. The adapter probes effective capabilities and Symphonia shows `connected` plus any limitations.
 7. The import capability schedules a separate durable operation.
+
+In HA mode, steps 2–5 use the companion's native flow under `SYM-SEC-012`–`014`.
+The public Core callback stages only; fresh same-admin native confirmation
+precedes App-only exchange. This binds a native flow/paired installation, not
+the research trial's original Ingress cookie or an unproven Core login session.
+Library/copy profiles remain blocked by their exact scope/feasibility review;
+the initial read-only proof profile cannot schedule an import.
 
 ### 6.2 Alternative and boundary paths
 
@@ -206,7 +255,7 @@ Exact provider field names remain adapter-owned. Every field declares type, secr
 | --- | --- | --- | --- | --- |
 | OAuth application ownership | enum | bring-your-own for distributed self-hosting | accepted shared registration or per-install credentials | adapter/install; snapshotted for attempt |
 | Requested capability profile | enum | minimum MVP import/copy profile | adapter-declared bounded profiles | connection; exact scopes snapshotted |
-| Callback mode | enum | direct App callback-only, pending `RG-002` | one accepted direct callback profile | install; restart required if the callback profile changes |
+| HA callback mode | enum | native companion + fixed My redirect | My, or separately verified exact Core HTTPS callback | provider/paired install; immutable attempt snapshot |
 | Unofficial access acknowledgement | boolean | `false` | explicit `true` only for accepted unofficial adapter | connection plus policy version/time |
 
 Client secrets, refresh tokens, Music User Tokens, browser cookies, and authorization codes are never App options. Redirect targets, scope sets, provider hosts, and token endpoints come from versioned adapter definitions, not arbitrary user URLs unless an accepted provider explicitly requires a bounded configurable endpoint.
@@ -221,7 +270,7 @@ Client secrets, refresh tokens, Music User Tokens, browser cookies, and authoriz
 | Application | begin/complete/reauthorize/disconnect/probe use cases | Provider SDK DTOs, token persistence implementation |
 | Provider adapter | Provider authorization metadata, account lookup, refresh/revoke, capability probe | Cross-provider workflow policy |
 | Secret adapter | encrypt/store/load/delete/rotate by opaque reference | UI or provider semantics |
-| Future HA broker adapter | Config flow/Application Credentials and one-use local handoff | MVP provider imports/writes, database access |
+| HA OAuth bridge adapter | Native flow/state/actor checks and one-use staged code/PKCE delivery | Durable grants/refresh, imports/writes, database or playback authority |
 | Presentation | Disclosure/forms/status/error mapping | Token values or authorization decisions |
 
 ### 8.2 Contracts, durable state, and trust boundaries
@@ -237,12 +286,16 @@ Client secrets, refresh tokens, Music User Tokens, browser cookies, and authoriz
 
 | Alternative | Benefits | Costs/risks | Readiness evidence |
 | --- | --- | --- | --- |
-| Direct App-owned OAuth | Self-contained provider adapter and standalone parity | Public callback/exposure, exact redirect, token storage all owned by App | `RG-002` callback-only listener and remote/local tests |
-| Companion-integration broker (future) | Reuses HA Application Credentials/config-flow callback UX | Second artifact, token ownership/handoff, backup/version skew | Separate native-surface RFC; not an MVP dependency |
+| Native companion (selected HA direction) | Reuses HA config-flow/Core callback UX without public App listener | Second artifact, fresh actor proof, private pairing, recovery/version/key contract | `RG-002`/`RG-008`, companion SDD and 16-case bridge matrix |
+| Direct App-owned OAuth (historical research / future standalone) | Self-contained provider adapter | Callback hosting/exposure/registration and separate auth profile | Not the default HA mode; standalone needs its own approval |
 
-The direct App callback is the MVP working direction. `RG-002` must still
-prove its local/remote reachability, listener isolation, and secret/recovery
-properties before the SDD can become ready for implementation.
+ADR 0007 supersedes the direct-App working direction in HA. The proposed bridge
+keeps grants/refresh only in the App; it does not use the HA helper's default
+token-bearing entry/refresh session. Its supported custom completion hooks,
+current admin context, per-attempt PKCE and backup/key isolation remain gates.
+An unavailable companion prevents new consent, while existing verified App
+grants can continue safe provider work. No fallback opens a callback tunnel or
+borrows native HA Spotify credentials. OAuth and playback enroll separately.
 
 ### 8.4 Executable architecture constraints
 
@@ -317,7 +370,7 @@ Risk/support is textual, not icon-only. Consent-return errors receive focus and 
 2. Callback state is signed/opaque, short-lived, single-use, and bound to initiator, provider, redirect, and attempt.
 3. Secret material is encrypted at rest, versioned for rotation, absent from general database exports, and redacted through canary tests.
 4. Provider/adapter URLs and schemes are allowlisted; user/provider data cannot choose filesystem paths, modules, callbacks, or unrestricted egress.
-5. A companion broker uses mutual/local authentication and a one-use handoff; it never exposes HA-stored credentials through ordinary service/entity state.
+5. The companion uses independently authenticated encrypted pairing and a one-use code/PKCE completion contract; it stores no provider user grant and never reads another integration's credentials. See `SYM-SEC-012`–`SYM-SEC-014` and the companion SDD for fresh actor, exchange fence and backup requirements.
 6. Browser-cookie access, if accepted, requires a dedicated threat model, explicit primary-account warning, deletion/revocation steps, and independent release kill switch.
 
 ## 12. Observability and operational UX
@@ -346,10 +399,15 @@ Minimum **82 distinct cases**:
 | Attempt/state/idempotency/races | 20 | expiry, denial, replay, duplicate callback, refresh/disconnect races, restart |
 | Provider/secret/callback adapters | 18 | exchange/refresh/revoke/probe, error mapping, rotation, listener isolation, timeouts |
 | HTTP/UI/accessibility/sanitization | 12 | disclosures and all states, focus, hostile names/errors/URLs, locale fallback |
-| Integration/security/migration | 16 | direct/broker paths, listener isolation, canary leakage, backup, reauth migration |
+| Integration/security/migration | 16 | HA companion activation boundary, isolation, canary leakage, backup, reauth migration |
 | **Total** | **82** | No double counting |
 
 Provider contract tests are offline and deterministic. Live smoke tests are opt-in, use dedicated accounts/client registrations, bounded scopes/quota, and safe cleanup. Exact secrets are seeded as canaries and asserted absent from every non-secret boundary. Manual evidence reviews provider consent transitions and narrow/mobile disclosures.
+
+The companion's separate **80-case** budget and **16-case live bridge matrix**
+cover native flow/pairing/profile/actor/HA lifecycle risks. They supplement
+these 82 cases; existing loopback/direct-tunnel passes cannot substitute for
+them. This design change adds no passing implementation evidence.
 
 The twelve feature-specific UI cases supplement the UI-foundation budget and inherit its catalog, host-context, theme, accessibility, responsive, hostile-content, and dated visual-reference release gates.
 
@@ -365,7 +423,7 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 ## 16. Acceptance scenarios
 
 1. Given an official adapter, setup shows access basis, maturity/support, prerequisites, scopes, callback mode, and reauthorization expectations before `Connect`.
-2. Given a valid consent return, exactly one attempt is consumed, immutable account identity is verified, only a secret reference enters connection state, and effective capabilities are shown.
+2. Given a valid consent return and the required fresh native same-admin confirmation in HA mode, exactly one attempt is consumed, immutable account identity is verified, only a secret reference enters connection state, and effective capabilities are shown.
 3. Given denial, expired state, replay, wrong initiator, wrong provider, or wrong redirect, no connection is created and transient secrets are removed.
 4. Given two simultaneous refresh requests, one exchange occurs and all callers observe one durable result.
 5. Given provider outage, the connection becomes degraded without falsely requesting reauthorization; given invalid grant, it becomes action-required without blind retries.
@@ -376,6 +434,13 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 10. Given App restart at every attempt phase, no callback is consumed twice and no orphan grant becomes an active connection.
 11. Given a direct callback listener, management routes and Ingress identity headers are unavailable on that listener, and a forged/replayed callback cannot create a connection.
 12. Given official, unofficial, connected, degraded, action-required, authorizing, and disconnected fixtures, the shared Home Assistant-native component families preserve information hierarchy, keyboard/focus behavior, narrow layout, theme parity, and textual risk without exposing secret material.
+13. Given HA consent, the native Core/My callback only stages; fresh same-admin
+    confirmation on the bound paired flow admits at most one App exchange.
+14. Given an OAuth-only pair or Core outage, no playback/Core proxy authority
+    exists; new consent is unavailable but active App grants can refresh safely.
+15. Given default HA token-storage behavior, actor context cannot be proved,
+    unsafe pair keys/backups or an incompatible protocol, setup blocks rather
+    than persisting grants in Core or enabling a direct App callback fallback.
 
 ## 17. Requirements traceability
 
@@ -386,15 +451,16 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 | `SYM-PROV-015`–`SYM-PROV-020` | manifest and presentation | schema/opt-in/label tests | provider support policy |
 | `SYM-SEC-001`–`SYM-SEC-007` | auth/secret ports | replay/race/canary/rotation tests | security and provider setup |
 | `SYM-SEC-008`–`SYM-SEC-010` | listener/callback/provider adapters | route/redirect/path/egress abuse tests | callback operations guide |
+| `SYM-HA-012`, `SYM-SEC-012`–`SYM-SEC-014` | native bridge + App exchange/secret owner | scenarios 13–15 and companion live matrix | companion RFC/setup guide |
 | `SYM-TEST-005`, `SYM-TEST-011`, `SYM-TEST-012` | verification tooling | release gates | contributor testing guide |
 
 ## 18. Implementation sequence
 
-1. Complete `RG-001`/`RG-002`, secret/backup threat model, and authorization-boundary ADR.
+1. Complete `RG-001`/`RG-002`/`RG-008`, secret/backup threat model and ADR 0007 protocol proof.
 2. Define manifest, attempt, connection, capability, and normalized-error contracts plus architecture tests.
 3. Implement pure state/capability/disclosure policies and deterministic tests.
 4. Implement application use cases and fake provider/secret/callback ports.
-5. Implement one official provider adapter and the direct callback boundary behind contract tests.
+5. Implement one official provider adapter and the approved HA companion/App exchange boundary behind contract tests; no default Core grant storage.
 6. Add UI, reauthorization/disconnect, diagnostics, documentation, and opt-in live smoke evidence.
 
 ## 19. Definition of Done
@@ -415,5 +481,5 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 - Related SDDs: [App runtime](home-assistant-app-runtime-and-ingress.md), [imports](library-import-and-provider-projections.md), [durable operations](durable-operations-and-recovery.md), [listening](listening-and-playback-control.md).
 - Related UI contract: [Home Assistant-native UI foundation](home-assistant-native-ui.md) and [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md).
 - Accepted: capability and risk disclosure before authorization; opaque secret references; distinct unofficial adapters.
-- MVP direction: direct App-owned callback-only OAuth; a companion broker is deferred.
+- Accepted HA direction: [ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md), native OAuth companion plus App-only grant lifecycle; protocol/secret/readiness gates remain open.
 - Rejected: tokens in App options; pasted callback URLs as tokens; generic retry of invalid grants; treating private APIs as official.

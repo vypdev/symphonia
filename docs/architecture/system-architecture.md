@@ -1,7 +1,7 @@
 # System architecture
 
 **Status:** Home Assistant-first deployment and UI stack direction accepted; logical boundaries proposed; other technology choices open
-**Last reviewed:** 2026-09-28
+**Last reviewed:** 2026-10-25 (OAuth companion direction; other open decisions retain their gates)
 
 ## Architectural drivers
 
@@ -112,6 +112,7 @@ This follows the useful boundary pattern in `homeassistant-gateway` without carr
 | Home Assistant adapter | Ingress identity and future native integration contract | Owning music domain rules |
 | Playback adapter | Normalize broker-reported observations/capabilities and dispatch typed listening requests for an explicit player | Import/write credentials, Core API credentials, arbitrary HA service calls, audio processing |
 | Companion playback broker | Within HA, discover/observe allowed entities and gate/dispatch typed commands to one exact entity | Symphonia provider grants/database, music-domain policy, generic Core proxy |
+| Companion OAuth adapter | Native consent/config flow and staged Core callback, paired current-admin completion | Durable provider grants/refresh, App database, player authority or generic Core/provider proxy |
 
 ## Presentation and Home Assistant-native UI boundary
 
@@ -162,13 +163,22 @@ Whether standalone packaging ships in the first public release or immediately af
 
 A companion custom integration is required for the selected HA playback path under [ADR 0006](../decisions/0006-narrow-home-assistant-playback-broker.md); it MAY later expose other native entities, actions, events, and configuration discovery. It must use a stable, authenticated, versioned Symphonia contract and MUST NOT duplicate matching, sync, provider-credential, or durable-write retry logic. The exact transport and pairing protocol remain unselected. The [broker protocol RFC](playback-broker-protocol-rfc.md) proposes a reverse, mutually authenticated channel and enumerates the topology, secret-storage, caller-identity, replay, and version proofs needed before selection.
 
-The MVP does not require the companion integration to broker provider
-authorization. Provider authorization is owned by the App's adapters following
-the App-plus-Ingress pattern. The playback broker decision does not make that
-integration an OAuth broker. A future proposal MAY evaluate reusing Home
-Assistant's Application Credentials/config-flow machinery; if selected, it
-must separately specify token ownership, refresh, revocation, backup/recovery,
-and version skew before acceptance.
+[ADR 0007](../decisions/0007-home-assistant-oauth-companion.md) supersedes the
+earlier direct-App OAuth direction in the HA profile. New OAuth consent and
+reauthorization require a thin auxiliary integration using native config flow
+and the Core callback, with My Home Assistant as the default redirect. No
+Cloudflare or public App callback is required. The App remains the sole durable
+grant, provider API and refresh/revocation owner. The proposed code/PKCE bridge,
+fresh native admin confirmation and private authenticated pairing contract are
+specified in the [OAuth RFC](home-assistant-oauth-companion-rfc.md) and
+[companion SDD](../../specs/home-assistant-oauth-companion.md), which remain Draft.
+
+OAuth and playback are separate enrolled authority profiles with no implicit
+permission/credential sharing. Existing verified App grants can continue provider
+work without Core; new consent cannot. This refines the old statement that the
+companion was optional for all library/copy setup, while preserving library/copy
+runtime independence after authorization. Neither App nor browser gets broad
+Core API credentials. The companion does not read another integration's tokens.
 
 Candidate native surface (illustrative, not accepted):
 
@@ -184,7 +194,10 @@ Three approaches were compared for native surfaces; ADR 0006 selects the compani
 | MQTT discovery/events | Mature decoupling and push model | Adds an MQTT dependency and weakens direct operation correlation |
 | App calls Home Assistant APIs directly | Fewer artifacts for events/actions initiated by the App | Couples the service to Home Assistant and does not cleanly provide a native integration surface |
 
-The App-plus-Ingress approach remains the accepted primary product direction. The companion's playback responsibility is selected; native projections beyond listening remain deferred to a future native-surface RFC.
+The App-plus-Ingress approach remains the accepted primary product direction.
+OAuth and playback companion responsibilities are selected independently;
+native projections beyond those profiles remain deferred. Protocol proof and
+production implementation approval are separate from these authority decisions.
 
 ## Service/API shape
 
@@ -300,12 +313,24 @@ There are three distinct concerns:
 - **SYM-SEC-009:** A directly exposed OAuth callback listener MUST expose only the minimum callback surface or independently authenticate every other route. Opening a callback port MUST NOT make the management UI/API anonymously reachable.
 - **SYM-SEC-010:** Provider-controlled IDs, names, URIs, metadata, callback parameters, and adapter mappings MUST NOT become local filesystem paths, module/import names, executable URI schemes, arbitrary redirect targets, or unrestricted outbound destinations.
 - **SYM-SEC-011:** The App MUST run without root privileges where the platform permits and MUST NOT request host/config/media mounts or broad network privileges without a documented requirement and threat review.
+- **SYM-SEC-012:** In the HA OAuth companion profile, completion MUST require a fresh server-validated administrator action by the initiating actor, bound to the native flow, paired HA/App identities and pair epoch, provider/profile, exact redirect and unexpired App attempt. A public callback, submitted actor/flow ID or Ingress user header alone MUST NOT authorize exchange. Exact original-browser/Core-login continuity MUST NOT be claimed without independent proof.
+- **SYM-SEC-013:** A staged OAuth return MUST NOT itself exchange or activate credentials. The App MUST durably fence one exchange owner before provider I/O; lost acknowledgements use safe status lookup and unknown outcomes MUST NOT replay the code automatically. Cross-store secret activation MUST have recoverable orphan cleanup and disconnect/reauthorization fencing.
+- **SYM-SEC-014:** The App MUST be the sole durable provider-grant and refresh owner in the HA companion profile. The integration MUST NOT persist provider codes, PKCE verifiers or user grants, create a token-bearing HA entry or refresh session, borrow other integrations' credentials, or imply playback/general Core authority. Pairing credentials require their own protected storage/backup contract.
 
 ### OAuth callback risk in Home Assistant mode
 
 Provider redirect URIs must be exact and externally reachable under provider rules, while Home Assistant Ingress uses a proxied base path and session. The official Home Assistant Spotify integration demonstrates `https://my.home-assistant.io/redirect/oauth` and `<HOME_ASSISTANT_URL>/auth/external/callback` through Home Assistant's Application Credentials/config-flow machinery. A Supervisor App does not automatically inherit that machinery; using it would require a companion integration or another explicitly designed broker.
 
-The project MUST complete an OAuth callback spike for local-only and externally reachable Home Assistant deployments before provider authentication architecture is accepted. It must validate the direct App flow and cover HTTPS, redirect registration, Ingress session continuity, remote access, dynamic paths, user-provided OAuth clients, state/PKCE/single use, denial/error flows, token ownership, backup/restore, and reauthorization. Any direct callback port must satisfy `SYM-SEC-009`. Tokens MUST NOT be pasted into App options or browser-export files as a normal workaround.
+ADR 0007 selects the HA-native companion direction; it does not certify a
+complete protocol. `RG-002`/`RG-008` must prove local/remote Core/My redirect
+behavior, fresh native actor/flow identity, per-attempt PKCE/state/single use,
+denial/error, private pairing, App-only token ownership, backup/restore and
+reauthorization. The trial's original App/Ingress-cookie binding is not the
+native flow's identity contract. Direct App callback research remains historical;
+standalone needs its own accepted profile. Any future direct callback port must
+satisfy `SYM-SEC-009`. Tokens MUST NOT be pasted into App options or browser-export
+files as a workaround. Exact LAN HTTP examples in HA documentation must not
+override the provider's current HTTPS/loopback registration rules.
 
 See the dated [Home Assistant music ecosystem review](../providers/home-assistant-ecosystem-review.md) for the implementation evidence and security cautions behind these alternatives.
 
@@ -333,6 +358,7 @@ The MVP may render metrics in its UI and logs; choosing Prometheus/OpenTelemetry
 - **SYM-HA-009:** The MVP App panel MUST be admin-only; a future multi-user model MUST define which Home Assistant identity owns provider connections and may approve writes.
 - **SYM-HA-010:** Any App-to-Core playback integration MUST be explicitly enabled and threat-reviewed; Core credentials remain server-side, and the adapter MUST allowlist player entities, read methods, and media-player actions rather than exposing a generic Home Assistant API relay to the UI.
 - **SYM-HA-011:** The Home Assistant listening path MUST use a narrow, authenticated, versioned companion integration that alone accesses Core playback entities. The App MUST NOT enable broad Supervisor-to-Core API access for listening; the broker MUST restrict each read/command to an exact allowed entity and typed operation, and its absence or incompatibility MUST disable only listening without replaying commands.
+- **SYM-HA-012:** New provider OAuth consent/reauthorization in the HA profile MUST use the Symphonia auxiliary integration's native config flow and Core/My callback, without a public App callback or Cloudflare dependency. Its independently authenticated, versioned OAuth-only contract MUST preserve App-owned grant lifecycle, existing-grant operation during Core outages, and separation from playback authority; no broad App-to-Core credential is permitted.
 - **SYM-ARCH-016:** Playback observation/commands MUST remain separate from imported library snapshots and durable playlist-write execution; observing or commanding an external player MUST NOT silently mutate canonical recording/playlist facts or enter copy-job retry policy.
 
 ## Technology decisions still open
