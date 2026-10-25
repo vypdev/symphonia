@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from tools.ha_oauth_trial.server import (
     CALLBACK, COOKIE, FLOW_SECONDS, RUN_SECONDS, PROFILE, TOKEN, Rejected,
     Trial, TrialHandler, TrialServer, configuration, request_json, tunnel_command,
-    read_options, validate_grant, valid_token, verify_spotify,
+    read_options, validate_grant, valid_token, verify_spotify, action_rejection_code,
 )
 
 
@@ -115,10 +115,34 @@ class HAInstalledTrialTests(unittest.TestCase):
 
     def test_origin_and_csrf_are_both_required(self):
         self.begin()
-        for changes in ({"origin": "https://attacker.example"}, {"origin": "null"}, {"csrf": "bad"}):
-            with self.assertRaisesRegex(Rejected, "origin_or_csrf"):
+        for changes, reason in (({"origin": "https://attacker.example"}, "invalid_request_origin"),
+            ({"origin": "null"}, "invalid_request_origin"), ({"csrf": "bad"}, "invalid_csrf")):
+            with self.assertRaisesRegex(Rejected, reason):
                 self.complete(**changes)
         self.assertEqual(self.calls, [])
+
+    def test_private_context_probe_needs_no_tunnel_and_admits_no_oauth_attempt(self):
+        trial = Trial(OPTIONS, exchange=lambda *args: self.fail("no provider calls"))
+        nonce, csrf = trial.browser(self.identity, "", create=True)
+        cookie = COOKIE + "=" + nonce
+        self.assertIsNone(trial.post("/check", self.identity, cookie, OPTIONS["management_origin"], csrf))
+        self.assertTrue(trial.sessions[trial.digest(nonce)]["checked"])
+        other, _ = trial.browser(self.identity, "", create=True)
+        self.assertFalse(trial.sessions[trial.digest(other)]["checked"])
+        self.assertNotIn("private_context_verified", trial.report)
+        self.assertEqual(trial.report["result"], "tunnel_disabled")
+        self.assertFalse(trial.used)
+        self.assertIsNone(trial.flow)
+        with self.assertRaisesRegex(Rejected, "invalid_request_origin"):
+            trial.post("/check", self.identity, cookie, "null", csrf)
+        with self.assertRaisesRegex(Rejected, "invalid_csrf"):
+            trial.post("/check", self.identity, cookie, OPTIONS["management_origin"], "csrf-canary")
+
+    def test_diagnostic_codes_are_allowlisted_and_never_echo_exception_values(self):
+        self.assertEqual(action_rejection_code(Rejected("invalid_csrf"), True), "invalid_csrf")
+        for error, trusted in ((Rejected("token-canary"), True), (Rejected("invalid_csrf"), False),
+            (Rejected("invalid_csrf", "token-canary"), True), (Rejected(["token-canary"]), True)):
+            self.assertEqual(action_rejection_code(error, trusted), "invalid_request")
 
     def test_cookie_limit_and_unknown_nonce_fail_closed(self):
         with self.assertRaises(Rejected):
@@ -241,9 +265,10 @@ class HAInstalledTrialTests(unittest.TestCase):
             finally:
                 client.close()
         try:
-            for route in ("/", "/health", "/complete", "/api/dashboard"):
+            for route in ("/", "/health", "/check", "/complete", "/api/dashboard"):
                 self.assertEqual(request(servers[0], "GET", route)[0], 400)
             self.assertEqual(request(servers[0], "POST", "/complete")[0], 404)
+            self.assertEqual(request(servers[0], "POST", "/check")[0], 404)
             status, body, cache = request(servers[0], "GET", path)
             self.assertEqual(status, 200)
             self.assertEqual(cache, "no-store")
@@ -302,12 +327,23 @@ class HAInstalledTrialTests(unittest.TestCase):
                 # document therefore needs its own same-origin policy too.
                 self.assertIn({"name": "referrer", "content": "same-origin"}, parser.meta)
                 body = urlencode({"csrf": parser.csrf})
+                client.request("POST", "/check", body, headers={"Cookie": cookie,
+                    "Origin": OPTIONS["management_origin"], "Content-Type": "application/x-www-form-urlencoded"})
+                response = client.getresponse()
+                self.assertEqual(response.status, 303)
+                response.read()
+                self.assertTrue(any(session["checked"] for session in self.trial.sessions.values()))
+                self.assertFalse(self.trial.used)
                 for origin, expected in (("null", 403), (OPTIONS["management_origin"], 303)):
                     client.request("POST", "/start", body, headers={"Cookie": cookie,
                         "Origin": origin, "Content-Type": "application/x-www-form-urlencoded"})
                     response = client.getresponse()
                     self.assertEqual(response.status, expected)
-                    response.read()
+                    response_body = response.read().decode()
+                    if expected == 403:
+                        self.assertIn("Diagnostic: invalid_request_origin", response_body)
+                        for secret in (parser.csrf, cookie, OPTIONS["management_origin"]):
+                            self.assertNotIn(secret, response_body)
                 self.assertEqual(self.trial.report["result"], "waiting_for_spotify")
                 self.assertEqual(self.calls, [])
         finally:

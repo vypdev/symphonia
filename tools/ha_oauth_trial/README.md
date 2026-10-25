@@ -85,7 +85,9 @@ options refuse startup rather than inventing a client or origin.
    owner. Install only after the applicable action-time authorization.
 2. Enter the dedicated Client ID and existing HA HTTPS origin. First start
    with `tunnel_enabled: false`, verify App discovery and private Ingress
-   access, and stop. No provider call or public listener is created.
+   access, select **Verificar sesion privada**, require
+   `private_context_verified: true`, and stop. This probe admits no OAuth
+   attempt and makes no provider call or public listener.
 3. After authorization for the limited public callback, set
    `tunnel_enabled: true` and start. Open the App over HTTPS. The private page
    shows the generated `https://<random>.trycloudflare.com/oauth/callback`.
@@ -115,9 +117,14 @@ The private document therefore declares `same-origin` metadata before its
 forms so Chrome retains the exact Origin for private POSTs. Cross-origin
 requests still receive no Referer. The callback keeps `no-referrer`; it never
 renders the private policy or an Ingress URL. A null Origin remains rejected.
-Version `0.1.0-trial.1` lacked this document policy and failed the owner's
-first HTTPS authorization start; use the reviewed `0.1.0-trial.2` correction
-for the next trial. See the [dated result](../../docs/development/ha-oauth-trial-2026-10-25.md#owner-installation-and-first-https-trial).
+Version `0.1.0-trial.1` lacked this document policy. Version
+`0.1.0-trial.2` supplied it, but the owner's manual start still failed before
+consent; the exact remaining gate is unknown. Version `0.1.0-trial.3` adds the
+private session probe and allowlisted fixed rejection codes. These codes
+never include request/cookie/CSRF/Origin values or raw exception text. They
+are shown only for verified Ingress contexts or the actual Supervisor peer;
+untrusted peers get a generic category. Public callback errors stay generic.
+Do not activate the tunnel until the private probe passes. See the [dated result](../../docs/development/ha-oauth-trial-2026-10-25.md#owner-installation-and-first-https-trial).
 
 ## Stop and remove
 

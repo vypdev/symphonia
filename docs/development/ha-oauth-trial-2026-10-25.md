@@ -105,7 +105,7 @@ IDs, cookies, Ingress route tokens or private URLs.
 
 ## Verification and live trial gates
 
-[30 App tests](../../tests/test_ha_oauth_trial.py) cover actor/session/browser
+[32 App tests](../../tests/test_ha_oauth_trial.py) cover actor/session/browser
 separation, peer/header ambiguity, HTTPS, CSRF/Origin, exact callback host and
 route, expiry, replay, concurrency, denial/cancellation, restart, bounded
 options, token/scope/account checks, real loopback listener isolation and
@@ -221,3 +221,71 @@ catalog/SDD consistency checks passed. Its local aarch64 Docker image built
 successfully as
 `sha256:643ac21513635915176244fd9c83830d306dd9c17aab8bfd90025122b217434f`.
 This build does not establish the revised App's real Ingress/provider flow.
+
+
+## Corrected owner trial and remaining private-context blocker
+
+The owner approved revision `8653e4db37a0b660386f9d16d0794ce76fbbbf77`
+and version **0.1.0-trial.2**. The remote head matched immediately before
+updating. Supervisor installed that version, and the tunnel-disabled HTTPS
+Ingress panel displayed the expected server SHA-256:
+`55c4affc5448b6c19a6254fdabd10c5f5f6949a64337d406c62041865f79b745`.
+The revised source also passed GitHub Verify
+[run 40179748250](https://github.com/vypdev/symphonia/actions/runs/40179748250).
+
+A new tunnel started at about 10:59:47 UTC. Its temporary redirect was
+registered in the dedicated Spotify app; a fresh `/complete` GET on the
+public callback origin returned the generic callback rejection. A transient
+Spotify dashboard save error was resolved by reloading the form and verifying
+the saved URI. No Client Secret was viewed.
+
+The automated start opened a tab without an observable valid URL. Browser
+policy blocked observation; automatic review also rejected acquiring that
+tab, requiring manual intervention. No blocked popup was inspected through
+another surface. The owner requested a separate work group; **Symphonia OAuth**
+was created with new HA and Spotify tabs. The new HA context was rejected;
+its precise identity/session category was not recorded. A disposable restart
+restored the private panel, replaced the temporary redirect and stayed inside
+the original twenty-minute exposure window. The owner then manually selected
+**Autorizar Spotify** and reported the same fixed **Trial action rejected**
+message. This is a failed real start, not a successful provider callback.
+
+The previous inference about `Origin: null` is insufficient to explain this
+remaining failure. A second synthetic Chrome fixture added the actual trial
+CSP, a same-origin iframe and `target=_blank`. It observed exact Origin,
+single Origin/Content-Length headers, the expected content type and form,
+no Transfer-Encoding and a synthetic App cookie. This validates only that
+fixture. It does not prove the actual HA proxy headers or cookies, whose
+values were not extracted.
+
+The App was stopped before the 11:14:01 UTC closure check, within fifteen
+minutes of the original start. Supervisor showed **Detenido**, the final
+public hostname returned Cloudflare 1033, both trial redirect registrations
+were removed/replaced and the dedicated app ended with its original loopback
+redirect only. `tunnel_enabled` was restored to false. No successful App
+provider exchange, refresh, callback correlation or bound finalization was
+observed. Provider and Core-login revocation remain untested.
+
+Version **0.1.0-trial.3** is prepared to diagnose the remaining gate privately.
+**Verificar sesion privada** checks the same actor/Ingress/browser/Origin/CSRF
+boundary without a tunnel, provider call or OAuth-attempt admission. A success
+adds `private_context_verified: true` for that exact App browser session; failures expose/log only fixed codes
+from a closed allowlist, with generic fallback for unknown exceptions and
+untrusted peers. Origin and CSRF rejection codes are distinct; their checks
+are unchanged. Public callback responses remain generic. Install/run of this
+new revision requires its applicable action-time approval. The tunnel must
+stay off until the private check passes.
+
+The 16-case matrix and production SDD statuses/blockers remain open. Real
+callback-only HTTPS reachability and install/hash checks passed; real
+session-bound provider completion has still not passed.
+
+
+The prepared diagnostic revision passed **466 Python tests**, including 32
+trial-App and three exporter tests. Combined line/branch coverage is **89%**
+against the unchanged 85% floor. Specification validation, whitespace and
+manual SDD/catalog consistency checks passed. Its aarch64 Docker build is
+`sha256:6a302bad0c800812eec2fd30110cff4fd6a808be9ccb997c22bc0177a9050aeb`.
+The new private probe and diagnostic codes have not yet run on the owner's
+installation. Neither the synthetic iframe success nor these tests establish
+real Home Assistant session-bound OAuth completion.

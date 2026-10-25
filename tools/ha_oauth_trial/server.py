@@ -32,10 +32,25 @@ COOKIE = "symphonia_oauth_trial"
 RUN_SECONDS = 1200
 FLOW_SECONDS = 600
 TUNNEL_HOST = re.compile(r"https://[a-z0-9]+(?:-[a-z0-9]+)*\.trycloudflare\.com\Z")
+ACTION_REJECTIONS = frozenset({
+    "trusted_ingress_required", "invalid_actor", "invalid_ingress_path",
+    "open_home_assistant_over_https",
+    "trial_expired", "invalid_session", "invalid_browser_session",
+    "initiating_ingress_session_required", "invalid_request_origin", "invalid_csrf",
+    "callback_unavailable_or_trial_already_used", "unsupported_action",
+    "initiating_browser_required", "callback_not_received", "unsupported_request",
+    "invalid_request_size", "invalid_form",
+})
 
 
 class Rejected(Exception):
     """Fixed safe result, never provider response text."""
+
+
+def action_rejection_code(error, trusted):
+    if trusted and len(error.args) == 1 and isinstance(error.args[0], str) and error.args[0] in ACTION_REJECTIONS:
+        return error.args[0]
+    return "invalid_request"
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -242,14 +257,19 @@ class Trial:
             if not create or len(self.sessions) >= 8:
                 raise Rejected("invalid_browser_session")
             nonce, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
-            self.sessions[self.digest(nonce)] = {"identity": identity, "csrf": csrf}
+            self.sessions[self.digest(nonce)] = {"identity": identity, "csrf": csrf, "checked": False}
             return nonce, csrf
 
     def post(self, action, identity, cookie_header, origin, csrf):
         with self.lock:
             nonce, expected = self.browser(identity, cookie_header)
-            if origin != self.options["management_origin"] or not isinstance(csrf, str) or not hmac.compare_digest(expected.encode(), csrf.encode()):
-                raise Rejected("invalid_request_origin_or_csrf")
+            if origin != self.options["management_origin"]:
+                raise Rejected("invalid_request_origin")
+            if not isinstance(csrf, str) or not hmac.compare_digest(expected.encode(), csrf.encode()):
+                raise Rejected("invalid_csrf")
+            if action == "/check":
+                self.sessions[self.digest(nonce)]["checked"] = True
+                return None
             if action == "/start":
                 if not self.callback_origin or self.used:
                     raise Rejected("callback_unavailable_or_trial_already_used")
@@ -377,7 +397,8 @@ class TrialHandler(BaseHTTPRequestHandler):
             nonce, csrf = trial.browser(identity, cookie_header, create=True)
             with trial.lock:
                 callback = trial.callback_origin + CALLBACK if trial.callback_origin else "Tunnel disabled or waiting"
-                status = json.dumps(trial.report, sort_keys=True)
+                status = json.dumps({**trial.report,
+                    "private_context_verified": trial.sessions[trial.digest(nonce)]["checked"]}, sort_keys=True)
             # Core replaces the response Referrer-Policy with no-referrer.
             # Set the private document policy too: same-origin POSTs keep their
             # Origin while cross-origin consent requests get no Referer.
@@ -386,7 +407,7 @@ class TrialHandler(BaseHTTPRequestHandler):
             body += "<p>Registra esta URI exacta en la app de prueba de Spotify:</p><pre>" + html.escape(callback) + "</pre>"
             body += "<pre>" + html.escape(status) + "</pre><a href='./'>Actualizar estado</a>"
             body += "<p>Research server SHA-256:</p><pre>" + hashlib.sha256(Path(__file__).read_bytes()).hexdigest() + "</pre>"
-            for action, label in (("start", "Autorizar Spotify"), ("complete", "Completar"), ("cancel", "Cancelar")):
+            for action, label in (("check", "Verificar sesion privada"), ("start", "Autorizar Spotify"), ("complete", "Completar"), ("cancel", "Cancelar")):
                 target = " target='_blank'" if action == "start" else ""
                 body += f"<form method=post action='./{action}'{target}><input type=hidden name=csrf value='{csrf}'><button>{label}</button></form>"
             self.send(200, body.encode(), headers={"Referrer-Policy": "same-origin", "Set-Cookie":
@@ -398,9 +419,11 @@ class TrialHandler(BaseHTTPRequestHandler):
         if self.server.callback:
             self.send(404, b"Not found.")
             return
+        trusted = self.client_address[0] == "172.30.32.2"
         try:
             identity = self.ingress()
-            if self.path not in {"/start", "/complete", "/cancel"} or self.headers.get("Content-Type") != "application/x-www-form-urlencoded":
+            trusted = True
+            if self.path not in {"/check", "/start", "/complete", "/cancel"} or self.headers.get("Content-Type") != "application/x-www-form-urlencoded":
                 raise Rejected("unsupported_request")
             lengths = self.headers.get_all("Content-Length", [])
             if len(lengths) != 1 or not lengths[0].isdigit() or not 0 < int(lengths[0]) <= 256 or self.headers.get("Transfer-Encoding"):
@@ -411,7 +434,11 @@ class TrialHandler(BaseHTTPRequestHandler):
                 raise Rejected("invalid_form")
             target = self.server.trial.post(self.path, identity, self.headers.get("Cookie", ""), self.headers["Origin"], data["csrf"][0])
             self.send(303, b"", headers={"Location": target or identity.base_path + "/"})
-        except (Rejected, ValueError, UnicodeError, OSError):
+        except Rejected as error:
+            reason = action_rejection_code(error, trusted)
+            print(json.dumps({"trial": "action_rejected", "reason": reason}), flush=True)
+            self.send(403, ("Trial action rejected. Refresh the App or start a new trial. Diagnostic: " + reason).encode())
+        except (ValueError, UnicodeError, OSError):
             self.send(403, b"Trial action rejected. Refresh the App or start a new trial.")
 
 

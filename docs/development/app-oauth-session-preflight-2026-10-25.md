@@ -162,7 +162,9 @@ The subsequent [owner installation trial](ha-oauth-trial-2026-10-25.md#owner-ins
 partially exercises cases 1/2, 10 and 16. HTTPS transport and bounded GET route
 rejection passed; authorization start failed before consent, so real callback
 correlation, finalization and refresh did not run. All other live cases below
-remain **not run**. Full acceptance still needs at least **16 distinct live
+remain **not run**. The corrected owner trial also failed manual authorization start; the next
+research version adds a private context check before any tunnel. Full
+acceptance still needs at least **16 distinct live
 cases**, supplementing the offline suite and the authorization SDD's unchanged
 82-case budget.
 
