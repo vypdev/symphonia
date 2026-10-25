@@ -467,10 +467,13 @@ four actual missing/wrong-key cases and twenty-three fake-AEAD policy cases.
 Dynamic CSR research passes thirty-six observations including three issuance
 process deaths. A separate real-Core HTTP/signature prototype passes twenty-eight
 observations plus thirteen ordinary binding/resume cases. The guarded
-Core 2026.9.4/Supervisor 2026.10.4 wire repeat passes thirty-two Boolean observations:
+Core 2026.9.4/Supervisor 2026.10.4 wire repeat passes thirty-three Boolean observations:
 CSR enrollment/renewal, stale-certificate denial, App-key loss with live Ingress,
 fresh native admin approval, actual App Origin/CSRF enforcement and interrupted
-reset with a new signed resume. Nine ordinary boundary/operator/renewal cases are
+reset with a new signed resume. A separate actual child death after reset commit
+before pair revocation passes nine observations: startup revokes idempotently
+before TLS, serializes renewal/reset and never rearms a consumed challenge.
+Twelve ordinary boundary/operator/renewal cases are
 separate. Ingress still returned 200 after user deactivation; native HTTP denied
 that user. Manual lab cookies are not browser/HTTPS proof. The signed recovery
 authority/UX remains proposed; final package/restore, production concurrency and

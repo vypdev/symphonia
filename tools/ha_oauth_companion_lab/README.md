@@ -279,6 +279,14 @@ Unlike the older isolated prototype, this experiment crosses actual Supervisor
 Ingress and Core-to-App CSR/renewal TLS. Renewal independently requires a
 current-key signature over the exact issued certificate, replacement CSR and
 epoch. Public certificate bytes alone cannot renew. The final campaign passes
-36 isolated CSR and 32 real-wire Boolean observations. Its manually supplied
+36 isolated CSR and 33 real-wire Boolean observations. Its manually supplied
 cookies over HTTP are explicitly not Chrome/HTTPS or provider proof. Production
 recovery authority/UX and final package rollout still need review.
+
+`wire_reset_probe.py` adds one actual child death after credential reset commit
+before issuer revocation. Stage it and `wire_app/server.py` with the complete
+research package in the pinned networkless image and a fresh owned volume as
+UID10001. Nine observations verify startup revokes before TLS, is idempotent,
+preserves history and never rekeys. Its admission Boolean is a test stub.
+Post-reset wire fixtures require explicit fresh provisioning; they never expose
+a consumed challenge or silently re-arm enrollment after restart.

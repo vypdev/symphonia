@@ -155,13 +155,21 @@ ordinary file/SQL policy cases with fake AEAD. This includes buffered private
 writes and durable two-link publication; no simulated power-loss claim is made.
 Admitted writers pin staged files; a complete SQL reference set switches at once.
 Interrupted reset remains pending until fresh explicit resume and preserves history.
-The isolated reset Boolean remains a stub. Separately, thirty-two actual
+The isolated reset Boolean remains a stub. Separately, thirty-three actual
 Core 2026.9.4/Supervisor 2026.10.4 wire observations establish CSR/renewal,
 locked-key Ingress survival, native fresh-admin approval and App Origin/CSRF
 redemption with interrupted reset/resume. Ingress returned 200 after user
 deactivation, while native confirmation returned 401: cached headers are not
 fresh authority. Browser cookies were manually supplied over lab HTTP, not
-validated by Chrome. Nine ordinary boundary/operator/renewal guards supplement that
+validated by Chrome. Twelve ordinary boundary/operator/renewal guards supplement that
 experiment. Full live lease/reader/reset/collector concurrency, final packaging/
 backup/restore, proposed recovery authority/UX review and native browser/provider
 conformance remain gates. The accepted custody direction and Draft status remain.
+
+A separate actual child death immediately after credential reset commit and
+before issuer revocation now passes nine observations. The durable completed
+reset phase fences the old pair on startup before TLS; reconciliation is
+idempotent and never rekeys/rearms enrollment. Reset and renewal share an
+authority lock; the TLS worker reads through its own read-only SQLite connection.
+This research fixture ends unpaired and explicitly requires a fresh disposable
+namespace. It does not implement production post-reset enrollment UX.

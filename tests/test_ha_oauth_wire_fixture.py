@@ -85,3 +85,44 @@ class RenewalAdmissionGuardTests(unittest.TestCase):
             with self.subTest(proof_type=type(proof).__name__), self.assertRaises(fixture.Locked):
                 issuer.renew(b"public-certificate",0,"valid-csr",proof=proof)
         issuer.db.execute.assert_not_called()
+
+
+class ResetWireLifecycleTests(unittest.TestCase):
+    def test_completed_reset_revocation_is_idempotent_and_never_rekeys(self):
+        import sqlite3,tempfile
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/"issuer").mkdir()
+            db=sqlite3.connect(root/"issuer/state.sqlite")
+            db.executescript("CREATE TABLE pair(epoch INTEGER,serial TEXT,peer TEXT); INSERT INTO pair VALUES(0,'old','public'); CREATE TABLE challenge(value TEXT); INSERT INTO challenge VALUES('consumed');")
+            db.commit();db.close()
+            state=object.__new__(fixture.State);state.vault=Mock();state.vault.phase.return_value="unpaired"
+            with patch.object(fixture,"ROOT",root):
+                state.reconcile_reset();state.reconcile_reset()
+            db=sqlite3.connect(root/"issuer/state.sqlite")
+            self.assertEqual(db.execute("SELECT * FROM pair").fetchone(),(1,None,None))
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM challenge").fetchone()[0],0);db.close()
+            self.assertEqual({str(p.relative_to(root)) for p in root.rglob('*')},{"issuer","issuer/state.sqlite"})
+
+    def test_pending_or_completed_reset_blocks_tls_before_peer_policy(self):
+        from unittest.mock import Mock
+        for phase in ("reset_pending","unpaired"):
+            handler=object.__new__(fixture.TLSHandler);handler.path="/internal/ha-oauth/v1"
+            state=Mock();state.vault.phase.return_value=phase;state.tls_active.return_value=False
+            import threading
+            state.authority_lock=threading.RLock()
+            handler.server=SimpleNamespace(state=state);handler.data=lambda:{"op":"hello"}
+            handler.send=Mock();handler.do_POST()
+            self.assertEqual(handler.send.call_args.args[0],403)
+            state.issuer.accepts.assert_not_called()
+
+    def test_unpaired_page_never_returns_a_stale_bootstrap_challenge(self):
+        from unittest.mock import Mock
+        handler=object.__new__(fixture.IngressHandler);handler.path="/";handler.identity=lambda:("a","b","c")
+        state=Mock();state.meta={"installation":"synthetic","expires":1};state.vault.phase.return_value="unpaired"
+        state.public_signer.return_value=None;state.issuer=None;state.challenge="consumed-old-value"
+        handler.server=SimpleNamespace(state=state,parsing_complete=Mock());handler.connection=object()
+        handler.send=Mock();handler.do_GET()
+        status,body=handler.send.call_args.args
+        self.assertEqual(status,200);self.assertFalse(body["pairing_available"])
+        self.assertNotIn("challenge",body);self.assertEqual(body["required_action"],"fresh_disposable_fixture")

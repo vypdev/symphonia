@@ -144,7 +144,7 @@ cover duplicate/oversized fields, current actor/install/profile, typed/bounded
 epochs, exact purpose/identifier and expiry. Two regression cases use actual
 SQL/files with fake AEAD/signature verification: failed reset needs a fresh
 resume approval, while a competing completed resume fences a stale approval.
-They do not substitute for cryptography or real native HTTP. The integrated suite passes **566 tests, no
+They do not substitute for cryptography or real native HTTP. The integrated suite passes **569 tests, no
 skips**; combined application coverage remains 89%, with the unchanged 85% floor.
 The final native source was repeated after its parser guards; all twenty-eight
 observations pass. The container and all temporary users/config/key state are
@@ -168,7 +168,7 @@ API privilege, and expires twenty minutes after explicit fresh provisioning.
 A five-minute challenge is held only by its first process. Restart does not
 extend either deadline or provision a replacement challenge/key.
 
-Thirty-two Boolean observations pass through the actual wire:
+Thirty-three Boolean observations pass through the actual wire:
 
 - Core-generated CSR enrollment crosses private TLS after server-pin checking;
   wrong pin stops before the body. Wrong/consumed challenges, missing client
@@ -196,13 +196,32 @@ Thirty-two Boolean observations pass through the actual wire:
   Replay fails. A new native confirmation signs a fresh purpose-bound resume;
   final Ingress redemption completes once, revokes the pair and retains history.
 
+A separate [reset-commit crash campaign](../../tools/ha_oauth_companion_lab/wire_reset_probe.py)
+exits a real child process immediately after credential reset commit and before
+issuer revocation. Nine Boolean observations pass on the pinned isolated
+Core 2026.10.3 crypto image. Startup uses the durable `unpaired` phase as
+revocation intent, clears the old pair/challenge idempotently **before** opening
+TLS authority, preserves history and adds/replaces no private key. Pending or
+completed reset phases also fence requests on any already-running TLS listener. A shared
+lock serializes reset with renewal; TLS reads the phase through a separate
+read-only SQLite connection and is tested from an actual worker thread.
+Its reset admission is an explicit test stub; actual native admission is the
+independent wire campaign above. This is one additional actual process death,
+not one of the eighteen vault-publication deaths.
+
+After reset, this disposable profile ends. Ingress states that fresh fixture
+provisioning is required and returns no stale/null bootstrap challenge. Restart
+cannot re-arm enrollment or mint replacement CA/server keys. The isolated CSR
+campaign separately exercises explicit re-pair; post-reset production setup/UX
+and key regeneration are outside this hidden wire fixture's scope.
+
 The HTTP client manually sends a Secure cookie over lab HTTP. **This does not
 prove Chrome cookie, iframe, SameSite, HTTPS or provider behavior.** Native
 setup is an explicitly installed research component, not the final helper.
 An initial App liveness-healthcheck omission and two harness programming errors
 were corrected before the successful repeat; failed runs are not counted as
 passes. The final operator/shim uses its own package namespace so it cannot
-replace Core's existing modules. Nine ordinary boundary/target-guard/renewal tests are
+replace Core's existing modules. Twelve ordinary boundary/target-guard/renewal tests are
 separate from real-wire evidence.
 
 ## Fault-plan progress and remaining gates
@@ -309,3 +328,8 @@ folder were verified absent. The lab is stopped. Private receipts retain
 versions, assertions, source hashes and failure-stage diagnostics, not keys,
 user credentials, callbacks or sessions. The shared image and verification
 runtime remain for current review/reproduction.
+
+The separate reset-commit crash iterations each contained seventeen verified
+private files / 114,688 allocated bytes and were removed after their receipts
+were saved (zero measured filesystem free-space change). No private recovery
+material remains in those volumes.

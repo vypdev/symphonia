@@ -76,13 +76,30 @@ class State:
             raise Locked("unowned_wire_fixture")
         if not time.time()<self.meta["expires"]<=time.time()+1200:
             raise Locked("wire_fixture_expired")
+        self.authority_lock=threading.RLock()
         self.vault=RecoveryVault(ROOT/"grants")
-        try:
-            self.issuer=Issuer(ROOT/"issuer")
-        except Locked:
-            self.issuer=None  # Missing private TLS/CA key never reprovisions.
-        self.challenge=self.issuer.challenge() if fresh else None
+        # Durable completed-reset phase is the revocation intent. Reconcile it
+        # before opening any TLS authority, including a crash after vault commit.
+        self.reconcile_reset()
+        self.issuer=None
+        if self.vault.phase()=="active":
+            try:
+                self.issuer=Issuer(ROOT/"issuer")
+            except Locked:
+                pass  # Missing private TLS/CA key never reprovisions.
+        self.challenge=self.issuer.challenge() if fresh and self.issuer else None
         self.sessions={}
+
+    def tls_active(self):
+        # TLS uses its own read-only connection; the vault writer belongs to the
+        # Ingress thread. The outer authority lock serializes reset/renewal.
+        with PrivateFiles(ROOT/"grants") as files:
+            files.read("state.sqlite",1048576)
+        db=sqlite3.connect(f"file:{ROOT/'grants/state.sqlite'}?mode=ro",uri=True)
+        try:
+            return db.execute("SELECT phase FROM lifecycle").fetchone()==("active",)
+        finally:
+            db.close()
 
     def public_signer(self):
         x509,*_=crypto()
@@ -132,10 +149,14 @@ class State:
                 files.publish("fault.json",encoded({"once":False}))
                 raise OSError("synthetic_key_publication_failure")
 
+    def reconcile_reset(self):
+        if self.vault.phase()=="unpaired":
+            self.revoke_public_pair()
+
     def revoke_public_pair(self):
         db=sqlite3.connect(ROOT/"issuer/state.sqlite")
         try:
-            db.execute("UPDATE pair SET epoch=epoch+1,serial=NULL,peer=NULL")
+            db.execute("UPDATE pair SET epoch=epoch+1,serial=NULL,peer=NULL WHERE serial IS NOT NULL OR peer IS NOT NULL")
             db.execute("DELETE FROM challenge")
             db.commit()
         finally:
@@ -178,22 +199,25 @@ class TLSHandler(CommonHandler):
         if self.path!="/internal/ha-oauth/v1":
             self.send(404,{"accepted":False});return
         try:
-            data=self.data();issuer=self.server.state.issuer
-            if type(data.get("version")) is not int or data["version"]!=1 or data.get("profile")!="oauth":
-                raise Locked("profile_refused")
-            op=data.get("op")
-            if op=="pair.enroll" and set(data)=={"op","version","profile","challenge","csr"}:
-                receipt,cert=issuer.enroll(data["challenge"],data["csr"])
-                self.send(200,{"receipt":receipt,"certificate":cert});return
-            peer=self.connection.getpeercert(binary_form=True)
-            if not issuer.accepts(peer,data.get("epoch")):
-                raise Locked("peer_refused")
-            if op=="hello" and set(data)=={"op","version","profile","epoch"}:
-                self.send(200,{"accepted":True});return
-            if op=="pair.renew" and set(data)=={"op","version","profile","epoch","csr","proof"}:
-                receipt,cert=issuer.renew(peer,data["epoch"],data["csr"],proof=data["proof"])
-                self.send(200,{"receipt":receipt,"certificate":cert});return
-            raise Locked("operation_refused")
+            data=self.data();state=self.server.state;issuer=state.issuer
+            with state.authority_lock:
+                if not state.tls_active() or issuer is None:
+                    raise Locked("credential_epoch_locked")
+                if type(data.get("version")) is not int or data["version"]!=1 or data.get("profile")!="oauth":
+                    raise Locked("profile_refused")
+                op=data.get("op")
+                if op=="pair.enroll" and set(data)=={"op","version","profile","challenge","csr"}:
+                    receipt,cert=issuer.enroll(data["challenge"],data["csr"])
+                    self.send(200,{"receipt":receipt,"certificate":cert});return
+                peer=self.connection.getpeercert(binary_form=True)
+                if not issuer.accepts(peer,data.get("epoch")):
+                    raise Locked("peer_refused")
+                if op=="hello" and set(data)=={"op","version","profile","epoch"}:
+                    self.send(200,{"accepted":True});return
+                if op=="pair.renew" and set(data)=={"op","version","profile","epoch","csr","proof"}:
+                    receipt,cert=issuer.renew(peer,data["epoch"],data["csr"],proof=data["proof"])
+                    self.send(200,{"receipt":receipt,"certificate":cert});return
+                raise Locked("operation_refused")
         except (Locked,ValueError,UnicodeError,TypeError):
             self.send(403,{"accepted":False,"reason":"wire_request_refused"})
 
@@ -220,15 +244,18 @@ class IngressHandler(CommonHandler):
         try:
             identity=self.identity();state=self.server.state
             value={"installation":state.meta["installation"],"phase":state.vault.phase(),
-                "tls_available":state.issuer is not None,"expires":state.meta["expires"]}
+                "tls_available":state.issuer is not None and state.vault.phase()=="active","expires":state.meta["expires"]}
             try:
                 state.vault.read_all();value["credentials_locked"]=False
             except Locked:
                 value["credentials_locked"]=True
             signer=state.public_signer()
             if signer is None:
+                if state.issuer is None or state.vault.phase()!="active" or state.challenge is None:
+                    value.update(pairing_available=False,required_action="fresh_disposable_fixture")
+                    self.send(200,value);return
                 x509,*_=crypto()
-                value.update(challenge=state.challenge,
+                value.update(pairing_available=True,challenge=state.challenge,
                     server_pin=fingerprint(x509.load_pem_x509_certificate((ROOT/"issuer/server.crt").read_bytes()).public_key()),
                     ca_certificate=(ROOT/"issuer/ca.crt").read_text())
                 self.send(200,value);return
@@ -252,9 +279,10 @@ class IngressHandler(CommonHandler):
             data=self.data();origins=self.headers.get_all("Origin",[])
             if set(data)!={"approval","csrf"} or len(origins)!=1:
                 raise Locked("reset_request_refused")
-            consumer.submit(data["approval"],actor=identity[0],browser=browser,csrf=data["csrf"],origin=origins[0],
-                test_checkpoint=self.server.state.fault)
-            self.server.state.revoke_public_pair()
+            with self.server.state.authority_lock:
+                consumer.submit(data["approval"],actor=identity[0],browser=browser,csrf=data["csrf"],origin=origins[0],
+                    test_checkpoint=self.server.state.fault)
+                self.server.state.revoke_public_pair()
             self.send(200,{"accepted":True,"phase":self.server.state.vault.phase(),"pair_revoked":True,
                 "history_retained":self.server.state.vault.db.execute("SELECT value FROM history").fetchone()[0]=="retained-synthetic-history"})
         except OSError:

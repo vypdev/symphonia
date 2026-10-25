@@ -274,6 +274,8 @@ async def exercise(hass,root):
             results["actual_ingress_history_retained"]=completed.get("history_retained") is True
             status,_=await ingress("POST","reset",value=payload)
             results["actual_ingress_resume_replay_denied"]=status==403
+            status,post_reset=await ingress()
+            results["completed_reset_never_offers_consumed_challenge"]=status==200 and post_reset.get("pairing_available") is False and "challenge" not in post_reset and post_reset.get("required_action")=="fresh_disposable_fixture"
             assert all(v for k,v in results.items() if k!="ingress_after_disable_observed_status"),[k for k,v in results.items() if k!="ingress_after_disable_observed_status" and not v]
         except Exception as error:
             failure=type(error).__name__
