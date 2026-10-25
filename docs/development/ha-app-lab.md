@@ -28,6 +28,13 @@ The VS Code tasks use `tools/stage_ha_local_app_in_devcontainer.sh`. The officia
 
 ### 2026-10-25 refresh
 
+The separate [native OAuth companion validation](ha-oauth-companion-lab-2026-10-25.md)
+later exercised isolated real-Core HTTP hooks, actual Core-to-App paired TLS
+and Supervisor key/backup controls. Its App metadata is hidden as a fixture;
+the temporary App, backups and marked PKI were removed, then the lab was stopped.
+No real provider or personal HA was used. This does not complete the companion
+SDD or resolve persistent key custody.
+
 The [Spotify OAuth/HA proof](spotify-oauth-proof-2026-10-25.md) records a fresh
 App rebuild and successful Ingress smoke on Core 2026.9.4 and Supervisor
 2026.10.4. This Supervisor requires `user_id` when creating an Ingress session.

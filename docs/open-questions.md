@@ -170,14 +170,22 @@ A [disposable Core/MA Compose lab](development/playback-lab/README.md) is now pr
 
 ### RG-008 — Native OAuth companion conformance
 
+**Bounded evidence (2026-10-25):** [the lab run](development/ha-oauth-companion-lab-2026-10-25.md)
+now demonstrates native main-flow/request-actor feasibility, an actual paired
+TLS route and App exclusion/locked-restore behavior. It also confirms that
+private HA storage and unprotected backups can contain plaintext controls.
+The source of a protected persistent wrapping key and its cold-start/restore
+procedure remains unresolved. These are partial results, not production
+companion or supported-version/browser/provider acceptance.
+
 Before [the companion SDD](../specs/home-assistant-oauth-companion.md) can leave
 Draft, prove the [RFC](architecture/home-assistant-oauth-companion-rfc.md) in a
 disposable HA installation with dedicated public client registration:
 
-1. Supported native config-flow extension points, fresh current administrator
+1. Complete supported-version/browser/package conformance of the now-exercised native config-flow extension points, fresh current administrator
    at begin/confirm, exact flow binding, per-attempt PKCE, staged-only callback
    and no default token-bearing config entry/HA refresh owner.
-2. Supervisor-internal alias reachability, pinned mutual TLS, temporary pairing,
+2. Production provisioning/renewal beyond the proven Supervisor-internal alias and pinned mutual TLS route, temporary pairing,
    key protection, epoch revocation, strict OAuth-only schemas and version skew;
    no host mapping, broad Core credential or authority inherited by playback.
 3. App-only exchange/secret publication, lost acknowledgement, crash/disconnect

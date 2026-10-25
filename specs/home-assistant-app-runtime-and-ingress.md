@@ -78,6 +78,14 @@ the runtime's production readiness or platform/recovery gates.
 
 The PR #1 documentation correction aligns the inherited UI-foundation reference with its current 92-case budget. It does not change this runtime capability readiness or any implementation/release gate. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
+The later [OAuth companion lab experiment](../docs/development/ha-oauth-companion-lab-2026-10-25.md)
+installed and removed only a hidden research fixture. Actual Core-to-App internal
+TLS, no host ports, App key-directory exclusion and App-only backup restoration
+to a locked/stopped state were observed. This does not prove the production
+secret-key source or complete HA restore: a private Core storage file was still
+plaintext and its control was readable in an unprotected backup. The runtime
+therefore remains Draft with key/cold-start/recovery and platform gates open.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

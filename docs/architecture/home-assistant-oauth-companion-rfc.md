@@ -240,8 +240,20 @@ an unreachable App's provider grant has disappeared.
 
 ## Review gates and rollout
 
-No component from this design is installed. Existing research trial/tunnel
-remains stopped; existing native Spotify configuration is not a migration source.
+No production component from this design is installed. The separately authorized
+[laboratory validation](../development/ha-oauth-companion-lab-2026-10-25.md)
+proves bounded native HTTP, internal TLS and backup mechanisms. Its temporary
+Supervisor App was removed afterwards. Existing owner-instance research
+trial/tunnel remains stopped; native Spotify configuration is not a migration source.
+
+Native current-request actor and main reconfigure/reauth hooks now have real
+framework HTTP evidence. Pre-issued PKI tests show the private route can reject
+wrong pins, clients, profiles and epochs; they do not prove production enrollment
+or renewal. Actual App backup exclusion and a locked restore work. However,
+private Core files remain plaintext, and record/backup encryption does not
+establish the wrapping-key source. CSR lifecycle, persistent key custody,
+unseal/restore policy, production activation/recovery and full live/browser
+conformance therefore remain gates; the protocol is still proposed.
 
 1. Prove native flow hooks, per-attempt PKCE isolation, no default Core token
    persistence, callback-only staging and fresh same-admin confirmation.

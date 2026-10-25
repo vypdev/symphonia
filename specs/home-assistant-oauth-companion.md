@@ -8,7 +8,7 @@
 - Related requirements: `SYM-ACC-002`, `SYM-ACC-004`–`SYM-ACC-006`, `SYM-HA-002`, `SYM-HA-004`–`SYM-HA-007`, `SYM-HA-012`, `SYM-SEC-001`–`SYM-SEC-008`, `SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-014`, `SYM-PROV-009`, `SYM-PROV-012`, `SYM-PROV-013`, `SYM-PROV-022`
 - Related decisions/research: [ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md), [protocol RFC](../docs/architecture/home-assistant-oauth-companion-rfc.md), [official research](../docs/providers/provider-research.md#2026-10-25--native-home-assistant-oauth-companion), [ecosystem evidence](../docs/providers/home-assistant-ecosystem-review.md#2026-10-25--oauth-companion-evidence), [authorization](provider-connections-and-authorization.md), [runtime](home-assistant-app-runtime-and-ingress.md), [UI foundation](home-assistant-native-ui.md), `OQ-004`, `RG-002`, `RG-008`
 - Required review gates: product UX, architecture, HA platform, provider feasibility, testing, documentation, security/operations
-- Open decisions blocking readiness: supported native-flow actor/completion hooks; internal topology and mutually authenticated pairing proof; sealed key source and HA/App backup policy; App secret publication/recovery; PKCE-only credential UX and exact provider scopes; supported version/architecture matrix and live conformance.
+- Open decisions blocking readiness: supported-version/browser/package conformance of the native hooks; production enrollment/certificate lifecycle and durable pairing; sealed key source and HA/App cold-start/backup policy; App secret publication/recovery; production PKCE-only credential UX and exact provider scopes; full live conformance. Bounded HTTP/TLS/backup evidence is now recorded below.
 
 ## 1. Executive summary
 
@@ -53,6 +53,28 @@ attempt/connection persistence is reusable policy evidence, not this adapter.
 - No current claim of exact Core login-session, same-browser or immediate
   logout propagation is made. Native flow, current actor and installation
   binding are named separately from the old trial's Ingress/App cookie binding.
+
+### 2.4 Laboratory validation, 2026-10-25
+
+The owner authorized non-production experiments. The
+[dated laboratory results](../docs/development/ha-oauth-companion-lab-2026-10-25.md)
+separate real framework HTTP, actual Core-to-Supervisor-App TLS, native backup
+archives and synthetic crypto records. The [fixtures](../tools/ha_oauth_companion_lab/README.md)
+are outside production packaging; their App metadata cannot be discovered by
+an ordinary repository scan.
+
+| Area | Bounded result | Remaining gate |
+| --- | --- | --- |
+| Native hooks | Main reconfigure/reauth, fresh actor, per-attempt S256, staged callback and saved-file canaries pass in isolated Core 2026.9.4 and 2026.10.3 | Supported package/deployment/browser matrix and production adapter conformance |
+| Internal pairing/TLS | Actual alias, SPKI pin, client-certificate enrollment/replay/epoch/profile rejection pass with no host port | Pre-issued test PKI does not prove CSR issuance, protected persistence, renewal or durable enrollment |
+| Private HA storage | `Store(private=True)` is 0600 but plaintext | A sealed key record and protected wrapping-key source still need proof |
+| Native backups | Password protection rejects wrong key; unprotected Core/App controls are readable; App key exclusion and locked App-only restore pass | Live-key protection, cold-start/unseal and complete HA/App recovery policy |
+| AEAD fixture | External-key recovery succeeds; wrong key/domain or tampering fails | Does not select a production encryption/key-management stack |
+
+No provider exchange, real Spotify consent, personal HA changes, public callback
+or production implementation occurred. All partial live-case claims are scoped
+in the report. This evidence narrows `RG-008`; it does not close it or the 80-case
+production budget.
 
 ## 3. Actors, surfaces, and terminology
 

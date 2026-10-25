@@ -66,7 +66,8 @@
         "docs/architecture/home-assistant-oauth-companion-rfc.md",
         "specs/home-assistant-oauth-companion.md",
         "docs/operations/home-assistant-oauth.md",
-        "docs/development/ha-oauth-companion-design-review-2026-10-25.md"
+        "docs/development/ha-oauth-companion-design-review-2026-10-25.md",
+        "docs/development/ha-oauth-companion-lab-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -121,7 +122,7 @@
         "Supported Home Assistant versions and CPU architectures",
         "Secret-encryption key source and backup/restore behavior",
         "OQ-005 standalone release timing and authentication",
-        "RG-008 internal OAuth bridge pairing/profile, protected keys and lifecycle conformance"
+        "RG-008 protected persistent keys/unseal and complete paired lifecycle beyond bounded TLS/App-backup proof"
       ]
     },
     {
@@ -371,7 +372,8 @@
         "docs/architecture/home-assistant-oauth-companion-rfc.md",
         "specs/home-assistant-oauth-companion.md",
         "docs/operations/home-assistant-oauth.md",
-        "docs/development/ha-oauth-companion-design-review-2026-10-25.md"
+        "docs/development/ha-oauth-companion-design-review-2026-10-25.md",
+        "docs/development/ha-oauth-companion-lab-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -407,7 +409,7 @@
       },
       "blockers": [
         "RG-002 native Core/My callback and provider authorization conformance",
-        "RG-008 native actor/flow, paired channel, App-only grant and HA/App key/backup proof",
+        "RG-008 production enrollment/key custody and complete HA/App/provider/browser conformance (bounded lab mechanisms now proven)",
         "RG-001 provider-specific scopes and account constraints",
         "Authenticated actor/session binding and provider token/secret lifecycle integration",
         "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
@@ -459,7 +461,10 @@
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/open-questions.md",
         "docs/development/ha-oauth-trial-2026-10-25.md",
-        "docs/development/ha-oauth-companion-design-review-2026-10-25.md"
+        "docs/development/ha-oauth-companion-design-review-2026-10-25.md",
+        "docs/development/ha-oauth-companion-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/README.md",
+        "tests/test_ha_oauth_companion_lab.py"
       ],
       "implementationEvidence": {
         "code": [],
@@ -467,12 +472,12 @@
         "documentation": []
       },
       "blockers": [
-        "RG-008 supported native flow extension points and fresh current-admin binding",
-        "RG-008 internal paired TLS, version/profile isolation and supported deployment matrix",
-        "Protected HA/App pairing key source and backup/restore contract",
-        "RG-002 App-only exchange, secret publication, uncertain-outcome and disconnect recovery",
-        "RG-001 PKCE-only client UX and exact provider capability/scope profiles",
-        "80 planned offline cases and 16 live bridge cases remain unimplemented/unproven"
+        "RG-008 production package/browser/deployment conformance beyond isolated native HTTP proof on Core 2026.9.4 and 2026.10.3",
+        "RG-008 production enrollment/renewal, durable pairing and full wire/size/rate conformance beyond pre-issued PKI TLS proof",
+        "Protected persistent HA/App wrapping-key source, cold-start/unseal and complete backup/restore contract",
+        "RG-002 App-only provider exchange, secret publication, uncertain-outcome and disconnect recovery",
+        "RG-001 production PKCE-only client UX and exact provider capability/scope profiles",
+        "80 planned production cases and 16 live bridge cases remain unimplemented/unproven; research fixtures are separate"
       ]
     },
     {

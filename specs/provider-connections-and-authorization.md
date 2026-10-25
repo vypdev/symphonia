@@ -81,6 +81,15 @@ not a claim that the connection capability is implemented.
 - Existing deterministic foundation evidence: [authorization attempt tests](../tests/test_authorization_service.py), [durable attempt tests](../tests/test_sqlite_authorization.py), [connection service tests](../tests/test_provider_connections.py), [connection persistence tests](../tests/test_sqlite_connections.py), [architecture boundary tests](../tests/test_architecture_boundaries.py), and [loopback callback-spike tests](../tests/test_oauth_callback_spike.py). These do not prove the full SDD test budget or remote App topology.
 - Unknowns: native flow/actor conformance and internal paired transport, secret encryption/key/backup, Google/YouTube product scope, exact scopes, token expiry/revocation under test accounts, and provider-specific client-registration policy.
 
+The subsequent [companion lab validation](../docs/development/ha-oauth-companion-lab-2026-10-25.md)
+adds bounded native-framework actor/reauth/PKCE and actual internal mTLS/backup
+evidence, using synthetic accounts/canaries only. It exposes plaintext private
+HA storage and unprotected archives as unsafe defaults, while demonstrating
+protected archives, sealed-record checks and App-only locked restoration.
+Production enrollment/key custody, secret-store activation/recovery and actual
+provider/browser integration remain unproven. Draft status and the separate
+82/80-case budgets remain unchanged.
+
 The PR #1 correction fences probe publication with the complete observation captured before provider I/O and a compare-and-swap predicate inside the SQLite update, including when concurrent probes have equal timestamps. A competing observation or disconnect wins over a stale success or error; older timestamps cannot replace newer health. Missing capability keys make readiness fail closed. Cross-connection, in-flight success/error and three corruption fixtures cover this foundation boundary. See the [PR #1 review](../docs/development/pr1-review-2026-10-21.md).
 
 The isolated callback spike selects the IPv6 socket family for its already accepted ::1 loopback host. A real IPv6 HTTP callback regression proves the same route/state/secret boundary as IPv4. This remains research evidence and adds no reachable production authorization endpoint. See the [follow-up review](../docs/development/pr1-review-2026-10-21.md).

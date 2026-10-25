@@ -1,10 +1,16 @@
 # Home Assistant OAuth setup and recovery — design preview
 
-**Status:** proposed UX/operator procedure, 2026-10-25. The auxiliary integration
-does not exist yet. Do not install a package, change HA or reopen the research
+**Status:** proposed UX/operator procedure, 2026-10-25. The production auxiliary
+integration does not exist yet. Do not install a package, change HA or reopen the research
 tunnel based on this preview. See the [SDD](../../specs/home-assistant-oauth-companion.md)
 for readiness gates and the [RFC](../architecture/home-assistant-oauth-companion-rfc.md)
 for trust/recovery details.
+
+The [laboratory validation](../development/ha-oauth-companion-lab-2026-10-25.md)
+now proves some mechanics, not a released package. It confirms that private
+HA file permissions alone do not encrypt a key; unprotected backups can retain
+plaintext. App key exclusion works, but restoration without that key leaves the
+fixture locked. The final key/unseal/restore operator procedure is still a blocker.
 
 ## Intended normal setup
 
