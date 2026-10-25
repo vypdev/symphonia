@@ -157,7 +157,8 @@
         "docs/development/ui-lit-spike/gateway-reference.md",
         "docs/development/ui-lit-spike/browser-review.md",
         "docs/development/ha-app-lab.md",
-        "docs/development/pr1-review-2026-10-21.md"
+        "docs/development/pr1-review-2026-10-21.md",
+        "docs/development/pr1-review-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -170,7 +171,8 @@
           "ui/src/theme.test.ts"
         ],
         "documentation": [
-          "docs/development/pr1-review-2026-10-21.md"
+          "docs/development/pr1-review-2026-10-21.md",
+          "docs/development/pr1-review-2026-10-25.md"
         ]
       },
       "blockers": [

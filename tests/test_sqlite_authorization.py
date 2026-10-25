@@ -164,6 +164,37 @@ class AuthorizationAttemptRepositoryTests(unittest.TestCase):
             self.repository.consume("attempt-1", raw_state="raw-state-secret", now=NOW + timedelta(seconds=2))
         self.assertEqual(self.repository.get("attempt-1").state, AuthorizationState.EXPIRED)
 
+    def test_late_denial_expires_atomically_and_retains_the_expiry_outcome(self) -> None:
+        for delay in (1, 2):
+            with self.subTest(seconds=delay):
+                repository = AuthorizationAttemptRepository()
+                try:
+                    repository.create(
+                        attempt_id="expiring", provider="spotify", actor_id="actor",
+                        redirect_uri="https://ha.example/callback", raw_state="state",
+                        now=NOW, ttl=timedelta(seconds=1),
+                    )
+                    completed_at = NOW + timedelta(seconds=delay)
+                    with self.assertRaisesRegex(AuthorizationAttemptError, "expired"):
+                        repository.deny("expiring", now=completed_at)
+                    self.assertFalse(repository._connection.in_transaction)
+                    expired = repository.get("expiring")
+                    self.assertEqual(expired.state, AuthorizationState.EXPIRED)
+                    self.assertEqual(expired.completed_at, completed_at)
+                    self.assertIsNone(expired.failure_code)
+                    with self.assertRaises(AuthorizationAttemptError):
+                        repository.deny("expiring", now=completed_at + timedelta(seconds=1))
+                    self.assertEqual(repository.get("expiring"), expired)
+                finally:
+                    repository.close()
+
+    def test_late_denial_cannot_overwrite_a_consumed_attempt(self) -> None:
+        self.create(ttl=timedelta(seconds=1))
+        consumed = self.repository.consume("attempt-1", raw_state="raw-state-secret", now=NOW)
+        with self.assertRaises(AuthorizationAttemptError):
+            self.repository.deny("attempt-1", now=NOW + timedelta(seconds=2))
+        self.assertEqual(self.repository.get("attempt-1"), consumed)
+
     def test_denial_is_terminal(self) -> None:
         self.create()
         denied = self.repository.deny("attempt-1", now=NOW + timedelta(seconds=1))
