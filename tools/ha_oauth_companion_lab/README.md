@@ -146,3 +146,82 @@ Receipts contain only modes, versions, status codes and booleans. Archive bytes,
 client/server keys, HA access tokens, pairing challenges and raw callback URLs
 must not enter evidence. These tests do not fulfill the 80-case production
 budget or the 16-case live-provider/browser matrix.
+
+
+## Install-local key and Core backup follow-up
+
+The [separate dated report](../../docs/development/local-key-custody-lab-2026-10-25.md)
+and [ADR 0008](../../docs/decisions/0008-install-local-oauth-keys-and-backups.md)
+record the automatic-start decision. These scripts remain research tools, never
+production imports or App package members. No recovery-kit feature is selected.
+
+For `key_custody_probe.py`, use an **explicitly new**, labelled owned Docker
+volume mounted at `/data`, the pinned Core 2026.10.3 image below, no network and
+a read-only bind of the script at `/probe.py`. Refuse an existing volume; never
+reuse an owner data volume. A creation wrapper may chown only the new `/data`
+mount, drop all supplementary groups, then irreversibly set GID/UID 10001 before
+running the fixture. This matches the campaign boundary; its root must be
+`/data/vault`. The fixture needs the image's cryptography package, not a new
+production dependency.
+
+```sh
+docker run --rm --network none --read-only \
+  --mount type=volume,src=<new-owned-labelled-volume>,dst=/data \
+  --mount type=bind,src=<absolute-research-script>,dst=/probe.py,readonly \
+  --entrypoint python3 \
+  ghcr.io/home-assistant/home-assistant@sha256:407b89cd11a8cb67d388d21739a226c74acbbebe1ac59e3b83b11b43ce76b98f \
+  -c 'import os,runpy,sys; os.chown("/data",10001,10001); os.setgroups([]); os.setgid(10001); os.setuid(10001); sys.argv=["/probe.py","campaign"]; runpy.run_path("/probe.py",run_name="__main__")'
+```
+
+Run a second `--rm --network none --read-only --cap-drop ALL --user 10001:10001`
+container against that same exact volume/script/image, with entrypoint `python3`
+and arguments `/probe.py restart-check`. The expected receipt confirms the
+existing key/grant without provisioning a new key. This is a container-replacement
+proof, not a native Core restart/upgrade. After recording safe Boolean results,
+verify the exact labels, `vault/owned.json` marker and absence of consumers before
+removing only that volume. Do not print its key or grant files.
+
+The independent `core_key_backup_probe.py` runs **only** through the guarded
+`symphonia-ha-lab`; first resume it using the established guide and verify the
+pinned image/label guards. It creates an exact owned synthetic Core namespace,
+private pairing key and safe Store reference. It uses actual Supervisor partial
+Core backups, reads only its two selected members, then deletes its backups and
+files in `finally`. It never restores Core or uses provider credentials.
+
+```sh
+docker exec -i symphonia-ha-lab docker exec -i \
+  -e SYMPHONIA_DISPOSABLE_HA_LAB=symphonia-ha-lab \
+  homeassistant python3 - < tools/ha_oauth_companion_lab/core_key_backup_probe.py
+```
+
+The expected distinction is deliberate: an unprotected Core archive contains
+the pairing identity; correct protected-archive decryption recovers it and a
+wrong password fails. `core_key_excluded_from_backup` is **false**, while safe
+Store/key permissions, new-process signature and cleanup flags are true. This
+proves the selected HA trust profile, not Core exclusion or clone detection.
+Independently verify zero backups with the exact campaign name prefix and the
+absence of its two Core paths before stopping the guarded lab. If cleanup fails,
+retain only the emitted owned backup slugs for exact recovery; do not broaden
+cleanup to another App, backup or HA config path.
+
+
+For the synthetic file/SQLite crash campaign, stage the complete `tools` package
+anchor plus `key_custody_probe.py` and `key_publication_probe.py` read-only at
+`/research`, with `PYTHONPATH=/research`. Use another explicitly new labelled
+volume at `/data`, the same pinned Core image, no network, and UID 10001 after
+preparing only that volume's owner. Run:
+
+```text
+python3 /research/tools/ha_oauth_companion_lab/key_publication_probe.py campaign
+```
+
+Eight child processes intentionally exit 83 at named publication/generation
+boundaries; the parent reopens SQLite/files and checks old/new identity, history
+and quiescent collection. A main exit 0 with all Boolean results true is the
+accepted synthetic result. An unexpected child status fails the campaign.
+It tests one record and no live collector or reset HTTP endpoint. Ordinary
+`test_ha_oauth_key_publication_fixture.py` uses real SQLite/files and fake AEAD;
+the pinned-container campaign provides the separate real-AEAD evidence. Inspect
+the exact twelve owned case markers and volume labels/consumers before removing
+that volume; never delete another application's data. The report records the
+performed campaign and its remaining fault-plan gaps.

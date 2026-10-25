@@ -47,7 +47,8 @@
         "SYM-HA-012",
         "SYM-SEC-012",
         "SYM-SEC-013",
-        "SYM-SEC-014"
+        "SYM-SEC-014",
+        "SYM-SEC-015"
       ],
       "evidence": [
         "docs/decisions/0003-home-assistant-app-primary.md",
@@ -67,7 +68,15 @@
         "specs/home-assistant-oauth-companion.md",
         "docs/operations/home-assistant-oauth.md",
         "docs/development/ha-oauth-companion-design-review-2026-10-25.md",
-        "docs/development/ha-oauth-companion-lab-2026-10-25.md"
+        "docs/development/ha-oauth-companion-lab-2026-10-25.md",
+        "docs/decisions/0008-install-local-oauth-keys-and-backups.md",
+        "docs/architecture/local-key-custody-rfc.md",
+        "docs/development/local-key-custody-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/key_custody_probe.py",
+        "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
+        "tests/test_ha_oauth_key_custody_fixture.py",
+        "tools/ha_oauth_companion_lab/key_publication_probe.py",
+        "tests/test_ha_oauth_key_publication_fixture.py"
       ],
       "implementationEvidence": {
         "code": [
@@ -120,9 +129,9 @@
       "blockers": [
         "RG-004 storage and recovery spike",
         "Supported Home Assistant versions and CPU architectures",
-        "Secret-encryption key source and backup/restore behavior",
+        "Final local-key adapter/package, rotation/reset and backup/restore conformance under accepted ADR 0008",
         "OQ-005 standalone release timing and authentication",
-        "RG-008 protected persistent keys/unseal and complete paired lifecycle beyond bounded TLS/App-backup proof"
+        "RG-008 production CSR/pair lifecycle and full recovery beyond bounded persistent-key and protected-backup proof"
       ]
     },
     {
@@ -354,7 +363,8 @@
         "SYM-HA-012",
         "SYM-SEC-012",
         "SYM-SEC-013",
-        "SYM-SEC-014"
+        "SYM-SEC-014",
+        "SYM-SEC-015"
       ],
       "evidence": [
         "docs/providers/provider-specification.md",
@@ -373,7 +383,15 @@
         "specs/home-assistant-oauth-companion.md",
         "docs/operations/home-assistant-oauth.md",
         "docs/development/ha-oauth-companion-design-review-2026-10-25.md",
-        "docs/development/ha-oauth-companion-lab-2026-10-25.md"
+        "docs/development/ha-oauth-companion-lab-2026-10-25.md",
+        "docs/decisions/0008-install-local-oauth-keys-and-backups.md",
+        "docs/architecture/local-key-custody-rfc.md",
+        "docs/development/local-key-custody-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/key_custody_probe.py",
+        "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
+        "tests/test_ha_oauth_key_custody_fixture.py",
+        "tools/ha_oauth_companion_lab/key_publication_probe.py",
+        "tests/test_ha_oauth_key_publication_fixture.py"
       ],
       "implementationEvidence": {
         "code": [
@@ -409,7 +427,7 @@
       },
       "blockers": [
         "RG-002 native Core/My callback and provider authorization conformance",
-        "RG-008 production enrollment/key custody and complete HA/App/provider/browser conformance (bounded lab mechanisms now proven)",
+        "RG-008 production enrollment/key adapter/reset/rotation and complete HA/App/provider/browser conformance (trust direction accepted; bounded mechanisms proven)",
         "RG-001 provider-specific scopes and account constraints",
         "Authenticated actor/session binding and provider token/secret lifecycle integration",
         "Decision on whether an unofficial YouTube Music adapter exists in the MVP"
@@ -448,7 +466,8 @@
         "SYM-PROV-009",
         "SYM-PROV-012",
         "SYM-PROV-013",
-        "SYM-PROV-022"
+        "SYM-PROV-022",
+        "SYM-SEC-015"
       ],
       "evidence": [
         "docs/decisions/0007-home-assistant-oauth-companion.md",
@@ -464,7 +483,15 @@
         "docs/development/ha-oauth-companion-design-review-2026-10-25.md",
         "docs/development/ha-oauth-companion-lab-2026-10-25.md",
         "tools/ha_oauth_companion_lab/README.md",
-        "tests/test_ha_oauth_companion_lab.py"
+        "tests/test_ha_oauth_companion_lab.py",
+        "docs/decisions/0008-install-local-oauth-keys-and-backups.md",
+        "docs/architecture/local-key-custody-rfc.md",
+        "docs/development/local-key-custody-lab-2026-10-25.md",
+        "tools/ha_oauth_companion_lab/key_custody_probe.py",
+        "tools/ha_oauth_companion_lab/core_key_backup_probe.py",
+        "tests/test_ha_oauth_key_custody_fixture.py",
+        "tools/ha_oauth_companion_lab/key_publication_probe.py",
+        "tests/test_ha_oauth_key_publication_fixture.py"
       ],
       "implementationEvidence": {
         "code": [],
@@ -474,7 +501,7 @@
       "blockers": [
         "RG-008 production package/browser/deployment conformance beyond isolated native HTTP proof on Core 2026.9.4 and 2026.10.3",
         "RG-008 production enrollment/renewal, durable pairing and full wire/size/rate conformance beyond pre-issued PKI TLS proof",
-        "Protected persistent HA/App wrapping-key source, cold-start/unseal and complete backup/restore contract",
+        "Final local-key adapter/package, CSR/rotation/reset/publication and full backup/restore conformance under accepted ADR 0008",
         "RG-002 App-only provider exchange, secret publication, uncertain-outcome and disconnect recovery",
         "RG-001 production PKCE-only client UX and exact provider capability/scope profiles",
         "80 planned production cases and 16 live bridge cases remain unimplemented/unproven; research fixtures are separate"

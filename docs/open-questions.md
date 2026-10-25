@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
 **Status:** open items and resolved decisions are marked individually
-**Last reviewed:** 2026-10-25 (native OAuth companion direction and proof gates)
+**Last reviewed:** 2026-10-25 (native OAuth companion and accepted automatic-start key/backup profile)
 
 ## Owner decisions and recorded outcomes
 
@@ -55,7 +55,8 @@ The [companion SDD](../specs/home-assistant-oauth-companion.md) and
 [RFC](architecture/home-assistant-oauth-companion-rfc.md) propose staged code/PKCE
 handoff, fresh native same-admin confirmation and private paired transport.
 `RG-002`/`RG-008`, secret/key/backup and exact provider scope gates remain open.
-The direction is accepted; no production implementation is authorized.
+The direction is accepted. The owner subsequently authorized continuing through
+readiness, implementation and testing; the SDD readiness gate still applies.
 
 ### OQ-005 — What authentication/exposure does standalone mode use, and when does it ship?
 
@@ -88,6 +89,18 @@ This foundation deliberately does not guess at provider reconciliation or expose
 The owner wants a Home Assistant-integrated listening surface alongside playlist management; see the [listening SDD](../specs/listening-and-playback-control.md). **Authority boundary resolved (2026-09-28):** the owner chose a narrow companion playback broker, recorded in [ADR 0006](decisions/0006-narrow-home-assistant-playback-broker.md), instead of granting the App broad Supervisor Core API authority. **Scope direction (2026-09-28):** the owner rejected an active-session-only Spotify first release and requested the complete listening experience across the desired connected providers, including starting media, choosing where it plays, current playback, transport controls, and changing playlists. Internal implementation increments are allowed, but an active-session-only prototype is not a complete-release claim. The supported source/output matrix and broker transport, pairing, versioning, user attribution, and threat model remain open. This is independent of `OQ-004`'s provider OAuth callback decision: provider import credentials do not authorize HA player control.
 
 **Unresolved feasibility and authority:** the [source review](providers/playback-integration-source-review.md) shows that stock HA Spotify drops `PLAY_MEDIA` while idle and selects devices by name, so it alone cannot substantiate the requested idle-start/exact-output experience. A separate, explicitly consented Spotify Connect adapter with its own read/control scopes is a possible complement, **not** an accepted fallback; it requires owner approval, a separate threat/policy review, account binding and live proof. Music Assistant players and its unofficial YouTube Music source need independent account/caller/queue and support-risk review. `ytube_music_player` is optional community evidence, not an automatic dependency. Native YouTube Music app sessions are not proven observable. Multiple active players are selected explicitly. There is no fallback to a generic Core API relay. The [full-scope proof plan](development/playback-release-gates.md) makes the release claims and required evidence explicit. The [broker protocol RFC](architecture/playback-broker-protocol-rfc.md) proposes a reverse authenticated channel but is **not accepted** until topology, pairing, secret/backup and caller-identity proof closes its gates.
+
+### OQ-012 — Automatic-start OAuth key and backup trust — Resolved direction
+
+**Decision (2026-10-25, explicit owner answers):** automatic startup with protected
+install-local keys, then the HA trust model with encrypted Core backups.
+[ADR 0008](decisions/0008-install-local-oauth-keys-and-backups.md) records separate
+private Core pairing files, encrypted HA identity archives and excluded App
+OAuth keys. Core restore requires operator App-pair revocation/re-pair; copied
+identity detection is not promised. Missing App keys require authenticated
+reset/new consent while preserving non-secret history. The choice is closed;
+final package, reset/rotation/publication and live conformance remain research
+gates. Standalone and playback key profiles are not approved by this decision.
 
 ## Research/design gates (not owner preference alone)
 
@@ -174,9 +187,12 @@ A [disposable Core/MA Compose lab](development/playback-lab/README.md) is now pr
 now demonstrates native main-flow/request-actor feasibility, an actual paired
 TLS route and App exclusion/locked-restore behavior. It also confirms that
 private HA storage and unprotected backups can contain plaintext controls.
-The source of a protected persistent wrapping key and its cold-start/restore
-procedure remains unresolved. These are partial results, not production
-companion or supported-version/browser/provider acceptance.
+ADR 0008 now selects install-local key custody and distinct encrypted-Core/
+excluded-App backup rules. [Follow-up research](development/local-key-custody-lab-2026-10-25.md)
+proves local key reopen in a second container, private Core identity reopen in a
+new process and actual protected Core archives. Final adapters/package, CSR,
+reset/rotation/publication and supported-version/browser/provider acceptance
+remain open. Core restore itself and cloned-identity detection were not tested.
 
 Before [the companion SDD](../specs/home-assistant-oauth-companion.md) can leave
 Draft, prove the [RFC](architecture/home-assistant-oauth-companion-rfc.md) in a
@@ -196,9 +212,10 @@ disposable HA installation with dedicated public client registration:
    alternative and exact HA/App/integration/browser matrix. A documentation
    example or the previous direct tunnel trial is not a bridge pass.
 
-No prototype installs on the owner's HA, production component, new scope or
-deployment is authorized merely by this design request. The 80-case offline
-budget is planned and does not replace the authorization/runtime budgets.
+The owner authorized continuation through readiness and subsequent implementation/
+testing. This does not make a Draft SDD ready or claim an owner-instance pass.
+The planned 80-case offline budget does not replace the authorization/runtime
+budgets or the 16-case release matrix.
 
 ## Future synchronization questions
 
@@ -220,7 +237,7 @@ These do not block the copy MVP but block sync implementation:
 - supported HA/browser matrix and Lit/Vite compatibility evidence; the UI stack is accepted by ADR 0005 and the design-system contract by ADR 0004;
 - SQLite versus PostgreSQL;
 - internal durable runner versus job library;
-- secret encryption primitive and key source;
+- final secret encryption library/package and reset/rotation/publication contract; the HA automatic-start local-key trust direction is accepted in ADR 0008;
 - API/event protocol and versioning;
 - companion integration transport;
 - App CPU architectures and supported Home Assistant versions;
