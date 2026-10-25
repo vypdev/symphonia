@@ -401,7 +401,7 @@ issuance process-death points with real crypto. A newly issued certificate
 crosses loopback TLS. Native enrollment/renewal wire, real Ingress reset
 admission, final package/restore and browser/provider conformance remain open;
 the reset boolean is explicitly a test stub. A separate real-Core HTTP/signature
-prototype passes twenty-two fresh-admin observations, with eleven parsing/binding
+prototype passes twenty-eight fresh-admin observations, with thirteen parsing/binding/resume
 cases; its Ingress/browser inputs are still explicitly stubbed. The signed
 recovery approval authority/UX is proposed, not accepted or installed. These
 results do not establish readiness or count toward the unchanged production budgets.

@@ -101,11 +101,10 @@ class IngressStubConsumer:
         self.used=False
         self.request={"request_id":secrets.token_hex(32),"installation":signer.installation,
             "actor":actor,"pair_epoch":0,"credential_epoch":vault.snapshot()[0],
-            "profile":"oauth-key-recovery","purpose":"reset","expires":int(time.time())+30}
+            "profile":"oauth-key-recovery","purpose":"resume" if vault.phase()=="reset_pending" else "reset",
+            "expires":int(time.time())+30}
 
-    def submit(self,approval,*,actor,browser,csrf,origin):
-        from cryptography.hazmat.primitives import hashes
-        from cryptography.hazmat.primitives.asymmetric import ec
+    def submit(self,approval,*,actor,browser,csrf,origin,test_checkpoint=lambda point: None):
         if (actor!=self.actor or browser!=self.browser or csrf!=self.csrf
                 or origin!="https://ha-reset.example.invalid" or self.used):
             raise Locked("test_ingress_context_refused")
@@ -116,13 +115,21 @@ class IngressStubConsumer:
             raise Locked("approval_binding_refused")
         if self.vault.snapshot()[0]!=self.request["credential_epoch"]:
             raise Locked("approval_generation_refused")
+        purpose="resume" if self.vault.phase()=="reset_pending" else "reset"
+        if purpose!=self.request["purpose"]:
+            raise Locked("approval_purpose_stale")
+        self._verify(decoded)
+        self.used=True  # Consume before durable intent/key publication.
+        self.vault.explicit_reset(test_authorized=True,resume=purpose=="resume",checkpoint=test_checkpoint)
+
+    def _verify(self,decoded):
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import ec
         try:
             signature=base64.b64decode(decoded["signature"],validate=True)
             self.signer.public.verify(signature,encoded(self.request),ec.ECDSA(hashes.SHA256()))
         except Exception:
             raise Locked("approval_signature_refused") from None
-        self.used=True  # Consume before durable intent/key publication.
-        self.vault.explicit_reset(test_authorized=True)
 
 
 FLOW_SOURCE='''
@@ -245,6 +252,7 @@ async def campaign():
                 status,approved=await call(path,{"confirm":True},0)
                 assert status==200 and approved["step_id"]=="approval"
                 approval=approved["description_placeholders"]["approval"]
+                issued_approvals=[approval]
                 results["fresh_same_admin_receives_signed_approval"]=True
                 context={"actor":users[0].id,"browser":app.browser,"csrf":app.csrf,"origin":"https://ha-reset.example.invalid"}
                 def rejects(document,changes=None):
@@ -269,6 +277,46 @@ async def campaign():
                 results["signed_native_approval_admits_reset_once"]=vault.phase()=="unpaired" and vault.snapshot()[0]==before+1 and vault.read_all()=={}
                 results["approval_replay_refused"]=rejects(approval) and vault.snapshot()[0]==before+1
                 results["nonsecret_history_retained"]=vault.db.execute("SELECT value FROM history").fetchone()[0]=="retained-synthetic-history"
+                # Regression: failed key publication must permit a NEW native
+                # resume approval, without replaying the consumed first one.
+                resume_root=root/"synthetic-resume-app"
+                RecoveryVault.create(resume_root)
+                resume_vault=RecoveryVault(resume_root)
+                try:
+                    app=IngressStubConsumer(resume_vault,signer,users[0].id)
+                    context={**context,"browser":app.browser,"csrf":app.csrf}
+                    failed_path,_,_=await begin()
+                    status,ready=await call(failed_path,{"confirm":True},0)
+                    assert status==200 and ready["step_id"]=="approval"
+                    reset_approval=ready["description_placeholders"]["approval"]
+                    issued_approvals.append(reset_approval)
+                    def fail(point):
+                        if point=="reset_key_staged":
+                            raise OSError("synthetic_key_publication_failure")
+                    try:
+                        app.submit(reset_approval,**context,test_checkpoint=fail)
+                    except OSError:
+                        pass
+                    else:
+                        raise AssertionError("fault_not_exercised")
+                    pending_epoch=resume_vault.snapshot()[0]
+                    results["interrupted_reset_approval_consumed"]=app.used and resume_vault.phase()=="reset_pending"
+                    results["consumed_reset_cannot_resume"]=rejects(reset_approval)
+                    app=IngressStubConsumer(resume_vault,signer,users[0].id)
+                    context={**context,"browser":app.browser,"csrf":app.csrf}
+                    results["fresh_request_selects_resume"]=app.request["purpose"]=="resume" and rejects(reset_approval)
+                    resumed_path,_,_=await begin()
+                    status,wrong=await call(resumed_path,{"confirm":True},1)
+                    results["resume_needs_fresh_same_admin"]=status==200 and wrong.get("errors",{}).get("base")=="wrong_actor"
+                    status,ready=await call(resumed_path,{"confirm":True},0)
+                    assert status==200 and ready["step_id"]=="approval"
+                    resume_approval=ready["description_placeholders"]["approval"]
+                    issued_approvals.append(resume_approval)
+                    app.submit(resume_approval,**context)
+                    results["fresh_native_approval_resumes_interrupted_reset"]=resume_vault.phase()=="unpaired" and resume_vault.snapshot()[0]==pending_epoch and resume_vault.read_all()=={}
+                    results["resume_approval_single_use"]=rejects(resume_approval)
+                finally:
+                    resume_vault.close()
                 from cryptography.hazmat.primitives import serialization
                 from cryptography.hazmat.primitives.asymmetric import ec
                 replacement=ec.generate_private_key(ec.SECP256R1()).private_bytes(serialization.Encoding.PEM,
@@ -288,7 +336,8 @@ async def campaign():
                 await hass.async_block_till_done()
                 results["no_config_entry_created"]=not hass.config_entries.async_entries(DOMAIN)
                 files=[p for p in root.rglob("*") if p.is_file()]
-                results["approval_and_private_key_absent_from_saved_files"]=all(signer.canary not in p.read_bytes() and approval.encode() not in p.read_bytes() for p in files)
+                results["approval_and_private_key_absent_from_saved_files"]=all(signer.canary not in p.read_bytes()
+                    and all(value.encode() not in p.read_bytes() for value in issued_approvals) for p in files)
             assert all(results.values()),[name for name,value in results.items() if not value]
             return {"mode":"isolated_real_core_reset_approval","core":__version__,"results":results,
                 "real_provider_or_owner_ha":False,"supervisor_ingress_browser_context":"explicit test stub",

@@ -103,11 +103,15 @@ policy evidence, not cryptography or native authorization evidence.
 [The native reset prototype](../../tools/ha_oauth_companion_lab/native_reset_probe.py)
 boots a separate Core 2026.10.3 with fresh temporary configuration, synthetic
 users and real authenticated native config-flow HTTP endpoints. It imports no
-owner configuration, Supervisor token or browser credential. Twenty-two Boolean
+owner configuration, Supervisor token or browser credential. Twenty-eight Boolean
 observations pass: fresh same-admin begin/confirmation, non-admin/different-admin/
 inactive-user/revoked-login denial, typed short-lived signed approval, changed
 purpose/signature/expiry/replay denial, local reset once and preserved history.
-No config entry or approval/private key is saved. Missing, malformed or substituted existing Core keys
+A key-publication failure consumes its first approval and leaves reset pending.
+A new native same-admin confirmation issues a distinct `resume` approval; it
+finishes that durable intent without another epoch increment or replay. The
+recovery was verified through the actual Core HTTP flow after the PR review
+identified the missing resume path. No config entry or approval/private key is saved. Missing, malformed or substituted existing Core keys
 block signing without replacement. Ingress actor/browser/Origin/CSRF inputs
 are **explicit stubs**; their negative policy observations do not establish
 real Supervisor or browser enforcement.
@@ -123,12 +127,14 @@ extension is a **review candidate**, not an accepted production permission.
 The explicit native setup view is the proposed approval-document surface;
 no provider secret or long-term key is shown or included in a URL.
 
-Eleven additional [ordinary parsing/binding cases](../../tests/test_ha_native_reset_fixture.py)
+Thirteen additional [ordinary parsing/binding and resume cases](../../tests/test_ha_native_reset_fixture.py)
 cover duplicate/oversized fields, current actor/install/profile, typed/bounded
-epochs, exact purpose/identifier and expiry. They do not use cryptography or
-substitute for real native HTTP. The integrated suite passes **551 tests, no
+epochs, exact purpose/identifier and expiry. Two regression cases use actual
+SQL/files with fake AEAD/signature verification: failed reset needs a fresh
+resume approval, while a competing completed resume fences a stale approval.
+They do not substitute for cryptography or real native HTTP. The integrated suite passes **553 tests, no
 skips**; combined application coverage remains 89%, with the unchanged 85% floor.
-The final native source was repeated after its parser guards; all twenty-two
+The final native source was repeated after its parser guards; all twenty-eight
 observations pass. The container and all temporary users/config/key state are
 removed with its temporary files and `--rm` lifecycle.
 
@@ -143,8 +149,8 @@ lease expiry under live workers, reset/reader/collector concurrency, the final
 adapter/backup package and all native/browser/provider paths remain gates.
 
 The companion/auth/runtime SDDs stay Draft. The separate 80/82/58 production
-budgets and 16 live bridge cases are unchanged. Passing 30 CSR and 22 native observations,
-14 recovery process deaths and 30 ordinary policy cases does not count as those production cases
+budgets and 16 live bridge cases are unchanged. Passing 30 CSR and 28 native observations,
+14 recovery process deaths and 32 ordinary policy cases does not count as those production cases
 or authorize treating an unreviewed artifact as ready on the owner's HA.
 
 ## Reproduction and cleanup

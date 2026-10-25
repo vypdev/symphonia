@@ -78,7 +78,7 @@ SDD ready or establish release conformance.
 
 The [successor recovery/CSR research](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
 adds fourteen three-record reset/rotation/publication process deaths, three
-CSR-issuance deaths and twenty-two real native HTTP/signature observations.
+CSR-issuance deaths and twenty-eight real native HTTP/signature observations.
 Ingress/browser reset inputs remain explicit stubs; the proposed short-lived
 native recovery approval and its pairing-authority/UX disclosure still need
 review. This evidence does not amend the accepted custody direction or approve

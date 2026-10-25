@@ -1,5 +1,8 @@
 """Untrusted recovery-document parsing/binding; native HTTP proof is separate."""
 import base64
+from pathlib import Path
+from types import SimpleNamespace
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -64,3 +67,74 @@ class NativeResetDocumentTests(unittest.TestCase):
     def test_unknown_fields_and_profiles_cannot_expand_authority(self):
         self.reject(url="https://arbitrary.example.invalid")
         self.reject(profile="playback")
+
+
+class NativeResetResumePolicyTests(unittest.TestCase):
+    """Real SQL/files; explicitly fake AEAD and signature verification.
+
+    Real native actor/signature proof belongs to the opt-in Core experiment.
+    """
+    def setUp(self):
+        from tools.ha_oauth_companion_lab import recovery_probe
+        self.recovery=recovery_probe
+        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
+        def seal(key,value,aad):
+            return {"value":value.hex(),"aad":aad.hex()}
+        def unseal(key,record,aad):
+            if record["aad"]!=aad.hex():
+                raise fixture.Locked("fake_codec_mismatch")
+            return bytes.fromhex(record["value"])
+        self.addCleanup(patch.stopall)
+        patch.object(recovery_probe,"seal",side_effect=seal).start()
+        patch.object(recovery_probe,"unseal",side_effect=unseal).start()
+        patch.object(fixture.IngressStubConsumer,"_verify",return_value=None).start()
+        root=Path(temporary.name)/"synthetic-resume"
+        recovery_probe.RecoveryVault.create(root)
+        self.vault=recovery_probe.RecoveryVault(root);self.addCleanup(self.vault.close)
+        self.signer=SimpleNamespace(installation="synthetic-installation")
+
+    def consumer(self):
+        return fixture.IngressStubConsumer(self.vault,self.signer,"synthetic-admin")
+
+    def submit(self,consumer,checkpoint=lambda point:None):
+        document=fixture.pack({"request":consumer.request,"signature":"explicit-test-stub"})
+        consumer.submit(document,actor=consumer.actor,browser=consumer.browser,csrf=consumer.csrf,
+            origin="https://ha-reset.example.invalid",test_checkpoint=checkpoint)
+
+    def interrupt(self):
+        consumer=self.consumer()
+        def fail(point):
+            if point=="reset_key_staged":
+                raise OSError("synthetic_publication_failure")
+        with self.assertRaises(OSError):
+            self.submit(consumer,fail)
+        self.assertTrue(consumer.used)
+        self.assertEqual(self.vault.phase(),"reset_pending")
+        return consumer
+
+    def test_failed_reset_needs_a_new_bound_resume_approval_and_preserves_history(self):
+        first=self.interrupt()
+        pending_epoch=self.vault.snapshot()[0]
+        with self.assertRaises(fixture.Locked):
+            self.submit(first)
+        fresh=self.consumer()
+        self.assertNotEqual(fresh.request["request_id"],first.request["request_id"])
+        self.submit(fresh)
+        self.assertEqual(self.vault.phase(),"unpaired")
+        self.assertEqual(self.vault.snapshot()[0],pending_epoch)
+        self.assertEqual(self.vault.read_all(),{})
+        self.assertEqual(self.vault.db.execute("SELECT value FROM history").fetchone()[0],"retained-synthetic-history")
+        with self.assertRaises(fixture.Locked):
+            self.submit(fresh)
+
+    def test_stale_resume_after_competing_success_cannot_generate_another_key(self):
+        self.interrupt()
+        first,stale=self.consumer(),self.consumer()
+        self.submit(first)
+        snapshot=self.vault.snapshot()
+        keys=sorted(p.name for p in (self.vault.root/"keys").iterdir())
+        with self.assertRaises(fixture.Locked):
+            self.submit(stale)
+        self.assertEqual(self.vault.snapshot(),snapshot)
+        self.assertEqual(sorted(p.name for p in (self.vault.root/"keys").iterdir()),keys)
+        self.assertFalse(stale.used)
