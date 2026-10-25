@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from http.server import HTTPServer
 import http.client
 import io
 import json
+import socket
 import threading
+import time
 import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError
@@ -15,7 +16,7 @@ from symphonia.application.authorization import AuthorizationService
 from symphonia.infrastructure import AuthorizationAttemptRepository
 from tools.spotify_oauth_spike import (
     AUTHORIZE, CALLBACK, COOKIE, PROFILE, REDIRECT, SCOPE, TOKEN,
-    ProofError, ResearchHandler, SpotifyProof, challenge, request_json,
+    ProofError, ResearchServer, SpotifyProof, challenge, request_json,
 )
 
 
@@ -160,10 +161,7 @@ class SpotifyOAuthProofTests(unittest.TestCase):
             request_json(PROFILE, bearer=CANARY)
 
     def test_http_rejects_cross_origin_start_and_management_paths(self):
-        server = HTTPServer(("127.0.0.1", 0), ResearchHandler)
-        server.proof = self.proof
-        server.report = None
-        server.result_viewed = False
+        server = ResearchServer(self.proof, address=("127.0.0.1", 0))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
@@ -185,6 +183,70 @@ class SpotifyOAuthProofTests(unittest.TestCase):
                     self.assertNotIn(CANARY, response.read().decode())
             connection.close()
         finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_trickled_headers_release_the_serial_listener_within_fixed_deadline(self):
+        server = ResearchServer(self.proof, address=("127.0.0.1", 0), parse_seconds=0.15)
+        accepted = threading.Event()
+        original = server.get_request
+
+        def get_request():
+            result = original()
+            accepted.set()
+            return result
+
+        server.get_request = get_request
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        slow = socket.create_connection(server.server_address, timeout=2)
+        connection = http.client.HTTPConnection(*server.server_address, timeout=2)
+        try:
+            slow.sendall(b"GET / HTTP/1.1\r\nHost: 127.0.0.1:8765\r\nX-Slow: ")
+            self.assertTrue(accepted.wait(1))
+            # Bytes arrive more frequently than the two-second idle timeout.
+            for _ in range(6):
+                try:
+                    slow.sendall(b"x")
+                except OSError:
+                    break
+                time.sleep(0.05)
+            connection.request("GET", "/", headers={"Host": "127.0.0.1:8765"})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            response.read()
+            self.assertIsNone(server._parsing)
+            self.transport.assert_not_called()
+        finally:
+            slow.close()
+            connection.close()
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_parsing_deadline_does_not_interrupt_authorized_provider_work(self):
+        server = ResearchServer(self.proof, address=("127.0.0.1", 0), parse_seconds=0.05)
+        original = self.proof.callback
+
+        def delayed_callback(*args):
+            self.assertIsNone(server._parsing)
+            time.sleep(0.15)
+            return original(*args)
+
+        self.proof.callback = delayed_callback
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        connection = http.client.HTTPConnection(*server.server_address, timeout=2)
+        try:
+            connection.request("GET", self.path, headers={"Host": "127.0.0.1:8765", "Cookie": f"{COOKIE}={self.cookie}"})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 303)
+            response.read()
+            self.assertEqual(server.report["result"], "spotify_pkce_verified")
+            self.assertEqual(self.transport.call_count, 4)
+        finally:
+            connection.close()
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)

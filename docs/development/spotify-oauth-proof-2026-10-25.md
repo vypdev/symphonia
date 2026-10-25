@@ -99,8 +99,17 @@ exited after displaying the safe result. No account ID or grant was retained
 in this evidence. Provider revocation was not run. Home Assistant actor
 binding and the remotely reachable App callback are explicitly unproven.
 
-There are **15 deterministic research-client tests**, supplementing 28 existing
+There are now **19 deterministic research-client tests**, supplementing 28 existing
 authorization/SQLite/callback tests. Fake transports prove local handling only.
+
+The PR review follow-up gives each accepted loopback connection a fixed
+two-second parsing window in addition to its idle timeout. Trickling bytes
+cannot occupy the serial listener indefinitely. Parsing completion cancels the
+watchdog before authorized provider work, which retains separate transport
+timeouts. Loopback regressions prove both recovery from trickled headers and
+completion of provider work exceeding the parsing window. This correction was
+not rerun against live Spotify. The complete PR suite passes 492 tests with no
+skips and 89% combined coverage.
 
 | Boundary | Offline result | Live result |
 | --- | --- | --- |

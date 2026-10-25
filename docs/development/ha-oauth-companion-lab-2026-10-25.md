@@ -188,3 +188,8 @@ volumes retained. No production source, dependencies, workflows or owner-HA
 configuration changed.
 
 The subsequent historical-trial parsing-deadline correction passes **490 tests, no skips, and 89% coverage**. It adds loopback slow-client/truncated-body/provider-deadline regressions; trial.6 remains uninstalled on the owner HA. A denial-cleanup alert was verified as a false positive against the existing try/finally and passing denial test; its erasure/replay assertions were strengthened. This does not add a native-companion live pass.
+
+The final loopback research-client review correction applies the same fixed
+parsing window to the standalone Spotify proof. Two additional regressions
+bring the complete PR suite to **492 tests, no skips, and 89% coverage**. No
+owner-HA installation, live Spotify repeat or native-companion pass is claimed.

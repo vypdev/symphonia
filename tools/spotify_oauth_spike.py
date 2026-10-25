@@ -18,6 +18,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import re
 import secrets
+import socket
+import threading
 import time
 from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError, URLError
@@ -169,17 +171,47 @@ class SpotifyProof:
 
 
 class ResearchServer(HTTPServer):
-    def __init__(self, proof: SpotifyProof):
+    def __init__(self, proof: SpotifyProof, *, address=("127.0.0.1", 8765), parse_seconds=2.0):
         self.proof = proof
         self.report = None
         self.result_viewed = False
-        super().__init__(("127.0.0.1", 8765), ResearchHandler)
+        self.parse_seconds, self._parsing = parse_seconds, None
+        super().__init__(address, ResearchHandler)
         self.timeout = 1
 
     def get_request(self):
         connection, address = super().get_request()
         connection.settimeout(2)
+        expired = threading.Event()
+
+        def expire():
+            expired.set()
+            try:
+                connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+        # The serial listener gets a fixed parsing deadline; trickled bytes
+        # cannot extend it. Provider work starts only after parsing completes.
+        deadline = threading.Timer(self.parse_seconds, expire)
+        deadline.daemon = True
+        self._parsing = (connection, deadline, expired)
+        deadline.start()
         return connection, address
+
+    def parsing_complete(self, connection, *, check_expiry=True):
+        current = self._parsing
+        if current is None or current[0] is not connection:
+            return
+        self._parsing = None
+        current[1].cancel()
+        current[1].join(timeout=1)
+        if check_expiry and current[2].is_set():
+            raise TimeoutError("research_parse_deadline")
+
+    def shutdown_request(self, connection):
+        self.parsing_complete(connection, check_expiry=False)
+        super().shutdown_request(connection)
 
 
 class ResearchHandler(BaseHTTPRequestHandler):
@@ -197,13 +229,17 @@ class ResearchHandler(BaseHTTPRequestHandler):
             **(headers or {}),
         }.items():
             self.send_header(key, value)
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:
+            pass
 
     def _valid_host(self):
         return self.headers.get("Host") == "127.0.0.1:8765"
 
     def do_GET(self):
+        self.server.parsing_complete(self.connection)
         if not self._valid_host() or len(self.path) > 12288 or not self.path.startswith("/") or self.path.startswith("//"):
             self._send(400, b"Invalid research request.")
         elif self.path == "/":
@@ -223,6 +259,7 @@ class ResearchHandler(BaseHTTPRequestHandler):
             self._send(404, b"Not found.")
 
     def do_POST(self):
+        self.server.parsing_complete(self.connection)
         if not self._valid_host() or self.path != "/start" or self.headers.get("Origin") != ORIGIN or self.headers.get("Content-Length", "0") != "0":
             self._send(400, b"Invalid research request.")
             return
