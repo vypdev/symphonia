@@ -77,9 +77,9 @@ gates and implementation/testing; that authorization does not itself make an
 SDD ready or establish release conformance.
 
 The [successor recovery/CSR research](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
-adds eighteen three-record reset/rotation/publication process deaths, four real
-missing/wrong-key cases, three CSR-issuance deaths and twenty-eight real native
-HTTP/signature observations. Separately, thirty-three actual Core/Supervisor wire
+adds twenty-one three-record reset/rotation/publication process deaths, four real
+missing/wrong-key cases, three CSR-issuance deaths and thirty-six real native
+HTTP/signature observations. Separately, thirty-four actual Core/Supervisor wire
 observations establish CSR enrollment/renewal and native signed reset/resume
 through App Ingress after key loss. This narrows mechanism uncertainty; the
 short-lived recovery approval's pairing-authority/UX disclosure still needs

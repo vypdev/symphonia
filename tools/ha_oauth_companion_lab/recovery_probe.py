@@ -42,7 +42,7 @@ class RecoveryVault(Vault):
                 "CREATE TABLE history(value TEXT); INSERT INTO history VALUES('retained-synthetic-history');"
                 "CREATE TABLE live(name TEXT PRIMARY KEY,reference TEXT);"
                 "CREATE TABLE owners(id TEXT PRIMARY KEY,epoch INTEGER,key_ref TEXT,refs TEXT,live INTEGER);"
-                "CREATE TABLE lifecycle(phase TEXT); INSERT INTO lifecycle VALUES('active');")
+                "CREATE TABLE lifecycle(phase TEXT,retirement_pending INTEGER); INSERT INTO lifecycle VALUES('active',0);")
             db.execute("INSERT INTO state VALUES(1,0,?,NULL)", (key_ref,))
             db.commit()
         finally:
@@ -59,6 +59,32 @@ class RecoveryVault(Vault):
 
     def phase(self):
         return self.db.execute("SELECT phase FROM lifecycle").fetchone()[0]
+
+    def reset_retirement_pending(self):
+        return self.db.execute("SELECT retirement_pending FROM lifecycle").fetchone()[0]==1
+
+    def needs_reset_resume(self):
+        return self.phase()=="reset_pending" or self.reset_retirement_pending()
+
+    def retire_reset_material(self, *, checkpoint=lambda point:None):
+        # Only committed reset cleanup: no new key, epoch or grant. This fixture
+        # has no live background writers; production lease retirement is open.
+        if self.phase()!="unpaired":
+            raise Locked("reset_not_committed")
+        if not self.reset_retirement_pending():
+            return
+        snapshot=self.snapshot()
+        if not self.collect_quiescent(checkpoint=lambda point:checkpoint("reset_"+point)):
+            raise Locked("reset_retirement_pending")
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            if self.phase()!="unpaired" or self.snapshot()!=snapshot:
+                raise Locked("reset_retirement_fenced")
+            self.db.execute("UPDATE lifecycle SET retirement_pending=0")
+            self.db.commit()
+        except BaseException:
+            self.db.rollback();raise
+        checkpoint("reset_retired")
 
     def snapshot(self):
         own = not self.db.in_transaction
@@ -152,6 +178,9 @@ class RecoveryVault(Vault):
         key, refs = candidate
         if set(refs) != set(CONNECTIONS):
             raise Locked("incomplete_fixture_connections")
+        row=self.db.execute("SELECT epoch,key_ref,refs,live FROM owners WHERE id=?",(owner,)).fetchone()
+        if not row or not row[3] or self.phase()!="active" or tuple(row[:3])!=self.snapshot():
+            return False
         self.read_refs(key, refs)
         self.db.execute("BEGIN IMMEDIATE")
         try:
@@ -222,7 +251,10 @@ class RecoveryVault(Vault):
         except BaseException:
             self.db.rollback()
             raise
-        self.collect_quiescent()
+        if self.phase()=="unpaired" and self.reset_retirement_pending():
+            self.retire_reset_material()
+        else:
+            self.collect_quiescent()
         return self.phase()
 
     def explicit_reset(self, *, test_authorized=False, resume=False, checkpoint=lambda point: None):
@@ -230,6 +262,11 @@ class RecoveryVault(Vault):
         # endpoint may turn caller input into this authority in production.
         if test_authorized is not True:
             raise Locked("reset_not_authorized")
+        if self.phase()=="unpaired" and self.reset_retirement_pending():
+            if not resume:
+                raise Locked("explicit_resume_required")
+            self.retire_reset_material(checkpoint=checkpoint)
+            return
         self.db.execute("BEGIN IMMEDIATE")
         try:
             if resume:
@@ -241,7 +278,7 @@ class RecoveryVault(Vault):
                 self.db.execute("UPDATE state SET epoch=epoch+1,record_ref=NULL")
                 self.db.execute("DELETE FROM live")
                 self.db.execute("UPDATE owners SET live=0")
-                self.db.execute("UPDATE lifecycle SET phase='reset_pending'")
+                self.db.execute("UPDATE lifecycle SET phase='reset_pending',retirement_pending=1")
             epoch = self.snapshot()[0]
             self.db.commit()
         except BaseException:
@@ -264,6 +301,7 @@ class RecoveryVault(Vault):
             self.db.rollback()
             raise
         checkpoint("reset_after_commit")
+        self.retire_reset_material(checkpoint=checkpoint)
 
 
 def child(root, mode, point):
@@ -290,7 +328,7 @@ def campaign(base):
     results = {}
     plans = (("publish",("before_record","record_a_private_written","record_a_private_named_durable","record_a","before_commit","after_commit")),
              ("rotate",("key_private_written","key_private_named_durable","key_staged","record_a","record_c","before_commit","after_commit","records_retired")),
-             ("reset",("reset_fenced","reset_key_staged","reset_before_commit","reset_after_commit")))
+             ("reset",("reset_fenced","reset_key_staged","reset_before_commit","reset_after_commit","reset_records_retired","reset_keys_retired","reset_retired")))
     for mode, points in plans:
         for point in points:
             root = base/(mode+"-"+point)
@@ -305,7 +343,7 @@ def campaign(base):
                 phase = vault.recover_after_all_writers_exit()
                 if mode == "reset":
                     assert {p.name for p in (root/"keys").iterdir()} <= set(before_keys)
-                    assert phase == ("unpaired" if point=="reset_after_commit" else "reset_pending")
+                    assert phase == ("unpaired" if point in {"reset_after_commit","reset_records_retired","reset_keys_retired","reset_retired"} else "reset_pending")
                     if phase == "reset_pending":
                         try:
                             vault.read_all()
@@ -357,7 +395,7 @@ def campaign(base):
             results["key-"+name]=True
         finally:
             vault.close()
-    return {"mode":"synthetic_multi_record_recovery", "process_deaths":18,"results":results,
+    return {"mode":"synthetic_multi_record_recovery", "process_deaths":21,"results":results,
             "uid":os.geteuid(),"real_ha_or_provider":False,"native_reset_admission_or_live_lease_expiry_proven":False}
 
 

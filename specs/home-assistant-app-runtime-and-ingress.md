@@ -395,16 +395,16 @@ final rotation/lease, collection and authenticated reset admission remain open.
 
 
 The [recovery/CSR follow-up](../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md)
-adds eighteen three-record publication/rotation/reset process-death points,
-four actual missing/wrong-key cases and twenty-three fake-AEAD policy cases.
+adds twenty-one three-record publication/rotation/reset process-death points,
+four actual missing/wrong-key cases and twenty-five fake-AEAD policy cases.
 Dynamic CSR research passes thirty-six observations including three issuance
-process deaths. A separate real-Core HTTP/signature prototype passes twenty-eight
-observations plus thirteen ordinary binding/resume cases. The guarded
-Core 2026.9.4/Supervisor 2026.10.4 wire repeat passes thirty-three Boolean observations:
+process deaths. A separate real-Core HTTP/signature prototype passes thirty-six
+observations plus fourteen ordinary binding/resume cases. The guarded
+Core 2026.9.4/Supervisor 2026.10.4 wire repeat passes thirty-four Boolean observations:
 CSR enrollment/renewal, stale-certificate denial, App-key loss with live Ingress,
 fresh native admin approval, actual App Origin/CSRF enforcement and interrupted
 reset with a new signed resume. A separate actual child death after reset commit
-before pair revocation passes nine observations: startup revokes idempotently
+before pair revocation passes ten observations: startup revokes idempotently
 before TLS, serializes renewal/reset and never rearms a consumed challenge.
 Thirteen ordinary boundary/operator/renewal cases are
 separate. Ingress still returned 200 after user deactivation; native HTTP denied

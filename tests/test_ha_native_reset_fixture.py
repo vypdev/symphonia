@@ -138,3 +138,18 @@ class NativeResetResumePolicyTests(unittest.TestCase):
         self.assertEqual(self.vault.snapshot(),snapshot)
         self.assertEqual(sorted(p.name for p in (self.vault.root/"keys").iterdir()),keys)
         self.assertFalse(stale.used)
+
+    def test_postcommit_cleanup_requires_a_fresh_resume_without_rekeying(self):
+        first=self.consumer()
+        def fail(point):
+            if point=='reset_after_commit':raise OSError('synthetic_cleanup_failure')
+        with self.assertRaises(OSError):self.submit(first,fail)
+        committed=self.vault.snapshot()
+        self.assertTrue(self.vault.reset_retirement_pending())
+        with self.assertRaises(fixture.Locked):self.submit(first)
+        fresh=self.consumer();self.assertEqual(fresh.request['purpose'],'resume')
+        self.submit(fresh)
+        self.assertEqual(self.vault.snapshot(),committed)
+        self.assertFalse(self.vault.needs_reset_resume())
+        self.assertEqual(list((self.vault.root/'records').iterdir()),[])
+        self.assertEqual({p.name for p in (self.vault.root/'keys').iterdir()},{committed[1]})

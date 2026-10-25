@@ -272,6 +272,7 @@ async def exercise(hass,root):
             status,completed=await ingress("POST","reset",value=payload)
             results["actual_ingress_native_resume_completes"]=status==200 and completed.get("phase")=="unpaired" and completed.get("pair_revoked") is True
             results["actual_ingress_history_retained"]=completed.get("history_retained") is True
+            results["actual_ingress_old_material_retired"]=completed.get("old_material_retired") is True
             status,_=await ingress("POST","reset",value=payload)
             results["actual_ingress_resume_replay_denied"]=status==403
             status,post_reset=await ingress()

@@ -194,9 +194,9 @@ new process and actual protected Core archives. Final adapters/package, CSR,
 reset/rotation/publication and supported-version/browser/provider acceptance
 remain open. Core restore itself and cloned-identity detection were not tested.
 The [recovery/CSR follow-up](development/oauth-recovery-and-pairing-lab-2026-10-25.md)
-adds dynamic issuance, three certificate-process crashes, eighteen multi-record
-process deaths, four real missing/wrong-key cases and twenty-three policy cases.
-Thirty-three additional actual Core/Supervisor wire observations establish generated
+adds dynamic issuance, three certificate-process crashes, twenty-one multi-record
+process deaths, four real missing/wrong-key cases and twenty-five policy cases.
+Thirty-four additional actual Core/Supervisor wire observations establish generated
 CSR enrollment/renewal and fresh native approval with App Ingress Origin/CSRF
 redemption, including reset interruption and new signed resume. Supervisor
 Ingress alone still accepted a deactivated actor on the tested version; fresh

@@ -149,13 +149,13 @@ collection, reset admission or the final adapter/package. The remaining gates
 above are retained; none of these counts replaces a production test budget.
 
 The [successor campaign](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
-adds eighteen actual process deaths across three-record publication/rotation and
-durable reset ordering, four real missing/wrong-key cases and twenty-three
+adds twenty-one actual process deaths across three-record publication/rotation and
+durable reset ordering, four real missing/wrong-key cases and twenty-five
 ordinary file/SQL policy cases with fake AEAD. This includes buffered private
 writes and durable two-link publication; no simulated power-loss claim is made.
 Admitted writers pin staged files; a complete SQL reference set switches at once.
 Interrupted reset remains pending until fresh explicit resume and preserves history.
-The isolated reset Boolean remains a stub. Separately, thirty-three actual
+The isolated reset Boolean remains a stub. Separately, thirty-four actual
 Core 2026.9.4/Supervisor 2026.10.4 wire observations establish CSR/renewal,
 locked-key Ingress survival, native fresh-admin approval and App Origin/CSRF
 redemption with interrupted reset/resume. Ingress returned 200 after user
@@ -167,7 +167,7 @@ backup/restore, proposed recovery authority/UX review and native browser/provide
 conformance remain gates. The accepted custody direction and Draft status remain.
 
 A separate actual child death immediately after credential reset commit and
-before issuer revocation now passes nine observations. The durable completed
+before issuer revocation now passes ten observations. The durable completed
 reset phase fences the old pair on startup before TLS; reconciliation is
 idempotent and never rekeys/rearms enrollment. Reset and renewal share an
 authority lock; the TLS worker reads through its own read-only SQLite connection.

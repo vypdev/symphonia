@@ -152,6 +152,7 @@ class State:
     def reconcile_reset(self):
         if self.vault.phase()=="unpaired":
             self.revoke_public_pair()
+            self.vault.retire_reset_material()
 
     def revoke_public_pair(self):
         db=sqlite3.connect(ROOT/"issuer/state.sqlite")
@@ -244,7 +245,8 @@ class IngressHandler(CommonHandler):
         try:
             identity=self.identity();state=self.server.state
             value={"installation":state.meta["installation"],"phase":state.vault.phase(),
-                "tls_available":state.issuer is not None and state.vault.phase()=="active","expires":state.meta["expires"]}
+                "tls_available":state.issuer is not None and state.vault.phase()=="active","expires":state.meta["expires"],
+                "retirement_pending":state.vault.reset_retirement_pending()}
             try:
                 state.vault.read_all();value["credentials_locked"]=False
             except Locked:
@@ -284,6 +286,7 @@ class IngressHandler(CommonHandler):
                     test_checkpoint=self.server.state.fault)
                 self.server.state.revoke_public_pair()
             self.send(200,{"accepted":True,"phase":self.server.state.vault.phase(),"pair_revoked":True,
+                "old_material_retired":not self.server.state.vault.reset_retirement_pending(),
                 "history_retained":self.server.state.vault.db.execute("SELECT value FROM history").fetchone()[0]=="retained-synthetic-history"})
         except OSError:
             self.send(503,{"accepted":False,"phase":self.server.state.vault.phase(),"reason":"key_publication_failed"})

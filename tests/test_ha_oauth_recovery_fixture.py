@@ -245,3 +245,29 @@ class RecoveryFixtureTests(unittest.TestCase):
         with self.assertRaises(fixture.Locked):
             self.vault.collect_quiescent()
         self.assertTrue(pending.is_symlink());self.assertTrue(key.exists())
+
+    def test_successful_reset_retires_old_and_staged_secret_files(self):
+        old_key=self.vault.snapshot()[1]
+        owner=self.vault.admit();staged=self.vault.stage_owner(owner,rotate=True)
+        self.vault.explicit_reset(test_authorized=True)
+        self.assertFalse((self.root/'keys'/old_key).exists())
+        self.assertFalse((self.root/'keys'/staged[0]).exists())
+        self.assertEqual(list((self.root/'records').iterdir()),[])
+        self.assertEqual({p.name for p in (self.root/'keys').iterdir()},{self.vault.snapshot()[1]})
+        self.assertFalse(self.vault.reset_retirement_pending())
+        self.assertFalse(self.vault.activate_owner(owner,staged))
+        self.assertEqual(self.vault.db.execute('SELECT value FROM history').fetchone()[0],'retained-synthetic-history')
+
+    def test_postcommit_retirement_resume_keeps_the_committed_identity(self):
+        def fail(point):
+            if point=='reset_records_retired':raise OSError('synthetic_retirement_failure')
+        with self.assertRaises(OSError):self.vault.explicit_reset(test_authorized=True,checkpoint=fail)
+        committed=self.vault.snapshot()
+        other=self.reopened()
+        self.assertEqual(other.phase(),'unpaired');self.assertTrue(other.needs_reset_resume())
+        with self.assertRaises(fixture.Locked):other.explicit_reset(test_authorized=True)
+        other.explicit_reset(test_authorized=True,resume=True)
+        self.assertEqual(other.snapshot(),committed)
+        self.assertEqual(list((self.root/'records').iterdir()),[])
+        self.assertEqual({p.name for p in (self.root/'keys').iterdir()},{committed[1]})
+        self.assertFalse(other.needs_reset_resume())

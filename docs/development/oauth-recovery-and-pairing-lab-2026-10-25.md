@@ -79,18 +79,29 @@ activates the entire set and key generation together. A live admitted owner
 conservatively pins staged files. Collection holds the SQL admission fence and
 does not use file age as evidence of terminal ownership.
 
-Eighteen actual process deaths pass with real AES-GCM:
+Twenty-one actual process deaths pass with real AES-GCM:
 
 | Operation | Interruption points |
 | --- | --- |
 | Publish, 6 | Before a record, inside buffered private write, durable two-link publication, first staged record, before commit, after commit |
 | Rotate, 8 | Inside buffered key write, durable two-link key publication, new key staged, first record staged, all records staged, before commit, after commit, obsolete records retired |
-| Explicit reset, 4 | Durable reset fence, replacement key staged, before reset commit, after commit |
+| Explicit reset, 7 | Durable fence, replacement key, before/after reset commit, old records retired, old keys retired, retirement marker cleared |
 
 Reopen sees all old or all committed new records, never a mixed active set.
 History survives. Reset remains `reset_pending` after an interrupted fence;
-health/startup do not create a key or finish the reset. Explicit resume produces
+health/startup do not create a key or finish a pre-commit reset intent. Explicit resume produces
 an unpaired identity with no grant and requires new pairing/consent.
+
+Reset success also retires obsolete ciphertexts and wrapping keys, including
+fenced staged generations. A durable retirement marker is written with reset
+intent and cleared only after owned-file collection and directory fsync. If
+interrupted after key commit, fresh approved resume completes only retirement,
+without another epoch/key; startup may reconcile that already-committed cleanup
+before opening authority. The marker is not a grant or permission to initialize
+keys. Stale publishers are fenced before opening retired records. These
+fixtures have no live background writers during reset; full live lease/reader/
+collector/reset concurrency remains a production gate. Unlinking owned live
+files does not erase older host snapshots or revoke an external provider grant.
 
 The reset caller is an explicitly named **test authorization stub**, not an
 HTTP route or proof of a current HA administrator. No real API may turn a
@@ -98,7 +109,7 @@ submitted boolean into that authority. Native Ingress, Origin/CSRF, active-user
 checks and unauthorized reset requests are proved separately below. The
 file/SQL fixture alone cannot claim that authority or external provider revocation.
 
-Twenty-three [ordinary tests](../../tests/test_ha_oauth_recovery_fixture.py) use
+Twenty-five [ordinary tests](../../tests/test_ha_oauth_recovery_fixture.py) use
 real files/SQLite and an explicitly fake codec. They cover owner/collector and
 two-connection races, complete-set activation, partial writes, rollback,
 epoch/reset fencing, corrupt/missing old/new keys or records, connection-bound
@@ -115,15 +126,19 @@ loss or proof about every filesystem/hardware implementation.
 [The native reset prototype](../../tools/ha_oauth_companion_lab/native_reset_probe.py)
 boots a separate Core 2026.10.3 with fresh temporary configuration, synthetic
 users and real authenticated native config-flow HTTP endpoints. It imports no
-owner configuration, Supervisor token or browser credential. Twenty-eight Boolean
+owner configuration, Supervisor token or browser credential. Thirty-six Boolean
 observations pass: fresh same-admin begin/confirmation, non-admin/different-admin/
 inactive-user/revoked-login denial, typed short-lived signed approval, changed
 purpose/signature/expiry/replay denial, local reset once and preserved history.
 A key-publication failure consumes its first approval and leaves reset pending.
+A separate post-key-commit failure leaves retirement pending and requires a
+new native resume that preserves the committed key/epoch.
 A new native same-admin confirmation issues a distinct `resume` approval; it
 finishes that durable intent without another epoch increment or replay. The
 recovery was verified through the actual Core HTTP flow after the PR review
-identified the missing resume path. No config entry or approval/private key is saved. Missing, malformed or substituted existing Core keys
+identified the missing resume path. No config entry or approval document is saved. The synthetic Core private key
+uses only its explicit0600 private file in the temporary fixture; it never
+enters a config entry and is removed with that fixture. Missing, malformed or substituted existing Core keys
 block signing without replacement. Ingress actor/browser/Origin/CSRF inputs
 are **explicit stubs**; their negative policy observations do not establish
 real Supervisor or browser enforcement.
@@ -139,14 +154,15 @@ extension is a **review candidate**, not an accepted production permission.
 The explicit native setup view is the proposed approval-document surface;
 no provider secret or long-term key is shown or included in a URL.
 
-Thirteen additional [ordinary parsing/binding and resume cases](../../tests/test_ha_native_reset_fixture.py)
+Fourteen additional [ordinary parsing/binding and resume cases](../../tests/test_ha_native_reset_fixture.py)
 cover duplicate/oversized fields, current actor/install/profile, typed/bounded
-epochs, exact purpose/identifier and expiry. Two regression cases use actual
+epochs, exact purpose/identifier and expiry. Three regression cases use actual
 SQL/files with fake AEAD/signature verification: failed reset needs a fresh
-resume approval, while a competing completed resume fences a stale approval.
-They do not substitute for cryptography or real native HTTP. The integrated suite passes **570 tests, no
+resume approval, a competing completed resume fences a stale approval, and post-commit
+retirement resume preserves the committed key/epoch.
+They do not substitute for cryptography or real native HTTP. The integrated suite passes **573 tests, no
 skips**; combined application coverage remains 89%, with the unchanged 85% floor.
-The final native source was repeated after its parser guards; all twenty-eight
+The final native source was repeated after its parser guards; all thirty-six
 observations pass. The container and all temporary users/config/key state are
 removed with its temporary files and `--rm` lifecycle.
 
@@ -168,7 +184,7 @@ API privilege, and expires twenty minutes after explicit fresh provisioning.
 A five-minute challenge is held only by its first process. Restart does not
 extend either deadline or provision a replacement challenge/key.
 
-Thirty-three Boolean observations pass through the actual wire:
+Thirty-four Boolean observations pass through the actual wire:
 
 - Core-generated CSR enrollment crosses private TLS after server-pin checking;
   wrong pin stops before the body. Wrong/consumed challenges, missing client
@@ -198,7 +214,7 @@ Thirty-three Boolean observations pass through the actual wire:
 
 A separate [reset-commit crash campaign](../../tools/ha_oauth_companion_lab/wire_reset_probe.py)
 exits a real child process immediately after credential reset commit and before
-issuer revocation. Nine Boolean observations pass on the pinned isolated
+issuer revocation. Ten Boolean observations pass on the pinned isolated
 Core 2026.10.3 crypto image. Startup uses the durable `unpaired` phase as
 revocation intent, clears the old pair/challenge idempotently **before** opening
 TLS authority, preserves history and adds/replaces no private key. Pending or
@@ -207,7 +223,7 @@ lock serializes reset with renewal; TLS reads the phase through a separate
 read-only SQLite connection and is tested from an actual worker thread.
 Its reset admission is an explicit test stub; actual native admission is the
 independent wire campaign above. This is one additional actual process death,
-not one of the eighteen vault-publication deaths.
+not one of the twenty-one vault-publication deaths.
 
 After reset, this disposable profile ends. Ingress states that fresh fixture
 provisioning is required and returns no stale/null bootstrap challenge. Restart
@@ -297,7 +313,7 @@ Never reuse an existing volume, mount a personal config, expose a host port or
 run these tools against a real App. Receipts contain versions, booleans and
 source hashes; never retain private keys, challenge values or archive bytes.
 CSR teardown checks its exact owned marker, seven permitted files and private
-modes/types. Recovery teardown checks all twenty-two current case names/markers, safe
+modes/types. Recovery teardown checks all twenty-five current case names/markers, safe
 private files and no volume consumers. The first recovery volume contained
 72 files / 696,320 allocated bytes; the expanded campaign contained 119 files /
 1,118,208 allocated bytes. Both were removed. Earlier CSR iterations each
@@ -346,3 +362,10 @@ The separate reset-commit crash iterations each contained seventeen verified
 private files / 114,688 allocated bytes and were removed after their receipts
 were saved (zero measured filesystem free-space change). No private recovery
 material remains in those volumes.
+
+The retirement follow-up's final25-case recovery volume contained128 verified
+files /1,241,088 allocated bytes. Its final reset-commit volume contained13
+files /98,304 allocated bytes, with obsolete records/keys already absent. Both
+volumes were removed using the same label/marker/type/permission/consumer guards;
+measured filesystem free-space change was zero. Native approval now has36
+observations, including fresh retirement-only resume after key commit.

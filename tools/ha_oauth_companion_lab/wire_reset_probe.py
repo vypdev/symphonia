@@ -15,6 +15,7 @@ import sys
 from tools.ha_oauth_companion_lab.enrollment_probe import Issuer,client,crypto
 from tools.ha_oauth_companion_lab.key_custody_probe import PrivateFiles,encoded
 from tools.ha_oauth_companion_lab.wire_app import server
+from tools.ha_oauth_companion_lab.recovery_probe import RecoveryVault
 
 BASE=Path('/data/wire-reset-lab')
 MARKER='symphonia-wire-reset-crash-v1'
@@ -49,7 +50,8 @@ def campaign():
     server.ROOT=BASE/'app'
     with PrivateFiles(BASE) as files:
         der=files.read('old-public.der',8192)
-    keys=[server.ROOT/'issuer/ca.key',server.ROOT/'issuer/server.key',*sorted((server.ROOT/'grants/keys').iterdir())]
+    active=RecoveryVault(server.ROOT/'grants');active_key=active.snapshot()[1];active.close()
+    keys=[server.ROOT/'issuer/ca.key',server.ROOT/'issuer/server.key',server.ROOT/'grants/keys'/active_key]
     before={p:hashlib.sha256(p.read_bytes()).digest() for p in keys}
     state=server.State()
     results={'actual_reset_commit_process_death':True,
@@ -65,8 +67,10 @@ def campaign():
     again=server.State()
     issuer=Issuer(server.ROOT/'issuer')
     results['revocation_is_idempotent_and_old_certificate_denied']=not issuer.accepts(der) and issuer.db.execute('SELECT epoch,serial,peer FROM pair').fetchone()==(1,None,None)
-    issuer.close();again.vault.close()
+    issuer.close()
     results['no_private_key_replaced_or_added']=set((server.ROOT/'grants/keys').iterdir())==set(keys[2:]) and all(hashlib.sha256(p.read_bytes()).digest()==digest for p,digest in before.items())
+    results['obsolete_grant_files_and_keys_retired']=not list((server.ROOT/'grants/records').iterdir()) and not again.vault.reset_retirement_pending()
+    again.vault.close()
     assert all(results.values())
     import cryptography,platform
     return {'mode':'synthetic_actual_death_before_pair_revocation','uid':os.geteuid(),
