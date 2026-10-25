@@ -13,7 +13,19 @@ function* sourceFiles(directory) {
 }
 
 
-function moduleSpecifiers(source, file) {
+function staticMemberName(node) {
+  if (!node.computed && node.property.type === "Identifier") return node.property.name;
+  if (node.computed && node.property.type === "Literal" && typeof node.property.value === "string") return node.property.value;
+  if (node.computed && node.property.type === "TemplateLiteral" && node.property.expressions.length === 0) return node.property.quasis[0].value.cooked;
+  return null;
+}
+
+function isWindowObject(node) {
+  if (node.type === "Identifier") return ["window", "self", "globalThis"].includes(node.name);
+  return node.type === "MemberExpression" && isWindowObject(node.object) && staticMemberName(node) === "window";
+}
+
+function inspectFixtureSource(source, file) {
   const parsed = parseSync(file, source);
   assert.equal(parsed.errors.length, 0, `${file} has invalid TypeScript syntax`);
   const imports = [];
@@ -23,6 +35,11 @@ function moduleSpecifiers(source, file) {
     else assert.fail(`${file} has a computed module specifier`);
   };
   new Visitor({
+    MemberExpression(node) {
+      if (!isWindowObject(node.object)) return;
+      const property = staticMemberName(node);
+      assert.ok(property !== null && property !== "parent", `${file} crosses the fixture boundary`);
+    },
     ImportDeclaration(node) { add(node.source); },
     ExportNamedDeclaration(node) { if (node.source) add(node.source); },
     ExportAllDeclaration(node) { add(node.source); },
@@ -39,7 +56,7 @@ function moduleSpecifiers(source, file) {
 
 for (const file of sourceFiles("src")) {
   const source = readFileSync(file, "utf8");
-  const imports = moduleSpecifiers(source, file);
+  const imports = inspectFixtureSource(source, file);
   for (const specifier of imports) {
     assert.ok(specifier === "lit" || specifier.startsWith("./"), `${file} imports non-presentation module ${specifier}`);
     assert.ok(!specifier.includes(".."), `${file} escapes its presentation package`);

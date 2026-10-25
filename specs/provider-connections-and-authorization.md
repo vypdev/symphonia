@@ -38,7 +38,10 @@ Provider authentication differs in client registration, redirect rules, scopes, 
 The owner-approved foundation persists provider-neutral authorization attempts
 with hashed and bounded state, exact redirect binding, expiry, single-use
 consumption, bounded durable outcome codes, and callback state lookup that
-survives restart. Connection persistence stores an opaque secret reference and
+survives restart. Denial at or after the deadline atomically records expiry and
+rejects the late callback, matching consumption; completed attempts cannot be
+overwritten. The [dated foundation follow-up](../docs/development/pr1-review-2026-10-25.md)
+records the deadline, replay and public-service regression evidence. Connection persistence stores an opaque secret reference and
 capability evidence, and its application service can register an already
 verified account and classify a capability-probe failure. The separate
 standard-library callback spike is loopback-only and demonstrates route/state

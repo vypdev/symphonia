@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import unittest
 
 from symphonia.application import AuthorizationService
-from symphonia.infrastructure import AuthorizationAttemptRepository
+from symphonia.infrastructure import AuthorizationAttemptError, AuthorizationAttemptRepository
 from symphonia.providers import AuthorizationState
 
 
@@ -92,6 +92,19 @@ class AuthorizationServiceTests(unittest.TestCase):
             )
 
         self.assertEqual(self.repository.get("attempt-1").state, AuthorizationState.CREATED)
+
+    def test_denial_callback_cannot_record_consent_after_expiry(self) -> None:
+        self.service.begin(
+            provider="spotify", actor_id="actor",
+            redirect_uri="https://ha.example/callback", now=NOW,
+            ttl=timedelta(seconds=1),
+        )
+        with self.assertRaisesRegex(AuthorizationAttemptError, "expired"):
+            self.service.deny_callback(
+                raw_state="raw-state-only-at-boundary", provider="spotify",
+                now=NOW + timedelta(seconds=1),
+            )
+        self.assertEqual(self.repository.get("attempt-1").state, AuthorizationState.EXPIRED)
 
     def test_redirect_uri_rejects_unsafe_callback_forms(self) -> None:
         for redirect_uri in (

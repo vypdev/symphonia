@@ -214,12 +214,19 @@ class AuthorizationAttemptRepository:
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             row = self._connection.execute(
-                "SELECT state FROM authorization_attempts WHERE attempt_id = ?", (attempt_id,)
+                "SELECT state, expires_at FROM authorization_attempts WHERE attempt_id = ?", (attempt_id,)
             ).fetchone()
             if row is None:
                 raise AuthorizationAttemptNotFound(attempt_id)
             if row["state"] != AuthorizationState.CREATED.value:
                 raise AuthorizationAttemptError("authorization attempt is already complete")
+            if state == AuthorizationState.DENIED and row["expires_at"] <= now_text:
+                self._connection.execute(
+                    "UPDATE authorization_attempts SET state = 'expired', completed_at = ? WHERE attempt_id = ?",
+                    (now_text, attempt_id),
+                )
+                self._connection.execute("COMMIT")
+                raise AuthorizationAttemptError("authorization attempt has expired")
             self._connection.execute(
                 """
                 UPDATE authorization_attempts
