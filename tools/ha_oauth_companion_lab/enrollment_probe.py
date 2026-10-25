@@ -56,6 +56,21 @@ def client():
     return key, csr.public_bytes(serialization.Encoding.PEM).decode()
 
 
+def renewal_payload(der, epoch, csr):
+    """Domain-separated intent; public certificate possession is not authority."""
+    if (not isinstance(der,bytes) or not 0<len(der)<=8192 or type(epoch) is not int
+            or not 0<=epoch<2**63 or not isinstance(csr,str) or not 0<len(csr)<=8192):
+        raise Locked("renewal_binding_refused")
+    return encoded({"domain":"symphonia-csr-renewal-v1","epoch":epoch,
+        "certificate_sha256":hashlib.sha256(der).hexdigest(),
+        "csr_sha256":hashlib.sha256(csr.encode()).hexdigest()})
+
+
+def renewal_proof(key, der, epoch, csr):
+    _,hashes,_,ec,*_=crypto()
+    return base64.b64encode(key.sign(renewal_payload(der,epoch,csr),ec.ECDSA(hashes.SHA256()))).decode()
+
+
 class Issuer:
     def __init__(self, root, *, clock=time.time):
         self.root, self.clock = root, clock
@@ -163,8 +178,19 @@ class Issuer:
             checkpoint("issuance_admitted")
             return receipt, self.resume(receipt, checkpoint=checkpoint)
 
-    def renew(self, der, epoch, csr, *, checkpoint=lambda point: None):
+    def renew(self, der, epoch, csr, *, proof=None, checkpoint=lambda point: None):
         self.validate_csr(csr)
+        # Also enforce possession here, independent of the mTLS adapter. An
+        # observed public cert/signature cannot authorize a different CSR or epoch.
+        try:
+            if not isinstance(proof,str) or not 0<len(proof)<=256:
+                raise ValueError
+            signature=base64.b64decode(proof,validate=True)
+            x509,hashes,_,ec,*_=crypto()
+            key=x509.load_der_x509_certificate(der).public_key()
+            key.verify(signature,renewal_payload(der,epoch,csr),ec.ECDSA(hashes.SHA256()))
+        except Exception:
+            raise Locked("renewal_possession_required") from None
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
             try:
@@ -221,13 +247,15 @@ class Issuer:
                 raise
 
     def accepts(self, der, epoch=0, profile="oauth"):
-        x509, *_ = crypto()
-        if not der or profile != "oauth" or type(epoch) is not int:
+        x509, _, serialization, *_ = crypto()
+        if not isinstance(der,bytes) or not 0<len(der)<=8192 or profile != "oauth" or type(epoch) is not int:
             return False
         cert = x509.load_der_x509_certificate(der)
         with self.lock:
             current, serial, peer = self.db.execute("SELECT epoch,serial,peer FROM pair").fetchone()
-        return (current == epoch and serial == str(cert.serial_number) and peer == fingerprint(cert.public_key())
+            issued=self.db.execute("SELECT certificate FROM issuance WHERE epoch=? AND certificate IS NOT NULL",(current,)).fetchall()
+            exact_issued=any(hmac.compare_digest(der,x509.load_pem_x509_certificate(row[0].encode()).public_bytes(serialization.Encoding.DER)) for row in issued)
+        return (exact_issued and current == epoch and serial == str(cert.serial_number) and peer == fingerprint(cert.public_key())
                 and cert.not_valid_before_utc.timestamp() <= self.clock() < cert.not_valid_after_utc.timestamp())
 
     def revoke(self):
@@ -276,7 +304,24 @@ def campaign(root):
     issuer = Issuer(root)
     results["durable_pair_and_ca_reopen"] = issuer.accepts(der) and issuer.status(receipt) == pem
     renewed_key, renewed_csr = client()
-    renewed_receipt, renewed_pem = issuer.renew(der, 0, renewed_csr)
+    proof=renewal_proof(key,der,0,renewed_csr)
+    attacker,_=client()
+    for label,request_csr,request_epoch,request_proof in (
+        ("public_certificate_alone_cannot_renew",renewed_csr,0,None),
+        ("attacker_key_cannot_sign_renewal",renewed_csr,0,renewal_proof(attacker,der,0,renewed_csr)),
+        ("renewal_signature_binds_replacement_csr",csr,0,proof),
+        ("renewal_signature_binds_epoch",renewed_csr,1,proof),
+        ("malformed_renewal_signature_refused",renewed_csr,0,"not-base64!")):
+        before=issuer.db.execute("SELECT COUNT(*) FROM issuance").fetchone()[0]
+        try:issuer.renew(der,request_epoch,request_csr,proof=request_proof)
+        except Locked:
+            results[label]=issuer.accepts(der) and issuer.db.execute("SELECT COUNT(*) FROM issuance").fetchone()[0]==before
+        else:raise AssertionError(label)
+    substituted=bytearray(der);substituted[-1]^=1;substituted=bytes(substituted)
+    try:issuer.renew(substituted,0,renewed_csr,proof=renewal_proof(key,substituted,0,renewed_csr))
+    except Locked:results["substituted_issuer_signature_cannot_renew"]=issuer.accepts(der)
+    else:raise AssertionError("unissued_certificate")
+    renewed_receipt, renewed_pem = issuer.renew(der, 0, renewed_csr,proof=proof)
     renewed_der = x509.load_pem_x509_certificate(renewed_pem.encode()).public_bytes(serialization.Encoding.DER)
     results["renewal_switches_exact_identity"] = issuer.accepts(renewed_der) and not issuer.accepts(der)
     results["renewal_lost_ack_is_stable"] = issuer.resume(renewed_receipt) == renewed_pem

@@ -1,0 +1,21 @@
+{
+  "name": "Symphonia native recovery wire laboratory",
+  "slug": "symphonia_oauth_recovery_wire",
+  "version": "0.0.0-lab.1",
+  "description": "Hidden disposable CSR and native reset HTTP research; no provider access",
+  "arch": ["aarch64"],
+  "startup": "application",
+  "boot": "manual",
+  "init": false,
+  "ingress": true,
+  "ingress_port": 8099,
+  "panel_admin": true,
+  "host_network": false,
+  "hassio_api": false,
+  "homeassistant_api": false,
+  "ports": {},
+  "map": [],
+  "options": {},
+  "schema": {},
+  "backup_exclude": ["wire-lab/issuer/ca.key", "wire-lab/issuer/server.key", "wire-lab/grants/keys"]
+}

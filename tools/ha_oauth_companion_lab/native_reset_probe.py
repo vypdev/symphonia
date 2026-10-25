@@ -93,9 +93,10 @@ class IngressStubConsumer:
     Only Core actor/signature and durable reset ordering are real here. No
     source-IP/header or browser authorization proof is claimed by this class.
     """
-    def __init__(self,vault,signer,actor):
+    def __init__(self,vault,signer,actor,*,expected_origin="https://ha-reset.example.invalid"):
         self.vault,self.signer,self.actor=vault,signer,actor
         self.clock=time.time
+        self.expected_origin=expected_origin
         self.csrf=secrets.token_urlsafe(32)
         self.browser=secrets.token_urlsafe(32)
         self.used=False
@@ -106,7 +107,7 @@ class IngressStubConsumer:
 
     def submit(self,approval,*,actor,browser,csrf,origin,test_checkpoint=lambda point: None):
         if (actor!=self.actor or browser!=self.browser or csrf!=self.csrf
-                or origin!="https://ha-reset.example.invalid" or self.used):
+                or origin!=self.expected_origin or self.used):
             raise Locked("test_ingress_context_refused")
         decoded=unpack(approval)
         if not isinstance(decoded,dict) or set(decoded)!={"request","signature"}:

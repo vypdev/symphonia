@@ -395,16 +395,20 @@ final rotation/lease, collection and authenticated reset admission remain open.
 
 
 The [recovery/CSR follow-up](../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md)
-adds fourteen three-record publication/rotation/reset process-death points,
-nineteen ordinary policy cases with fake AEAD, dynamic CSR issuance and three
-issuance process-death points with real crypto. A newly issued certificate
-crosses loopback TLS. Native enrollment/renewal wire, real Ingress reset
-admission, final package/restore and browser/provider conformance remain open;
-the reset boolean is explicitly a test stub. A separate real-Core HTTP/signature
-prototype passes twenty-eight fresh-admin observations, with thirteen parsing/binding/resume
-cases; its Ingress/browser inputs are still explicitly stubbed. The signed
-recovery approval authority/UX is proposed, not accepted or installed. These
-results do not establish readiness or count toward the unchanged production budgets.
+adds eighteen three-record publication/rotation/reset process-death points,
+four actual missing/wrong-key cases and twenty-three fake-AEAD policy cases.
+Dynamic CSR research passes thirty-six observations including three issuance
+process deaths. A separate real-Core HTTP/signature prototype passes twenty-eight
+observations plus thirteen ordinary binding/resume cases. The guarded
+Core 2026.9.4/Supervisor 2026.10.4 wire repeat passes thirty-two Boolean observations:
+CSR enrollment/renewal, stale-certificate denial, App-key loss with live Ingress,
+fresh native admin approval, actual App Origin/CSRF enforcement and interrupted
+reset with a new signed resume. Nine ordinary boundary/operator/renewal cases are
+separate. Ingress still returned 200 after user deactivation; native HTTP denied
+that user. Manual lab cookies are not browser/HTTPS proof. The signed recovery
+authority/UX remains proposed; final package/restore, production concurrency and
+browser/provider conformance remain open. No result establishes readiness or
+counts toward the unchanged production budgets.
 
 ## 17. Requirements traceability
 

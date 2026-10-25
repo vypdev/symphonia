@@ -241,11 +241,14 @@ python3 /research/tools/ha_oauth_companion_lab/recovery_probe.py
 ```
 
 The CSR campaign has three deliberate child exits 83. The recovery campaign
-has fourteen, including four reset fences. Parent exit 0 and all Boolean
+has eighteen, including four reset fences and four inside-publication points,
+plus four missing/wrong-key cases. Parent exit 0 and all Boolean
 observations true are required. `test_ha_oauth_recovery_fixture.py` uses an
 explicitly fake codec and test admission boolean; neither is native identity
 or encryption proof. The scripts are not production endpoints or an installable
-integration. Real enrollment/renewal wire and Ingress reset admission remain gates.
+integration. The separate actual-wire experiment below now proves bounded
+enrollment/renewal and native reset admission; final production/browser
+conformance remains open.
 Inspect exact volume labels, owned CSR/case markers, private file types/modes and
 absence of consumers before removing only these synthetic volumes. Preserve
 safe receipts/source hashes, never private material or challenges.
@@ -257,3 +260,25 @@ its own Core and never mounts the owner's or guarded lab's existing config.
 The actual Core actor/signature observations are separate from its explicit
 Ingress/browser/Origin/CSRF stubs. No default production recovery permission
 or native integration is installed by this script.
+
+
+## Actual Supervisor CSR, renewal and native reset wire
+
+`wire_lab_operator.py` stages the hidden `wire_app/` and temporary
+`wire_core_fixture.py` component only in the exact pinned disposable lab. It
+refuses another Core image/outer container. Follow the
+[full recipe and teardown](../../docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md#reproduction-and-cleanup),
+using a fresh private receipts directory and always `cleanup` after
+`receipt`. It preserves exact original Core configuration, creates/removes only
+its synthetic users and owns its explicit App/component namespaces. No existing
+user auth token is read. Core's internal Supervisor token stays in process.
+The App has no host ports, broad mounts or API privileges; its fixed lifetime is
+twenty minutes. The key-loss gate is bounded to 180 seconds after pairing.
+
+Unlike the older isolated prototype, this experiment crosses actual Supervisor
+Ingress and Core-to-App CSR/renewal TLS. Renewal independently requires a
+current-key signature over the exact issued certificate, replacement CSR and
+epoch. Public certificate bytes alone cannot renew. The final campaign passes
+36 isolated CSR and 32 real-wire Boolean observations. Its manually supplied
+cookies over HTTP are explicitly not Chrome/HTTPS or provider proof. Production
+recovery authority/UX and final package rollout still need review.

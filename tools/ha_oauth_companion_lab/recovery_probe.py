@@ -5,16 +5,17 @@ ordering, never native HA/Ingress authorization. That gate remains separate.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import os
 from pathlib import Path
 import secrets
+import re
 import sqlite3
+import stat
 import subprocess
 import sys
 
-from tools.ha_oauth_companion_lab.key_custody_probe import Locked, PrivateFiles, encoded, seal, unseal
+from tools.ha_oauth_companion_lab.key_custody_probe import Locked, MAX_RECORD, PrivateFiles, encoded, seal, unseal
 from tools.ha_oauth_companion_lab.key_publication_probe import MARKER, Vault
 
 
@@ -84,7 +85,8 @@ class RecoveryVault(Vault):
             record = encoded(seal(self.key(key), values[name], self.aad_for(name, key, ref)))
             checkpoint("before_record")
             with PrivateFiles(self.root/"records") as files:
-                files.publish(ref, record, exclusive=True)
+                files.publish(ref, record, exclusive=True,
+                    checkpoint=lambda point: checkpoint("record_"+name+"_"+point))
             refs[name] = ref
             checkpoint("record_"+name)
         return refs
@@ -141,7 +143,8 @@ class RecoveryVault(Vault):
         if rotate:
             key = secrets.token_hex(16)
             with PrivateFiles(self.root/"keys") as files:
-                files.publish(key, secrets.token_bytes(32), exclusive=True)
+                files.publish(key, secrets.token_bytes(32), exclusive=True,
+                    checkpoint=lambda point: checkpoint("key_"+point))
             checkpoint("key_staged")
         return key, self.records(key, NEW, checkpoint=checkpoint)
 
@@ -179,6 +182,19 @@ class RecoveryVault(Vault):
             refs = set(json.loads(raw).values())
             for folder, keep, point in (("records",refs,"records_retired"),("keys",{key},"keys_retired")):
                 with PrivateFiles(self.root/folder) as files:
+                    # A killed no-replace publication may leave its private
+                    # temporary name and two links to an UNREFERENCED inode.
+                    # Active state was validated first, so linked active files
+                    # still lock recovery rather than being silently repaired.
+                    for path in (self.root/folder).iterdir():
+                        if re.fullmatch(r"\.pending-[a-f0-9]{32}",path.name):
+                            info=os.stat(path.name,dir_fd=files.fd,follow_symlinks=False)
+                            if (not stat.S_ISREG(info.st_mode) or info.st_uid!=os.geteuid()
+                                    or stat.S_IMODE(info.st_mode)!=0o600 or info.st_nlink not in {1,2}
+                                    or info.st_size>MAX_RECORD):
+                                raise Locked("unsafe_pending_fixture_file")
+                            os.unlink(path.name,dir_fd=files.fd)
+                    os.fsync(files.fd)
                     for path in (self.root/folder).iterdir():
                         name = self.identifier(path.name)
                         if name not in keep:
@@ -272,8 +288,8 @@ def campaign(base):
         raise Locked("wrong_disposable_context")
     base.mkdir(mode=0o700)
     results = {}
-    plans = (("publish",("before_record","record_a","before_commit","after_commit")),
-             ("rotate",("key_staged","record_a","record_c","before_commit","after_commit","records_retired")),
+    plans = (("publish",("before_record","record_a_private_written","record_a_private_named_durable","record_a","before_commit","after_commit")),
+             ("rotate",("key_private_written","key_private_named_durable","key_staged","record_a","record_c","before_commit","after_commit","records_retired")),
              ("reset",("reset_fenced","reset_key_staged","reset_before_commit","reset_after_commit")))
     for mode, points in plans:
         for point in points:
@@ -308,7 +324,40 @@ def campaign(base):
                 results[mode+"-"+point] = True
             finally:
                 vault.close()
-    return {"mode":"synthetic_multi_record_recovery", "process_deaths":14,"results":results,
+    for name in ("old-missing","old-wrong","new-missing","new-wrong"):
+        root=base/("key-"+name)
+        RecoveryVault.create(root)
+        vault=RecoveryVault(root)
+        try:
+            owner=vault.admit()
+            snapshot=vault.snapshot()
+            candidate=vault.stage_owner(owner,rotate=True) if name.startswith("new-") else None
+            key=candidate[0] if candidate else snapshot[1]
+            with PrivateFiles(root/"keys") as files:
+                if name.endswith("missing"):
+                    os.unlink(key,dir_fd=files.fd)
+                else:
+                    files.publish(key,secrets.token_bytes(32))
+            before={p.name for p in (root/"keys").iterdir()}
+            try:
+                if candidate:
+                    vault.activate_owner(owner,candidate)
+                else:
+                    vault.stage_owner(owner,rotate=True)
+            except Locked:
+                pass
+            else:
+                raise AssertionError("unsafe_key_generation_accepted")
+            assert vault.snapshot()==snapshot
+            assert {p.name for p in (root/"keys").iterdir()}==before
+            if candidate:
+                assert vault.read_all()==OLD
+                vault.recover_after_all_writers_exit()
+            assert vault.db.execute("SELECT value FROM history").fetchone()[0]=="retained-synthetic-history"
+            results["key-"+name]=True
+        finally:
+            vault.close()
+    return {"mode":"synthetic_multi_record_recovery", "process_deaths":18,"results":results,
             "uid":os.geteuid(),"real_ha_or_provider":False,"native_reset_admission_or_live_lease_expiry_proven":False}
 
 

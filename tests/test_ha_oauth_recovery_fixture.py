@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import threading
@@ -208,3 +209,39 @@ class RecoveryFixtureTests(unittest.TestCase):
         self.vault.db.execute("DELETE FROM live WHERE name='c'")
         with self.assertRaises(fixture.Locked):
             self.vault.read_all()
+
+    def test_partial_private_temporary_is_pinned_until_writer_exits(self):
+        self.vault.admit()
+        path=self.root/"records"/(".pending-"+"a"*32)
+        path.write_bytes(b"partial synthetic ciphertext");path.chmod(0o600)
+        self.assertFalse(self.reopened().collect_quiescent())
+        self.assertTrue(path.exists())
+        self.vault.recover_after_all_writers_exit()
+        self.assertFalse(path.exists())
+        self.assertEqual(self.vault.read_all(),fixture.OLD)
+
+    def test_unreferenced_two_link_publication_is_collected_after_writer_exit(self):
+        owner=self.vault.admit();candidate=self.vault.stage_owner(owner,rotate=True)
+        orphan=self.root/"records"/candidate[1]["b"]
+        pending=orphan.parent/(".pending-"+"a"*32)
+        os.link(orphan,pending)
+        self.assertFalse(self.vault.collect_quiescent())
+        self.vault.recover_after_all_writers_exit()
+        self.assertFalse(pending.exists());self.assertFalse(orphan.exists())
+        self.assertEqual(self.vault.read_all(),fixture.OLD)
+
+    def test_pending_link_to_active_record_locks_instead_of_silently_repairing(self):
+        active=self.root/"records"/json.loads(self.vault.snapshot()[2])["b"]
+        pending=active.parent/(".pending-"+"a"*32)
+        os.link(active,pending)
+        with self.assertRaises(fixture.Locked):
+            self.vault.collect_quiescent()
+        self.assertTrue(pending.exists());self.assertEqual(active.stat().st_nlink,2)
+
+    def test_pending_symlink_is_retained_as_unsafe_evidence(self):
+        pending=self.root/"records"/(".pending-"+"a"*32)
+        key=self.root/"keys"/self.vault.snapshot()[1]
+        pending.symlink_to(key)
+        with self.assertRaises(fixture.Locked):
+            self.vault.collect_quiescent()
+        self.assertTrue(pending.is_symlink());self.assertTrue(key.exists())

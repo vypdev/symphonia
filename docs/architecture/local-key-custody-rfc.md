@@ -149,11 +149,19 @@ collection, reset admission or the final adapter/package. The remaining gates
 above are retained; none of these counts replaces a production test budget.
 
 The [successor campaign](../development/oauth-recovery-and-pairing-lab-2026-10-25.md)
-adds fourteen real process deaths across three-record publication/rotation and
-durable reset ordering, plus nineteen ordinary policy cases with fake AEAD.
-Admitted owners pin staged files; a complete SQL reference set switches at once.
-Interrupted reset remains pending until explicit resume and preserves history.
-Its authorization boolean is explicitly a test stub: real native Ingress,
-Origin/CSRF and active-admin admission are unproven. Writes inside fsync,
-complete live lease/reader/reset concurrency, final packaging/backup/restore and
-the native/browser/provider paths remain gates. SDD status stays Draft.
+adds eighteen actual process deaths across three-record publication/rotation and
+durable reset ordering, four real missing/wrong-key cases and twenty-three
+ordinary file/SQL policy cases with fake AEAD. This includes buffered private
+writes and durable two-link publication; no simulated power-loss claim is made.
+Admitted writers pin staged files; a complete SQL reference set switches at once.
+Interrupted reset remains pending until fresh explicit resume and preserves history.
+The isolated reset Boolean remains a stub. Separately, thirty-two actual
+Core 2026.9.4/Supervisor 2026.10.4 wire observations establish CSR/renewal,
+locked-key Ingress survival, native fresh-admin approval and App Origin/CSRF
+redemption with interrupted reset/resume. Ingress returned 200 after user
+deactivation, while native confirmation returned 401: cached headers are not
+fresh authority. Browser cookies were manually supplied over lab HTTP, not
+validated by Chrome. Nine ordinary boundary/operator/renewal guards supplement that
+experiment. Full live lease/reader/reset/collector concurrency, final packaging/
+backup/restore, proposed recovery authority/UX review and native browser/provider
+conformance remain gates. The accepted custody direction and Draft status remain.
