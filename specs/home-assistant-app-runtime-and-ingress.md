@@ -282,7 +282,7 @@ Minimum **58 distinct cases**:
 | Integration/security/migration | 14 | install/restart/backup/restore/upgrade/downgrade, direct-port isolation |
 | **Total** | **58** | No double counting |
 
-All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. A maintained Home Assistant Apps devcontainer profile is prepared at [the playback lab setup](../docs/development/playback-lab/README.md#supervisor-app-and-ingress-smoke-lane) for disposable Supervisor/App/Ingress smoke. Its first install/start/Ingress pass is still pending; it does not replace the required backup/restore/upgrade evidence on the supported deployment matrix. Manual evidence covers desktop/mobile and light/dark startup/error views.
+All ordinary tests use fake Supervisor/Ingress and deterministic storage/clock fixtures. The maintained devcontainer at [the playback lab setup](../docs/development/playback-lab/README.md#supervisor-app-and-ingress-smoke-lane) has dated install/start/Ingress evidence in [the App lab](../docs/development/ha-app-lab.md), refreshed by the [2026-10-25 OAuth/HA proof](../docs/development/spotify-oauth-proof-2026-10-25.md) on Supervisor 2026.10.4. These disposable passes do not replace backup/restore/upgrade evidence on the supported deployment matrix. Manual evidence covers desktop/mobile and light/dark startup/error views.
 
 The eight feature-specific UI cases above supplement rather than replace the 92-case UI-foundation budget. The runtime release also inherits component-catalog, arbitrary-base-path, host-context fallback, safe-area, accessibility, responsive-geometry, hostile-content, and dated visual-reference gates from that SDD.
 

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import Mock
 
-from tools.ha_ingress_probe import probe, proxy_path
+from tools.ha_ingress_probe import lab_owner_id, probe, proxy_path
 
 
 INGRESS_URL = "/api/hassio_ingress/synthetic_route"
 SESSION = "synthetic_session"
+USER_ID = "a" * 32
 
 
 class IngressProbeTests(unittest.TestCase):
@@ -38,7 +42,7 @@ class IngressProbeTests(unittest.TestCase):
         def request(path: str, method: str, data: bytes | None, session: str | None) -> tuple[int, bytes]:
             calls.append((path, method, session))
             if path == "/ingress/session":
-                self.assertEqual(data, b"{}")
+                self.assertEqual(json.loads(data), {"user_id": USER_ID})
                 return 200, json.dumps({"data": {"session": SESSION}}).encode()
             if path == "/addons/local_symphonia/info":
                 return 200, json.dumps({"data": {"state": "started", "ingress_url": INGRESS_URL}}).encode()
@@ -54,7 +58,7 @@ class IngressProbeTests(unittest.TestCase):
                 return 200, b"console.log('fixture')"
             return 200, b'<html><script src="./assets/index-abc.js"></script></html>'
 
-        result = probe(request)
+        result = probe(request, user_id=USER_ID)
 
         self.assertEqual(result["without_session"], 401)
         self.assertEqual(result["health"], 200)
@@ -66,6 +70,7 @@ class IngressProbeTests(unittest.TestCase):
         self.assertTrue(result["dashboard_ready"])
         self.assertNotIn(SESSION, json.dumps(result))
         self.assertNotIn("synthetic_route", json.dumps(result))
+        self.assertNotIn(USER_ID, json.dumps(result))
         self.assertEqual(len(calls), 8)
 
     def test_probe_fails_if_proxy_allows_a_request_without_session(self) -> None:
@@ -81,7 +86,37 @@ class IngressProbeTests(unittest.TestCase):
             return 404, b'{"error":"not_found"}'
 
         with self.assertRaisesRegex(RuntimeError, "Ingress smoke failed"):
-            probe(request)
+            probe(request, user_id=USER_ID)
+
+    def test_invalid_user_id_is_rejected_before_session_creation(self) -> None:
+        for user_id in (None, "", "a" * 31, "a" * 33, "g" * 32, "a" * 31 + "\n", 42):
+            with self.subTest(user_id=user_id), self.assertRaises(ValueError):
+                request = Mock()
+                probe(request, user_id=user_id)
+            request.assert_not_called()
+
+    def test_disposable_owner_selection_fails_closed(self) -> None:
+        owner = {"id": USER_ID, "is_owner": True, "is_active": True}
+        fixtures = [
+            ({"data": {"users": [owner]}}, USER_ID),
+            ({"data": {"users": [owner, {"id": "b" * 32, "is_owner": False}]}}, USER_ID),
+            ({"data": {"users": []}}, None),
+            ({"data": {"users": [owner, owner]}}, None),
+            ({"data": {"users": [{**owner, "is_active": False}]}}, None),
+            ({"data": {"users": [{**owner, "id": "invalid"}]}}, None),
+            ({"data": {"users": None}}, None),
+            ([], None),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "auth"
+            for fixture, expected in fixtures:
+                path.write_text(json.dumps(fixture), encoding="utf-8")
+                with self.subTest(fixture=fixture):
+                    if expected is None:
+                        with self.assertRaises(ValueError):
+                            lab_owner_id(path)
+                    else:
+                        self.assertEqual(lab_owner_id(path), expected)
 
 
 if __name__ == "__main__":

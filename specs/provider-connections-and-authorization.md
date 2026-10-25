@@ -92,6 +92,12 @@ Authenticated server API transports refuse all automatic redirects, including sa
 
 ## 3. Actors, surfaces, and terminology
 
+Research update: the [2026-10-25 OAuth/HA proof](../docs/development/spotify-oauth-proof-2026-10-25.md)
+records master validation, App/Ingress routing and a separate ephemeral PKCE
+client under `tools/`. The App callback and connection routes remain absent;
+local browser binding is not authenticated HA actor/session binding. This
+evidence leaves Draft status, the 82-case budget and all blockers unchanged.
+
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |
 | Home Assistant administrator | Configure provider client credentials and approve account access | Ingress connection setup | Provider disclosure, credential form, authorization return, connection status |

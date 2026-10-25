@@ -54,7 +54,8 @@
         "docs/development/ha-app-lab.md",
         "docs/development/bugbot-review-2026-10-21.md",
         "docs/development/pr1-review-2026-10-21.md",
-        "docs/development/pr1-review-2026-10-25.md"
+        "docs/development/pr1-review-2026-10-25.md",
+        "docs/development/spotify-oauth-proof-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [
@@ -346,7 +347,8 @@
         "docs/development/oauth-callback-spike.md",
         "docs/development/implementation-baseline.md",
         "docs/development/bugbot-review-2026-10-21.md",
-        "docs/development/pr1-review-2026-10-21.md"
+        "docs/development/pr1-review-2026-10-21.md",
+        "docs/development/spotify-oauth-proof-2026-10-25.md"
       ],
       "implementationEvidence": {
         "code": [

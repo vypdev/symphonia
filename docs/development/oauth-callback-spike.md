@@ -30,6 +30,12 @@ logs, URLs, diagnostics, ordinary operation payloads, or backups. See the
 
 ## Still required before production
 
+The [2026-10-25 Spotify/HA proof](spotify-oauth-proof-2026-10-25.md) adds a
+separate ephemeral, read-only PKCE research client and a current App/Ingress
+topology preflight. It never sends real grants to this original harness.
+Local browser binding does not establish an authenticated HA actor or resolve
+the remote App callback and durable secret-storage gates.
+
 `RG-002` remains open. A Home Assistant test matrix must verify externally
 reachable HTTPS redirects, arbitrary Ingress paths, remote access, browser
 session continuity, user-provided client registrations, PKCE where applicable,
