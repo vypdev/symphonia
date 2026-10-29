@@ -3,6 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 from tempfile import TemporaryDirectory
 import unittest
@@ -44,6 +45,15 @@ class SpecValidatorTests(unittest.TestCase):
 
     def test_repository_passes_original_copilot_validator(self) -> None:
         self.assertEqual(validate(ROOT), [])
+
+    def test_current_generated_catalog_links_resolve(self) -> None:
+        # Exercise the actual consumer inventory, without modifying SDK policy.
+        index = ROOT / "specs/CATALOG.md"
+        targets = re.findall(r"\[[^\]]+\]\(([^)]+)\)", index.read_text())
+        self.assertGreater(len(targets), 50)
+        for target in targets:
+            with self.subTest(target=target):
+                self.assertTrue((index.parent / target).is_file(), target)
 
     def test_proposed_research_and_language_neutral_paths_are_supported(self) -> None:
         self.assertEqual(validate(self.root), [])

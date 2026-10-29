@@ -103,8 +103,8 @@ Local validation on 2026-10-29 used Python 3.11.15 and Node 24.22.2:
 | Original Copilot SDK catalog reader | `sdk-v1`, all 10 capabilities accepted |
 | Original Copilot retained-owner SDD format check | All 10 owning documents accepted |
 | Original catalog validator/generator | 10 capabilities; generated index current |
-| Consumer regressions | 12 cases, including unchanged upstream blob hashes, ownership, paths, statuses and stale-index rejection |
-| `make verify` / `make coverage` | 565 Python tests; 89% combined line/branch coverage, above the unchanged 85% floor |
+| Consumer regressions | 13 cases, including unchanged upstream blob hashes, current generated links, ownership, paths, statuses and stale-index rejection |
+| `make verify` / `make coverage` | 566 Python tests; 89% combined line/branch coverage, above the unchanged 85% floor |
 | UI typecheck / tests / build | Passed; 27 tests; committed App assets reproduced exactly |
 
 The old custom-dialect validator assertions were replaced by SDK consumer
@@ -112,6 +112,14 @@ regressions; application tests were retained. All previous catalog requirement
 IDs and exact blocker strings were checked against the owning documents during
 migration. Remote CI and normal Action admission remain separate gates; the
 local results do not establish live OAuth acceptance.
+
+The unchanged upstream renderer drops subdirectories from nested SDD links;
+the accepted SDK fixture and broken output are reported in
+[Copilot #789](https://github.com/vypdev/copilot/issues/789). All ten current
+owning SDD paths are flat and every link in the actual generated index is tested.
+This consumer test verifies the current artifact; it does not change SDK path
+policy or claim that the upstream nested-path defect is fixed. Any correction
+must be adopted from upstream through a reviewed source/provenance update.
 
 - Migration: [Symphonia #33](https://github.com/vypdev/symphonia/issues/33).
 - Superseded dialect-adapter request:
