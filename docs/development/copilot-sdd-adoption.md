@@ -40,6 +40,11 @@ The [provenance manifest](../../tools/copilot-specifications/provenance.json)
 records upstream paths and Git blob hashes; the upstream
 [MIT license](../../tools/copilot-specifications/LICENSE) is retained. The consumer
 entrypoint supplies this repository's root to the original exported validator.
+Before generation, that entrypoint refuses an existing non-regular or symlinked
+output using the SDK's own path helper, including dangling links. It then calls
+the original generator; this invocation preflight adds no catalog fields,
+statuses, renderer or alternative publication flow. As with the SDK's input path
+checks, it assumes no hostile process concurrently mutates the same checkout.
 An upstream update must replace reviewed source copies and hashes together,
 then rerun the original checks and consumer regressions. Do not patch policy
 locally to make an incompatible catalog pass.
@@ -103,8 +108,8 @@ Local validation on 2026-10-29 used Python 3.11.15 and Node 24.22.2:
 | Original Copilot SDK catalog reader | `sdk-v1`, all 10 capabilities accepted |
 | Original Copilot retained-owner SDD format check | All 10 owning documents accepted |
 | Original catalog validator/generator | 10 capabilities; generated index current |
-| Consumer regressions | 13 cases, including unchanged upstream blob hashes, current generated links, ownership, paths, statuses and stale-index rejection |
-| `make verify` / `make coverage` | 566 Python tests; 89% combined line/branch coverage, above the unchanged 85% floor |
+| Consumer regressions | 15 cases, including unchanged upstream blob hashes, current generated links, output-symlink refusal, ownership, paths, statuses and stale-index rejection |
+| `make verify` / `make coverage` | 568 Python tests; 89% combined line/branch coverage, above the unchanged 85% floor |
 | UI typecheck / tests / build | Passed; 27 tests; committed App assets reproduced exactly |
 
 The old custom-dialect validator assertions were replaced by SDK consumer
@@ -120,6 +125,10 @@ owning SDD paths are flat and every link in the actual generated index is tested
 This consumer test verifies the current artifact; it does not change SDK path
 policy or claim that the upstream nested-path defect is fixed. Any correction
 must be adopted from upstream through a reviewed source/provenance update.
+That report also records the original generator's unchecked output-symlink
+write. The consumer preflight is tested with existing and dangling external
+targets; the former stays unchanged and the latter is not created. The original
+SDK source is not claimed to have this fix.
 
 - Migration: [Symphonia #33](https://github.com/vypdev/symphonia/issues/33).
 - Superseded dialect-adapter request:

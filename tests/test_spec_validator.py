@@ -107,6 +107,35 @@ class SpecValidatorTests(unittest.TestCase):
         self.write_catalog()
         self.assertIn("without symlinks", "\n".join(validate(self.root)))
 
+    def test_generation_does_not_overwrite_a_symlink_target(self) -> None:
+        with TemporaryDirectory() as directory:
+            outside = Path(directory) / "sentinel.md"
+            outside.write_text("Retain this unrelated content.\n")
+            index = self.root / "specs/CATALOG.md"
+            index.unlink()
+            index.symlink_to(outside)
+            result = subprocess.run(
+                ["node", "-e", "require(process.argv[1]).main(['--write'], process.argv[2])",
+                 str(VALIDATOR), str(self.root)], capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("without symlinks", result.stderr)
+            self.assertEqual(outside.read_text(), "Retain this unrelated content.\n")
+
+    def test_generation_does_not_follow_a_dangling_output_symlink(self) -> None:
+        with TemporaryDirectory() as directory:
+            outside = Path(directory) / "not-created.md"
+            index = self.root / "specs/CATALOG.md"
+            index.unlink()
+            index.symlink_to(outside)
+            result = subprocess.run(
+                ["node", "-e", "require(process.argv[1]).main(['--write'], process.argv[2])",
+                 str(VALIDATOR), str(self.root)], capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("without symlinks", result.stderr)
+            self.assertFalse(outside.exists())
+
     def test_invalid_verification_date_is_rejected(self) -> None:
         self.capability["lastVerified"] = "2026-02-30"
         self.write_catalog()
