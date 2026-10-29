@@ -2,6 +2,7 @@
 
 - Status: Ready for review
 - Date: 2026-09-28
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `home-assistant-native-ui`
 - Owners: Symphonia maintainers
 - Scope: establish the shared shell, component families, semantic tokens, host-context adaptation, accessibility, responsive behavior, component catalog, and visual compatibility evidence for every Symphonia web view.
@@ -9,6 +10,8 @@
 - Related decisions/research: [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0005](../docs/decisions/0005-lit-typescript-vite-ui.md), [UI specification](../docs/product/home-assistant-ui-specification.md), [official platform research](../docs/providers/provider-research.md#home-assistant-platform), [Gateway/HA UI evidence](../docs/providers/home-assistant-ecosystem-review.md#home-assistant-native-ui-lessons-from-homeassistant-gateway), [RG-006 host-context evidence](../docs/development/ui-spike/host-context-evidence.md)
 - Required review gates: product UX, Home Assistant platform, frontend architecture, accessibility, localization, testing/visual QA, documentation, security/privacy
 - Open decisions blocking implementation readiness: supported Home Assistant/browser matrix; verified public host-context/Ingress contract and deterministic fallbacks across that matrix; Lit/Vite compatibility and bundle evidence; accepted visual-reference capture/update procedure and visual/accessibility review
+
+- Open decisions blocking readiness: supported HA/browser matrix, public host context/fallback evidence, Lit/Vite compatibility, and dated visual-reference review; see the retained blockers below.
 
 ## 1. Executive summary
 
@@ -100,7 +103,9 @@ WCAG conformance for the full foundation.
 5. Ingress and standalone render the same product state and action semantics.
 6. Visual similarity never weakens accessibility, security, sanitization, or truthfulness.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -160,7 +165,9 @@ Text equivalent: validated public host context or deterministic fallback feeds s
 
 Feature states such as partial, waiting-user, failed, and completed remain owned by their SDDs and use the shared state/feedback components.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 | --- | --- | --- | --- | --- |
@@ -395,3 +402,18 @@ Required human evidence reviews official Home Assistant references versus the ca
 - Accepted: Home Assistant-native-adjacent direction, owned compatibility layer, no private HA frontend runtime dependency, shared Ingress/standalone semantics, Lit + TypeScript + Vite direction (ADR 0005), dated catalog/reference evidence.
 - Open: supported matrix, verified public App context and fallbacks, Lit/Vite bundle/Ingress evidence, reference capture/update automation and visual review.
 - Rejected: generic SaaS dashboard, private HA component imports by default, frozen pixel copy, decorative ambient UI, feature-local duplicate primitives.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-UI-001`, `SYM-UI-002`, `SYM-UI-003`, `SYM-UI-004`, `SYM-UI-005`, `SYM-UI-006`, `SYM-UI-007`, `SYM-UI-008`, `SYM-UI-009`, `SYM-UI-010`, `SYM-UI-011`, `SYM-UI-012`, `SYM-UI-013`, `SYM-UI-014`, `SYM-UI-015`, `SYM-UI-016`, `SYM-JOB-007`, `SYM-SEC-004`, `SYM-SEC-008`, `SYM-TEST-005`, `SYM-TEST-009`, `SYM-TEST-014`, `SYM-TEST-015`.
+
+Outstanding blockers retained from the previous catalog:
+
+- Supported Home Assistant and browser matrix
+- RG-006 verified public host context and deterministic theme, locale, direction, timezone, and safe-area fallbacks
+- Lit/Vite Ingress, bundle, accessibility, and browser compatibility evidence
+- Accepted dated visual-reference capture/update procedure and reviewed visuals

@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-09-27
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `one-time-playlist-copy`
 - Owners: Symphonia maintainers
 - Scope: preview and execute a finite playlist copy using an immutable plan, explicit non-ready policy, ordered writes, reconciliation, and item-level outcomes.
@@ -16,7 +17,9 @@ Symphonia shall copy one imported playlist to another provider as a finite, revi
 
 The operation is intentionally not persistent synchronization. A later source change does not mutate the accepted plan or trigger another copy. Retrying an operation shall be idempotent and shall reconcile uncertain provider outcomes before issuing another write.
 
-## 2. Problem statement and evidence
+<a id="2-problem-statement-and-evidence"></a>
+
+## 2. Problem, current behavior, and evidence
 
 Users need to move a playlist without trusting an opaque best-effort process that may silently substitute tracks, reorder entries, lose duplicates, or create multiple target playlists after a restart.
 
@@ -67,7 +70,9 @@ Redirected POSTs and successful writes with malformed target metadata retain an 
 
 Spotify append confirmation requires HTTP 201 and a nonblank string snapshot_id; creation likewise requires HTTP 201 and a usable new playlist ID. Empty or malformed acknowledgement metadata remains an unknown write outcome, preserving in-flight reconciliation instead of assuming the add succeeded.
 
-## 3. Actors and authorization
+<a id="3-actors-and-authorization"></a>
+
+## 3. Actors, surfaces, and terminology
 
 - A Home Assistant administrator configures provider connections and service-level limits.
 - An authorized household user selects the source playlist, target provider, and allowed resolution decisions.
@@ -76,7 +81,9 @@ Spotify append confirmation requires HTTP 201 and a nonblank string snapshot_id;
 
 The exact Home Assistant identity-to-Symphonia-user mapping remains an architectural decision. Until it is resolved, implementations shall not assume that every Ingress visitor may use every stored provider credential.
 
-## 4. Goals, non-goals, and invariants
+<a id="4-goals-non-goals-and-invariants"></a>
+
+## 4. Goals, non-goals, and fixed invariants
 
 ### Goals
 
@@ -104,7 +111,9 @@ The exact Home Assistant identity-to-Symphonia-user mapping remains an architect
 - Cancellation stops future work but does not claim to undo confirmed provider writes.
 - Audit data can relate every target write to the accepted plan and source snapshot.
 
-## 5. User journey and primary flow
+<a id="5-user-journey-and-primary-flow"></a>
+
+## 5. Current versus proposed product journey
 
 1. The user selects an imported source playlist and a connected target provider.
 2. Symphonia captures the source projection version, entry order, provider capabilities, connection identity, and relevant resolution decisions.
@@ -118,7 +127,9 @@ The exact Home Assistant identity-to-Symphonia-user mapping remains an architect
 
 If the source projection or relevant provider capability changes before acceptance, the plan becomes stale and must be regenerated. Changes after acceptance do not alter the operation.
 
-## 6. Functional contract and state model
+<a id="6-functional-contract-and-state-model"></a>
+
+## 6. Functional behavior and state model
 
 ### Plan entry classifications
 
@@ -176,7 +187,9 @@ must create and review a strict plan. See the [dated regression review](../docs/
 
 The owner confirmed create-only on 2026-10-04. A matching name does not identify an existing target: Symphonia creates a new playlist and never overwrites, clears, selects, or appends to one by name. A provider-visible operation marker may assist reconciliation where the provider permits it. Provider-specific name/visibility validation and uncertain-create reconciliation remain readiness blockers.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 | Setting | Scope | Default | Validation and notes |
 |---|---|---|---|
@@ -189,7 +202,9 @@ The owner confirmed create-only on 2026-10-04. A matching name does not identify
 
 Dry-run review, audit creation, plan digest validation, and reconciliation cannot be disabled.
 
-## 8. Architecture and boundaries
+<a id="8-architecture-and-boundaries"></a>
+
+## 8. Clean Architecture design
 
 ### Domain layer
 
@@ -216,7 +231,9 @@ Coordinates snapshot capture, identity lookup, plan calculation, acceptance, ope
 
 Provider-specific workarounds shall remain behind ports and shall not alter domain invariants.
 
-## 9. UI, UX, and accessibility
+<a id="9-ui-ux-and-accessibility"></a>
+
+## 9. UI/UX and content contract
 
 Source/target selection, dry-run summary, ordered occurrence review, ambiguity resolution links, acceptance, execution, reconciliation, and result views conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They use shared headings/toolbars, fields/selectors, cards/sections, status/alerts, progress, responsive data rows/tables, buttons, and adaptive confirmation dialogs. The immutable-plan and item-evidence density may extend ordinary settings patterns, but must preserve Home Assistant tokens, focus, action hierarchy, and documented intentional divergences.
 
@@ -244,7 +261,9 @@ Example partial result:
 
 Status shall never rely only on color. Keyboard navigation, visible focus, semantic headings, accessible tables/lists, and screen-reader announcements for material state changes are required.
 
-## 10. Failure and recovery semantics
+<a id="10-failure-and-recovery-semantics"></a>
+
+## 10. Failure, recovery, and cleanup
 
 | Failure | Required behavior | User recovery |
 |---|---|---|
@@ -259,7 +278,9 @@ Status shall never rely only on color. Keyboard navigation, visible focus, seman
 | Stored copy progress contradicts the accepted plan, including a gap before a confirmed or permanently failed occurrence | Stop before another provider mutation and retain the checkpoint in `waiting_user`; processed occurrences must form a prefix of the accepted writable order | Investigate or restore compatible evidence; do not infer success or retry from malformed progress |
 | User cancels | Stop scheduling further writes; preserve confirmed results | Review partial result; cancellation is not rollback |
 
-## 11. Security and privacy
+<a id="11-security-and-privacy"></a>
+
+## 11. Security, permissions, and privacy
 
 - Acceptance and execution require authorization for the source projection and target connection.
 - UI, logs, events, and exports shall not expose access or refresh tokens.
@@ -268,7 +289,9 @@ Status shall never rely only on color. Keyboard navigation, visible focus, seman
 - Provider text, artwork, and URLs are untrusted input and must be safely rendered.
 - Any destructive future behavior such as replacement or clearing requires a separate threat review and explicit confirmation contract.
 
-## 12. Observability and supportability
+<a id="12-observability-and-supportability"></a>
+
+## 12. Observability and operational UX
 
 Each plan and operation has a non-secret correlation identifier. Structured events cover plan creation, classification totals, acceptance, dispatch, target reconciliation, batch checkpoints, waits, retries, cancellation, and terminal result.
 
@@ -276,29 +299,36 @@ Metrics may include duration, plan size, classification counts, confirmation lat
 
 A redacted diagnostic export shall contain the plan version and digest, adapter versions, capability snapshot, state history, checkpoints, and categorized failures.
 
-## 13. Rollout, migration, and compatibility
+<a id="13-rollout-migration-and-compatibility"></a>
+
+## 13. Compatibility, migration, rollout, and rollback
 
 The capability remains unavailable until its dependencies are ready for implementation and the blocking product policies are decided. Initial rollout shall use synthetic provider adapters, then provider sandboxes or tightly controlled accounts before general availability.
 
 Persisted plans and operations require explicit schema versions. Migrations shall preserve accepted digests and audit history or fail safely before execution. An in-flight operation may resume only when the new version proves checkpoint compatibility.
 
-## 14. Numeric test budget
+<a id="14-numeric-test-budget"></a>
 
-Minimum planned automated tests: **94**.
+## 14. Testing strategy and numeric budget
 
-| Area | Minimum |
-|---|---:|
-| Plan calculation, ordering, duplicates, and classifications | 24 |
-| State transitions, digest validation, idempotency, and reconciliation | 22 |
-| Provider capability and write adapter contracts | 18 |
-| UI states and accessibility | 12 |
-| Integration, restart, migration, security, and redaction | 18 |
+Minimum **94 distinct cases**, planned automated tests:
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Plan calculation, ordering, duplicates, and classifications | 24 | Immutable plans and item outcomes |
+| State transitions, digest validation, idempotency, and reconciliation | 22 | Stale plans, duplicate delivery and uncertain writes |
+| Provider capability and write adapter contracts | 18 | Target eligibility and provider outcomes |
+| UI states and accessibility | 12 | Primary states and accessible interaction |
+| Integration, restart, migration, security, and redaction | 18 | Recovery, compatibility and secret protection |
+| **Total** | **94** | No double counting |
 
 Required fault injection includes timeouts before and after provider acceptance, duplicate delivery, process death at every write checkpoint, expired authorization, rate limits, capability drift, and ambiguous reconciliation.
 
 The twelve feature-specific UI cases supplement the UI-foundation budget and inherit its component-catalog, host-context, accessibility, responsive, theme/localization, hostile-content, and dated visual-reference gates.
 
-## 15. Documentation impact
+<a id="15-documentation-impact"></a>
+
+## 15. Documentation and discoverability
 
 Implementation shall update:
 
@@ -308,7 +338,9 @@ Implementation shall update:
 - privacy and retention documentation;
 - the SDD catalog and traceability evidence.
 
-## 16. Acceptance criteria
+<a id="16-acceptance-criteria"></a>
+
+## 16. Acceptance scenarios
 
 1. A user can select an imported playlist and authorized target connection.
 2. Planning performs no target mutation.
@@ -326,7 +358,9 @@ Implementation shall update:
 14. Given an existing target playlist with the same name, the accepted copy plan still creates a new playlist; after an uncertain create, it waits for reconciliation and does not create another blindly.
 15. Given a historical best-effort plan, including one with an old acceptance timestamp, admission and execution reject it before provider calls; historical data remains readable.
 
-## 17. Requirement traceability
+<a id="17-requirement-traceability"></a>
+
+## 17. Requirements traceability
 
 | Requirement | Design location | Planned verification |
 |---|---|---|
@@ -337,7 +371,9 @@ Implementation shall update:
 | `SYM-JOB-003`–`SYM-JOB-005` | Sections 7 and 11 | Checkpoint, restart, cancellation, and unknown-outcome tests |
 | `SYM-TEST-004`, `SYM-TEST-006` | Section 15 | Required fault and playlist-edge-case release gates |
 
-## 18. Sequence sketch
+<a id="18-sequence-sketch"></a>
+
+## 18. Implementation sequence
 
 ```text
 User -> App: choose source and target
@@ -354,7 +390,9 @@ Worker -> Job store: checkpoint every confirmed result
 App -> User: show terminal and per-item outcomes
 ```
 
-## 19. Definition of done
+<a id="19-definition-of-done"></a>
+
+## 19. Definition of Done
 
 - Blocking decisions are resolved and recorded in ADRs or the relevant horizontal specifications.
 - Dependencies are at least `Ready for implementation`.
@@ -363,7 +401,9 @@ App -> User: show terminal and per-item outcomes
 - Documentation and catalog evidence are current.
 - Product owner explicitly approves implementation and later release.
 
-## 20. References
+<a id="20-references"></a>
+
+## 20. References and decisions
 
 - [SDD standard](README.md)
 - [SDD catalog](CATALOG.md)
@@ -371,3 +411,17 @@ App -> User: show terminal and per-item outcomes
 - [Durable operations and recovery SDD](durable-operations-and-recovery.md)
 - [Home Assistant-native UI foundation SDD](home-assistant-native-ui.md)
 - [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md)
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-PROD-002`, `SYM-PL-001`, `SYM-PL-002`, `SYM-PL-003`, `SYM-PL-004`, `SYM-PL-005`, `SYM-PL-006`, `SYM-PL-007`, `SYM-PL-008`, `SYM-PL-009`, `SYM-PROD-004`, `SYM-PROD-005`, `SYM-PROD-006`, `SYM-PROV-010`, `SYM-PROV-019`, `SYM-ARCH-009`, `SYM-ARCH-010`, `SYM-JOB-003`, `SYM-JOB-004`, `SYM-JOB-005`, `SYM-TEST-004`, `SYM-TEST-006`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-001 proven target create/add/order/duplicate behavior
+- Provider-specific unknown-write reconciliation strategy
+- Provider-specific target naming and visibility validation

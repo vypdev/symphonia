@@ -2,6 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-10-04
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `operational-dashboard`
 - Owners: Symphonia maintainers
 - Scope: show the App's persisted operational summaries and recent operation states through an admin-only Supervisor Ingress panel.
@@ -79,7 +80,9 @@ choices. This does not add storage or claim full host-theme context support.
 3. Client content is escaped by Lit and bounded by the server projection.
 4. A refresh cannot overwrite a newer result or silently convert a failure to healthy.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Behavior | User effect |
 | --- | --- | --- |
@@ -117,7 +120,9 @@ The UI requests `./api/dashboard` with same-origin credentials. The API checks t
 
 No write, cancellation, duplicate command, or partial external result exists in this read-only capability; operation status may itself report waiting/partial/failed facts.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 | Input | Type | Default | Range | Scope |
 | --- | --- | --- | --- | --- |
@@ -249,3 +254,15 @@ Minimum **38 distinct cases**: 4 DTO/redaction, 4 peer/path/header security, 11 
 ## 20. References and decisions
 
 Primary sources: official Home Assistant App presentation/configuration links above. Related SDDs/ADRs: UI foundation, App runtime, ADRs 0004/0005. Accepted: bounded read-only operational slice; rejected: synthetic data and unfinished actions. Full UI foundation and feature workflows remain separately gated.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-HA-009`, `SYM-SEC-008`, `SYM-UI-001`, `SYM-UI-002`, `SYM-UI-004`, `SYM-UI-005`, `SYM-UI-007`, `SYM-UI-008`, `SYM-UI-009`, `SYM-TEST-009`.
+
+Outstanding blockers retained from the previous catalog:
+
+None within the bounded scope above.

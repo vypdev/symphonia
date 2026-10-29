@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-09-26
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `durable-operations-and-recovery`
 - Owners: Symphonia maintainers
 - Scope: execute imports and provider writes through durable, observable operations that recover safely across restarts, rate limits, uncertain writes, and upgrades.
@@ -16,7 +17,9 @@ Symphonia shall execute imports, provider reads, identity work, and playlist wri
 
 The operation engine shall use explicit state transitions, bounded leases, idempotency keys, checkpoints, and reconciliation. It shall never equate an in-memory task with durable progress or blindly retry a provider mutation whose outcome is unknown.
 
-## 2. Problem statement and evidence
+<a id="2-problem-statement-and-evidence"></a>
+
+## 2. Problem, current behavior, and evidence
 
 Provider work crosses unreliable networks and may take longer than an HTTP request or Home Assistant lifecycle event. A process may stop after a provider accepted a write but before Symphonia recorded the response. Without a durable contract, retrying can duplicate playlists or entries, while abandoning work can leave invisible partial results.
 
@@ -57,7 +60,9 @@ A healthy lease renewal retains the later of its current expiry and the newly re
 
 The October 25 foundation correction exports event `payload_keys` and `payload_keys_truncated` instead of arbitrary persisted event values. Credential-like text under innocent keys is excluded without rewriting the append-only ledger. See the [remaining PR 1 review](../docs/development/pr1-review-2026-10-25.md).
 
-## 3. Actors and authorization
+<a id="3-actors-and-authorization"></a>
+
+## 3. Actors, surfaces, and terminology
 
 - Application services create operations on behalf of an authenticated, authorized actor or a future explicitly approved scheduler.
 - Workers claim and advance operations.
@@ -66,7 +71,9 @@ The October 25 foundation correction exports event `payload_keys` and `payload_k
 
 Workers do not gain broader provider or household access merely by reading a queued operation. The stored operation references a scoped connection and authorization context.
 
-## 4. Goals, non-goals, and invariants
+<a id="4-goals-non-goals-and-invariants"></a>
+
+## 4. Goals, non-goals, and fixed invariants
 
 ### Goals
 
@@ -96,7 +103,9 @@ Workers do not gain broader provider or household access merely by reading a que
 - Terminal results are immutable except for separately recorded reconciliation or remediation operations.
 - Cancellation prevents future work but does not rewrite confirmed history.
 
-## 5. User journey and operational flow
+<a id="5-user-journey-and-operational-flow"></a>
+
+## 5. Current versus proposed product journey
 
 1. An application service validates a requested action and stores its immutable intent, actor context, and idempotency key.
 2. The same transaction or a recoverable dispatch mechanism makes the operation eligible for work.
@@ -109,7 +118,9 @@ Workers do not gain broader provider or household access merely by reading a que
 
 After a crash, another worker waits for lease expiry, claims the operation, and resumes from the last confirmed checkpoint. If a call may have succeeded externally, it reconciles that step first.
 
-## 6. Functional contract and state model
+<a id="6-functional-contract-and-state-model"></a>
+
+## 6. Functional behavior and state model
 
 ### Operation states
 
@@ -171,7 +182,9 @@ the new owner's running record untouched and completes later queued work.
 
 The operation request key deduplicates logically identical submissions within a defined scope. Each external mutation step has a stable key or reconciliation fingerprint derived from immutable intent—not from an attempt count. Where a provider lacks idempotency support, the adapter shall supply a deterministic reconciliation strategy or declare the write unsupported.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 | Setting | Scope | Default | Validation and notes |
 |---|---|---|---|
@@ -186,7 +199,9 @@ The operation request key deduplicates logically identical submissions within a 
 
 Users may cancel operations, but they shall not be offered arbitrary knobs that weaken lease safety, idempotency, retention obligations, or provider rate-limit compliance.
 
-## 8. Architecture and boundaries
+<a id="8-architecture-and-boundaries"></a>
+
+## 8. Clean Architecture design
 
 ### Domain layer
 
@@ -214,7 +229,9 @@ Creates operations, schedules eligibility, claims leases, dispatches handlers, c
 
 The persistent store and wakeup mechanism may be one technology or separate ones. The design shall not require an external broker unless evidence justifies that operational cost.
 
-## 9. UI, UX, and accessibility
+<a id="9-ui-ux-and-accessibility"></a>
+
+## 9. UI/UX and content contract
 
 Operation list/detail, progress, wait, recovery, cancellation, reconciliation, and terminal-result surfaces conform to the [Home Assistant-native UI foundation](home-assistant-native-ui.md). They use shared statuses, alerts, progress/loading, cards/sections, responsive result rows/tables, buttons, and adaptive dialogs. Visual updates are projections of persisted operation state; component animation or in-memory events can improve immediacy but never invent progress or success.
 
@@ -238,7 +255,9 @@ Example recovery state:
 
 Progress shall not move backward without an explicit explanation. Status shall not rely only on color, and live updates shall use non-disruptive accessible announcements.
 
-## 10. Failure and recovery semantics
+<a id="10-failure-and-recovery-semantics"></a>
+
+## 10. Failure, recovery, and cleanup
 
 | Failure | Required behavior | Recovery |
 |---|---|---|
@@ -258,7 +277,9 @@ Graceful shutdown stops new claims, lets safe checkpoints finish within a bounde
 
 If a cancellation request survives worker loss while a provider outcome is uncertain, the repository moves the expired operation to `waiting_user`, records `reconciliation_required`, and clears its lease without clearing the cancellation request. It is never eligible for ordinary claim or resume. The same quarantine applies if a worker reaches a retry or rate-limit release path with an uncertain checkpoint after cancellation was requested; such an operation is not scheduled for another ordinary attempt. A trusted caller may resolve only an established `no_effect` outcome to `cancelled` or `effect_confirmed` to `partial`; unresolved outcomes remain in `waiting_user`. The repository primitive is not an authorization boundary, and no caller is wired until the provider-specific and authenticated operator contracts are approved.
 
-## 11. Security and privacy
+<a id="11-security-and-privacy"></a>
+
+## 11. Security, permissions, and privacy
 
 - Operation payloads store credential references, never raw tokens.
 - Payloads, results, and diagnostics are classified and minimized; playlist contents and provider identifiers are household data.
@@ -268,7 +289,9 @@ If a cancellation request survives worker loss while a provider outcome is uncer
 - Retry and error messages displayed in the UI are redacted and safe for the current actor.
 - Queue/store corruption, forged state transitions, and lease theft are included in the threat model.
 
-## 12. Observability and supportability
+<a id="12-observability-and-supportability"></a>
+
+## 12. Observability and operational UX
 
 Structured events include operation creation, eligibility, claim, renewal, checkpoint, wait, retry schedule, reconciliation, cancellation, and terminal transition. Each event includes operation ID, operation type, state, attempt count, adapter category, and bounded error code; it excludes credentials and unbounded content. Redacted operation diagnostics may expose only a boolean unknown-step indicator, a validated reconciliation-required flag, and allowlisted recovery/resolution enums; they never expose the unknown step identifier or checkpoint value.
 
@@ -276,7 +299,9 @@ Metrics include queue depth, oldest eligible age, running leases, expired lease 
 
 Health distinguishes API availability, persistent-store readiness, worker liveness, claim progress, and migration state. A redacted export provides state history, version information, checkpoints, lease history, and categorized errors.
 
-## 13. Rollout, migration, and compatibility
+<a id="13-rollout-migration-and-compatibility"></a>
+
+## 13. Compatibility, migration, rollout, and rollback
 
 Before implementation readiness, a persistence spike shall prove atomic claim, ordinary and cancellation-requested lease expiry, transactional checkpointing, backup/restore behavior under `/data`, and migration safety in the chosen Home Assistant App runtime. The local SQLite spike now exercises cancellation quarantine and verifies that unresolved cancellation cannot be resumed; it remains research evidence, not representative Home Assistant/App-scale or provider evidence.
 
@@ -284,23 +309,28 @@ Operation records and payloads carry explicit schema and handler versions. Upgra
 
 Initial rollout uses one App instance and conservative concurrency. Multi-instance execution is out of scope unless a later deployment model requires it, but lease semantics shall not depend on process-local mutexes.
 
-## 14. Numeric test budget
+<a id="14-numeric-test-budget"></a>
 
-Minimum planned automated tests: **88**.
+## 14. Testing strategy and numeric budget
 
-| Area | Minimum |
-|---|---:|
-| Domain states, transitions, cancellation, and invariants | 20 |
-| Claims, leases, races, checkpoints, idempotency, and reconciliation | 26 |
-| Persistence and provider outcome adapter contracts | 16 |
-| UI states and accessibility | 8 |
-| Integration, restart, migration, security, corruption, and redaction | 18 |
+Minimum **88 distinct cases**, planned automated tests:
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Domain states, transitions, cancellation, and invariants | 20 | Legal transitions and safe cancellation |
+| Claims, leases, races, checkpoints, idempotency, and reconciliation | 26 | Concurrency, replay and uncertain outcomes |
+| Persistence and provider outcome adapter contracts | 16 | Durable state and external error mapping |
+| UI states and accessibility | 8 | Primary states and accessible interaction |
+| Integration, restart, migration, security, corruption, and redaction | 18 | Recovery, compatibility and secret protection |
+| **Total** | **88** | No double counting |
 
 Required deterministic tests include duplicate dispatch, concurrent claim, lease expiry, clock boundaries, crash before/after every checkpoint, store outage, retry exhaustion, rate-limit timing, cancellation races, unknown outcomes, cancellation quarantine and manual outcome resolution, and compatible/incompatible upgrades.
 
 The eight feature-specific UI cases supplement the UI-foundation budget and inherit its component-catalog, host-context, accessibility, responsive, theme/localization, hostile-content, and dated visual-reference gates.
 
-## 15. Documentation impact
+<a id="15-documentation-impact"></a>
+
+## 15. Documentation and discoverability
 
 Implementation shall update:
 
@@ -311,7 +341,9 @@ Implementation shall update:
 - runbooks for stuck operations, migration failures, and provider reconciliation;
 - the SDD catalog and traceability evidence.
 
-## 16. Acceptance criteria
+<a id="16-acceptance-criteria"></a>
+
+## 16. Acceptance scenarios
 
 1. Operation intent and idempotency data are durable before any external side effect.
 2. State transitions are atomic, validated, and auditable.
@@ -328,7 +360,9 @@ Implementation shall update:
 13. The numeric test budget and fault-injection suite pass.
 14. Queued, running, rate-limited, retry-scheduled, waiting-user, recovering, reconciling, partial, failed, cancelled, and succeeded fixtures use shared Home Assistant-native components; updates preserve focus, never move progress backward without explanation, and remain truthful after disconnect/reload at narrow and wide widths.
 
-## 17. Requirement traceability
+<a id="17-requirement-traceability"></a>
+
+## 17. Requirements traceability
 
 | Requirement | Design location | Planned verification |
 |---|---|---|
@@ -339,7 +373,9 @@ Implementation shall update:
 | `SYM-TEST-004`, `SYM-TEST-013` | Sections 14-15 | Provider-write fault and migration release gates |
 | `SYM-DEP-002`, `SYM-DEP-008` | Sections 6, 11, and 14 | App restart and graceful/abrupt shutdown tests |
 
-## 18. Sequence sketch
+<a id="18-sequence-sketch"></a>
+
+## 18. Implementation sequence
 
 ```text
 Application service -> Operation store: persist intent + idempotency key
@@ -358,7 +394,9 @@ Worker -> Operation store: wait, continue, or terminal transition
 UI -> Operation store: read durable progress view
 ```
 
-## 19. Definition of done
+<a id="19-definition-of-done"></a>
+
+## 19. Definition of Done
 
 - Persistent store and worker topology decisions are recorded in ADRs.
 - The persistence spike demonstrates required atomicity, restart, and migration behavior.
@@ -368,7 +406,9 @@ UI -> Operation store: read durable progress view
 - Runbooks, user/admin documentation, and catalog evidence are current.
 - Project owner explicitly approves implementation and later release.
 
-## 20. References
+<a id="20-references"></a>
+
+## 20. References and decisions
 
 - [SDD standard](README.md)
 - [SDD catalog](CATALOG.md)
@@ -376,3 +416,19 @@ UI -> Operation store: read durable progress view
 - [One-time playlist copy SDD](one-time-playlist-copy.md)
 - [Home Assistant-native UI foundation SDD](home-assistant-native-ui.md)
 - [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md)
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-PROD-004`, `SYM-PROD-005`, `SYM-PROD-006`, `SYM-ARCH-001`, `SYM-ARCH-002`, `SYM-ARCH-005`, `SYM-ARCH-008`, `SYM-ARCH-009`, `SYM-ARCH-010`, `SYM-JOB-001`, `SYM-JOB-002`, `SYM-JOB-003`, `SYM-JOB-004`, `SYM-JOB-005`, `SYM-JOB-006`, `SYM-JOB-007`, `SYM-JOB-008`, `SYM-OBS-001`, `SYM-OBS-002`, `SYM-OBS-003`, `SYM-OBS-004`, `SYM-OBS-005`, `SYM-OBS-006`, `SYM-TEST-004`, `SYM-TEST-013`, `SYM-DEP-002`, `SYM-DEP-008`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-004 storage engine and lease/crash-recovery spike
+- OQ-007 representative operation sizes and timing targets
+- Process topology and worker concurrency defaults
+- Retention policy for step detail and operation history
+- Provider-aware reconciliation and authorized manual-resolution surface

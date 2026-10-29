@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-10-25
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `home-assistant-app-runtime`
 - Owners: Symphonia maintainers
 - Scope: define the install, lifecycle, authentication, persistence, recovery, upgrade, backup, and diagnostics contract for the primary Supervisor-managed App.
@@ -125,7 +126,9 @@ restore and platform gates remain open. The runtime stays Draft.
 5. `/data` is the only ordinary persistent runtime location; secrets and key material follow the separate accepted secret design.
 6. Privileged mode, Docker socket, SSH, host network, and arbitrary host/config/media mounts are prohibited without a superseding ADR.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -197,7 +200,9 @@ to `ready` when no migration or recovery work is needed and every local readines
 invariant passes. A successful migration can also move to `ready` when no recovery
 work remains. Neither shortcut bypasses validation or permits writes while blocked.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 No final App option names are accepted yet. The first implementation RFC should minimize configuration and propose at least:
 
@@ -457,3 +462,19 @@ counts toward the unchanged production budgets.
 - Accepted key-custody direction: [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md); automatic restart, encrypted Core identity backups and excluded App OAuth keys, with final adapter/recovery conformance gated.
 - Rejected: all logic in a custom integration; unauthenticated management port; fresh database fallback after migration failure.
 - Selected OAuth direction: ADR 0007 and the Draft companion SDD; protocol and key/lifecycle proof precede implementation. Standalone and native projections beyond the separately selected OAuth/playback profiles remain follow-up work.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-PROD-001`, `SYM-ACC-005`, `SYM-ARCH-001`, `SYM-ARCH-003`, `SYM-ARCH-006`, `SYM-ARCH-007`, `SYM-SEC-008`, `SYM-SEC-009`, `SYM-SEC-011`, `SYM-OBS-003`, `SYM-OBS-005`, `SYM-HA-001`, `SYM-HA-002`, `SYM-HA-003`, `SYM-HA-004`, `SYM-HA-005`, `SYM-HA-006`, `SYM-HA-007`, `SYM-HA-008`, `SYM-HA-009`, `SYM-HA-011`, `SYM-TEST-009`, `SYM-TEST-012`, `SYM-TEST-013`, `SYM-DEP-001`, `SYM-DEP-002`, `SYM-DEP-003`, `SYM-DEP-004`, `SYM-DEP-005`, `SYM-DEP-006`, `SYM-DEP-007`, `SYM-DEP-008`, `SYM-DEP-009`, `SYM-DEP-010`, `SYM-HA-012`, `SYM-SEC-012`, `SYM-SEC-013`, `SYM-SEC-014`, `SYM-SEC-015`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-004 storage and recovery spike
+- Supported Home Assistant versions and CPU architectures
+- Final local-key adapter/package, production concurrency/reset UX and backup/restore conformance under accepted ADR 0008
+- OQ-005 standalone release timing and authentication
+- RG-008 production lifecycle/recovery and package matrix beyond bounded CSR/renewal/native-Ingress reset wire proof

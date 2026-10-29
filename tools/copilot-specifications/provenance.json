@@ -1,0 +1,32 @@
+{
+  "repository": "https://github.com/vypdev/copilot",
+  "revision": "f5e5a4cf9a80248994469cd88ad55eecab5b95ca",
+  "version": "3.10.6",
+  "files": [
+    {
+      "path": "specs/README.md",
+      "upstreamPath": "specs/README.md",
+      "gitBlobSha": "c8454adadea295343e9673ba8cda5021b92e34ce"
+    },
+    {
+      "path": "specs/_template.md",
+      "upstreamPath": "specs/_template.md",
+      "gitBlobSha": "74c3fe2ec21bb57c519edd6f144e2452b3c54050"
+    },
+    {
+      "path": "tools/copilot-specifications/src/infrastructure/specification_catalog_validator.cjs",
+      "upstreamPath": "src/infrastructure/specification_catalog_validator.cjs",
+      "gitBlobSha": "7e32e203d5cf2e71f3a944e05c461a3e7f73a903"
+    },
+    {
+      "path": "tools/copilot-specifications/src/domain/specification_catalog_path_policy.cjs",
+      "upstreamPath": "src/domain/specification_catalog_path_policy.cjs",
+      "gitBlobSha": "3232beb9092401cab6a033ebb9434f9ae3117d03"
+    },
+    {
+      "path": "tools/copilot-specifications/LICENSE",
+      "upstreamPath": "LICENSE",
+      "gitBlobSha": "31822ab5969fb8f830c88595daafa76824ac0394"
+    }
+  ]
+}

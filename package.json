@@ -1,0 +1,9 @@
+{
+  "name": "symphonia-repository-tools",
+  "private": true,
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "validate:specifications": "node scripts/validate-specification-catalog.cjs",
+    "generate:specifications": "node scripts/validate-specification-catalog.cjs --write"
+  }
+}
