@@ -33,13 +33,19 @@ entrypoint only invokes Copilot; it does not maintain a second schema or rendere
 CI provisions Node.js in both Python test and coverage jobs. Copilot verification
 continues using the existing trusted setup and runtime prerequisites.
 
-The standard, template, catalog validator and path policy are unchanged copies
-from Copilot 3.10.6, commit
+The standard, template and path policy are unchanged copies from Copilot 3.10.6;
+the catalog validation policy is also unchanged. The source commit is
 [`f5e5a4c`](https://github.com/vypdev/copilot/tree/f5e5a4cf9a80248994469cd88ad55eecab5b95ca).
 The [provenance manifest](../../tools/copilot-specifications/provenance.json)
 records upstream paths and Git blob hashes; the upstream
 [MIT license](../../tools/copilot-specifications/LICENSE) is retained. The consumer
-entrypoint supplies this repository's root to the original exported validator.
+entrypoint supplies this repository's root to the exported Copilot validator.
+Three renderer expressions preserve specification-relative subdirectories in
+primary and evidence links, correcting the defect reported in
+[Copilot #789](https://github.com/vypdev/copilot/issues/789). The manifest records
+the exact replacements and patched hash; a regression reverses only those
+replacements and verifies the original upstream blob hash. No validation rules,
+catalog fields, statuses or SDD publication semantics are changed by this fix.
 Before generation, that entrypoint refuses an existing non-regular or symlinked
 output using the SDK's own path helper, including dangling links. It then calls
 the original generator; this invocation preflight adds no catalog fields,
@@ -107,9 +113,9 @@ Local validation on 2026-10-29 used Python 3.11.15 and Node 24.22.2:
 |---|---|
 | Original Copilot SDK catalog reader | `sdk-v1`, all 10 capabilities accepted |
 | Original Copilot retained-owner SDD format check | All 10 owning documents accepted |
-| Original catalog validator/generator | 10 capabilities; generated index current |
-| Consumer regressions | 15 cases, including unchanged upstream blob hashes, current generated links, output-symlink refusal, ownership, paths, statuses and stale-index rejection |
-| `make verify` / `make coverage` | 568 Python tests; 89% combined line/branch coverage, above the unchanged 85% floor |
+| Copilot catalog validator/generator | 10 capabilities; generated index current |
+| Consumer regressions | 17 cases, including source provenance/declared rendering patch, nested primary/companion/evidence links, current generated links, output-symlink refusal, ownership, paths, statuses and stale-index rejection |
+| `make verify` / `make coverage` | 570 Python tests; 89% combined line/branch coverage, above the unchanged 85% floor |
 | UI typecheck / tests / build | Passed; 27 tests; committed App assets reproduced exactly |
 
 The old custom-dialect validator assertions were replaced by SDK consumer
@@ -118,17 +124,19 @@ IDs and exact blocker strings were checked against the owning documents during
 migration. Remote CI and normal Action admission remain separate gates; the
 local results do not establish live OAuth acceptance.
 
-The unchanged upstream renderer drops subdirectories from nested SDD links;
-the accepted SDK fixture and broken output are reported in
-[Copilot #789](https://github.com/vypdev/copilot/issues/789). All ten current
-owning SDD paths are flat and every link in the actual generated index is tested.
-This consumer test verifies the current artifact; it does not change SDK path
-policy or claim that the upstream nested-path defect is fixed. Any correction
-must be adopted from upstream through a reviewed source/provenance update.
-That report also records the original generator's unchecked output-symlink
-write. The consumer preflight is tested with existing and dangling external
-targets; the former stays unchanged and the latter is not created. The original
-SDK source is not claimed to have this fix.
+The accepted SDK nested-path fixture and original broken output are reported in
+[Copilot #789](https://github.com/vypdev/copilot/issues/789). The bounded rendering
+fix is tested with nested primary/companion/evidence paths and identical basenames
+in different directories. All ten current owning SDD paths are flat and all 385
+links in their generated index resolve. Adopt the upstream correction and retire
+the declared replacements when it becomes available; keep the standard and SDK
+validation rules as the controlling contract.
+
+The report also records the original generator's unchecked output-symlink write.
+The consumer preflight is tested with existing and dangling external targets;
+the former stays unchanged and the latter is not created. This protects the
+documented entrypoint; direct invocation of upstream's original `main` is not
+claimed fixed and hostile concurrent checkout mutation is outside this preflight.
 
 - Migration: [Symphonia #33](https://github.com/vypdev/symphonia/issues/33).
 - Superseded dialect-adapter request:

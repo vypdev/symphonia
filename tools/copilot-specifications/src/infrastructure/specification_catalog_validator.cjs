@@ -198,8 +198,8 @@ function renderCatalog(catalog) {
     const primarySpec = capability.specs[0];
     const companionCount = capability.specs.length - 1;
     const specLabel = companionCount > 0
-      ? `[${escapeCell(capability.title)}](./${path.posix.basename(primarySpec)}) + ${companionCount} companion`
-      : `[${escapeCell(capability.title)}](./${path.posix.basename(primarySpec)})`;
+      ? `[${escapeCell(capability.title)}](./${path.posix.relative('specs', primarySpec)}) + ${companionCount} companion`
+      : `[${escapeCell(capability.title)}](./${path.posix.relative('specs', primarySpec)})`;
     const evidenceCount = capability.workflows.length
       + capability.entrypoints.length
       + capability.code.length
@@ -258,7 +258,7 @@ function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
   return paths.map(relativePath => {
     const target = relativePath.startsWith('specs/')
-      ? `./${path.posix.basename(relativePath)}`
+      ? `./${path.posix.relative('specs', relativePath)}`
       : `../${relativePath}`;
     return `[\`${relativePath}\`](${target})`;
   }).join(' · ');

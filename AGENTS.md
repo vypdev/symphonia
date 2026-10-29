@@ -20,8 +20,9 @@ accepted upstream, continue following the supported system.
 
 Run `npm run validate:specifications` (equivalently
 `pnpm run validate:specifications`) and regenerate catalog metadata with
-`npm run generate:specifications`. The original Copilot validator is vendored
-unchanged; read [`the adoption notes`](docs/development/copilot-sdd-adoption.md)
+`npm run generate:specifications`. Copilot's validation policy is vendored
+unchanged; a provenance-tracked renderer bugfix preserves nested links. Read
+[`the adoption notes`](docs/development/copilot-sdd-adoption.md)
 for provenance, evidence limits, and the manual readiness review. Passing a
 structural check does not approve implementation or establish live acceptance.
 

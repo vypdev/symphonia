@@ -16,7 +16,24 @@
     {
       "path": "tools/copilot-specifications/src/infrastructure/specification_catalog_validator.cjs",
       "upstreamPath": "src/infrastructure/specification_catalog_validator.cjs",
-      "gitBlobSha": "7e32e203d5cf2e71f3a944e05c461a3e7f73a903"
+      "gitBlobSha": "7e32e203d5cf2e71f3a944e05c461a3e7f73a903",
+      "localGitBlobSha": "75a0513130559d2a4a32cf26157c1748f8cfe0ca",
+      "localPatch": {
+        "upstreamIssue": "https://github.com/vypdev/copilot/issues/789",
+        "scope": "Rendering only; SDK validation policy, catalog dialect and statuses unchanged",
+        "replacements": [
+          {
+            "before": "path.posix.basename(primarySpec)",
+            "after": "path.posix.relative('specs', primarySpec)",
+            "occurrences": 2
+          },
+          {
+            "before": "path.posix.basename(relativePath)",
+            "after": "path.posix.relative('specs', relativePath)",
+            "occurrences": 1
+          }
+        ]
+      }
     },
     {
       "path": "tools/copilot-specifications/src/domain/specification_catalog_path_policy.cjs",

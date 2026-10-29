@@ -94,6 +94,31 @@ class SpecValidatorTests(unittest.TestCase):
         self.assertEqual(validate(self.root), [])
         self.assertIn("Changed source-backed scope", (self.root / "specs/CATALOG.md").read_text())
 
+    def test_nested_primary_spec_links_resolve_in_table_and_evidence(self) -> None:
+        nested = self.root / "specs/nested/example.md"
+        nested.parent.mkdir()
+        (self.root / "specs/example.md").rename(nested)
+        self.capability["specs"] = ["specs/nested/example.md"]
+        self.write_catalog()
+        self.generate()
+        self.assertEqual(validate(self.root), [])
+        index = (self.root / "specs/CATALOG.md").read_text()
+        self.assertIn("[Example](./nested/example.md)", index)
+        self.assertIn("[`specs/nested/example.md`](./nested/example.md)", index)
+
+    def test_companion_and_evidence_keep_subdirectories_with_same_basename(self) -> None:
+        nested = self.root / "specs/companion/example.md"
+        nested.parent.mkdir()
+        nested.write_text("Companion fixture\n")
+        self.capability["specs"].append("specs/companion/example.md")
+        self.capability["documentation"].append("specs/companion/example.md")
+        self.write_catalog()
+        self.generate()
+        self.assertEqual(validate(self.root), [])
+        index = (self.root / "specs/CATALOG.md").read_text()
+        self.assertIn("[Example](./example.md) + 1 companion", index)
+        self.assertEqual(index.count("[`specs/companion/example.md`](./companion/example.md)"), 2)
+
     def test_missing_and_escaping_evidence_are_rejected(self) -> None:
         for path in ("source/missing.py", "../outside.py", "/outside.py"):
             with self.subTest(path=path):
@@ -146,11 +171,19 @@ class SpecValidatorTests(unittest.TestCase):
         self.write_catalog()
         self.assertIn("retrospective classification", "\n".join(validate(self.root)))
 
-    def test_vendored_policy_and_standard_are_unchanged_upstream_sources(self) -> None:
+    def test_copilot_sources_match_provenance_with_only_declared_rendering_patch(self) -> None:
         manifest = json.loads((ROOT / "tools/copilot-specifications/provenance.json").read_text())
         for entry in manifest["files"]:
             with self.subTest(path=entry["path"]):
                 content = (ROOT / entry["path"]).read_bytes()
+                if "localPatch" in entry:
+                    blob = b"blob " + str(len(content)).encode() + b"\0" + content
+                    self.assertEqual(hashlib.sha1(blob).hexdigest(), entry["localGitBlobSha"])
+                    source = content.decode()
+                    for replacement in entry["localPatch"]["replacements"]:
+                        self.assertEqual(source.count(replacement["after"]), replacement["occurrences"])
+                        source = source.replace(replacement["after"], replacement["before"])
+                    content = source.encode()
                 blob = b"blob " + str(len(content)).encode() + b"\0" + content
                 self.assertEqual(hashlib.sha1(blob).hexdigest(), entry["gitBlobSha"])
 
