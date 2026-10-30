@@ -1,6 +1,7 @@
 """Twelve distinct pure-policy cases from the native trial contract."""
 from dataclasses import replace
 import stat
+import json
 import unittest
 from urllib.parse import parse_qs, urlencode
 
@@ -77,6 +78,18 @@ class NativeTrialPolicyTests(unittest.TestCase):
         for value in variants:
             with self.subTest(value=value), self.assertRaises(p.TrialError):
                 p.envelope(value)
+        for kind in ("list", "dict"):
+            value = 0
+            for _ in range(31):
+                value = [value] if kind == "list" else {"nested": value}
+            accepted = json.dumps({"root": value}).encode()
+            self.assertIn("root", p.strict_json(accepted, 16384))
+            refused = json.dumps({"extra": {"root": value}}).encode()
+            with self.assertRaises(p.TrialError):
+                p.strict_json(refused, 16384)
+        self.assertEqual({"x": [1.25]}, p.strict_json(b'{"x":[1.25]}', 16384))
+        with self.assertRaises(p.TrialError):
+            p.strict_json(b'{"x":[1e9999]}', 16384)
 
     def test_pure_C10_private_metadata_rejects_unsafe_files(self):
         good = dict(mode=stat.S_IFREG | 0o600, owner=10001, expected_owner=10001, links=1, size=32)

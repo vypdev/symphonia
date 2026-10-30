@@ -180,6 +180,17 @@ def strict_json(raw: bytes, maximum: int):
                            parse_constant=reject_constant)
         if not isinstance(value, dict):
             raise ValueError
+        pending = [(value, 1)]
+        while pending:
+            container, depth = pending.pop()
+            if depth > 32:
+                raise ValueError
+            items = container.values() if isinstance(container, dict) else container
+            for item in items:
+                if isinstance(item, float) and not math.isfinite(item):
+                    raise ValueError
+                if isinstance(item, (dict, list)):
+                    pending.append((item, depth + 1))
         return value
     except (ValueError, UnicodeError, RecursionError):
         raise TrialError("invalid_request") from None

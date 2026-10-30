@@ -488,6 +488,8 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 
 The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
 
+Every decoded protocol, bootstrap and provider JSON object is bounded to32 nested containers, including the root. Depth is checked independently of Python runtime recursion behavior; excess depth and non-finite JSON numbers fail closed before typed admission. Case native-trial-http-C05 and native-trial-adapter-C05 cover this bound across supported runtimes.
+
 ## 16. Acceptance scenarios
 
 1. Given the exact supported disposable Core/Supervisor matrix and reviewed package, when the owner installs and pairs, then the distinct App/helper work through relative Ingress routes and owned rollback without host ports or broad privilege.

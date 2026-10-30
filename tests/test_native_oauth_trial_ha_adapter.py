@@ -113,9 +113,14 @@ class NativeTrialHTTPTests(unittest.IsolatedAsyncioTestCase):
                         {"retired": 1}, {"material_hashes": {name: "wrong" for name in good["material_hashes"]}}):
             with self.subTest(changed=changed), self.assertRaises(bridge.BridgeError):
                 bridge.validate_reference({**good, **changed})
-        for raw in (b"[]", b"", b"\xff", b'{"a":1,"a":2}', b'{' + b'"x":' + b'['*1100 + b'0' + b']'*1100 + b'}'):
+        for raw in (b"[]", b"", b"\xff", b'{"a":1,"a":2}', b'{"x":NaN}', b'{"x":Infinity}', b'{"x":1e9999}',
+                    b'{' + b'"x":' + b'['*32 + b'0' + b']'*32 + b'}',
+                    b'{' + b'"x":' + b'['*1100 + b'0' + b']'*1100 + b'}'):
             with self.subTest(size=len(raw)), self.assertRaises(bridge.BridgeError):
                 bridge.document(raw)
+        within = b'{"x":' + b'['*31 + b'0' + b']'*31 + b'}'
+        self.assertIn("x", bridge.document(within))
+        self.assertEqual({"x": [1.25]}, bridge.document(b'{"x":[1.25]}'))
         for block in (None, "{}", '{"installation":null}', "not-json"):
             with self.subTest(block=block), self.assertRaises(bridge.BridgeError):
                 bridge.bootstrap(block)

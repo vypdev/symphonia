@@ -18,7 +18,7 @@ Broad production companion/authorization/runtime specifications remain Draft.
 | Guarded Supervisor | 2026.10.5, aarch64, unsupported devcontainer environment; not HAOS hardware proof |
 | Devcontainer image | `sha256:81ea6e6892125d08e88b5a873c12da00131dfc3a184d335179576ec60bc0ecb0` |
 | App Python base index | `sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8` |
-| Local reproduced App image | `sha256:91c3ec2d17a8a4a2180f7a675399cdae295add0b07336575da7d05ebeeaeaadc` |
+| Local reproduced App image | `sha256:ba3cdae7d2d17c727433c741d9764cf730329ffe3435f5b89d5c26dbccdeb16d` |
 | Host quality runtime | Python 3.11.15, coverage 7.16.1 |
 | App runtime | Python 3.14.10; fifteen pinned dependencies in the App requirements |
 
@@ -35,7 +35,7 @@ manifest covers twelve App files; the helper manifest covers eight source files.
 | State | 12/12 | Actual SQLite; explicit fake provider/cipher for application-state cases |
 | Adapters | 12/12 | Actual AEAD, files, CSR/TLS, c-ares timeout/cancellation; controlled provider responses |
 | HTTP/UI contracts | 10/10 | Actual local HTTP plus named actor/Ingress fixtures; semantic/localization assertions are not manual UX review |
-| Package suite | 8/8, 32.578 seconds | Fresh Core/Supervisor execution, not replayed receipts |
+| Package suite | 8/8, 43.918 seconds | Fresh Core/Supervisor execution, not replayed receipts |
 | Shipping-main supplement | Passed | Actual entry module, network disabled, new Linux volume; read-only coverage instrumentation |
 
 The package suite observes each of the following:
@@ -71,7 +71,10 @@ The installer initially exposed a BusyBox checksum-comment incompatibility;
 verification now strips only the ownership header before checking payload hashes.
 Real Core testing also caught a positional PKCE-constructor mismatch; named
 arguments now match the official public API. Both are corrected in the tested
-source. Neither defect was exercised on the owner installation.
+source. Neither defect was exercised on the owner installation. CI subsequently caught
+a JSON-depth test depending on CPython recursion behavior. Both protocol decoders
+now enforce32 containers and reject non-finite values explicitly, with boundary
+cases; the full eight-case package campaign was repeated on the corrected source.
 
 ## Changed-module coverage
 

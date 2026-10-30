@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import re
 import socket
 import ssl
@@ -34,12 +35,25 @@ def document(raw):
                 raise ValueError
             value[key] = item
         return value
+    def reject_constant(value):
+        raise ValueError
     try:
         if not isinstance(raw, bytes) or not 1 <= len(raw) <= 16384:
             raise ValueError
-        result = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs)
+        result = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=reject_constant)
         if not isinstance(result, dict):
             raise ValueError
+        pending = [(result, 1)]
+        while pending:
+            value, depth = pending.pop()
+            if depth > 32:
+                raise ValueError
+            items = value.values() if isinstance(value, dict) else value
+            for item in items:
+                if isinstance(item, float) and not math.isfinite(item):
+                    raise ValueError
+                if isinstance(item, (dict, list)):
+                    pending.append((item, depth + 1))
         return result
     except (ValueError, UnicodeError, RecursionError):
         raise BridgeError("invalid_input") from None
