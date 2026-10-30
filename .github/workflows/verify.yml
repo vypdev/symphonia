@@ -1,8 +1,12 @@
 name: Verify
 
 on:
-  push:
   pull_request:
+    types: [opened, reopened, synchronize]
+
+concurrency:
+  group: verify-${{ github.repository }}-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

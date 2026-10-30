@@ -250,6 +250,22 @@ async def core_campaign():
             await hass.async_stop()
             # Runtime cache ownership comes from the actual packaged helper.
             assert (helper/".cache-owned.sha256").exists()
+            receipt=helper/".cache-owned.sha256"
+            lines=receipt.read_text().splitlines()
+            if len(lines)==1:
+                # Explicit synthetic installer fixture when Core writes no pyc.
+                cache=helper/"__pycache__";cache.mkdir(exist_ok=True)
+                canary=cache/"keys.cpython-314.pyc"
+                assert not canary.exists()
+                canary.write_bytes(b"synthetic-installer-cache-canary")
+                lines.append(hashlib.sha256(canary.read_bytes()).hexdigest()+"  "+canary.relative_to(helper).as_posix())
+            valid_receipt="\n".join(lines)+"\n"
+            intact={p.relative_to(helper):p.read_bytes() for p in helper.rglob('*') if p.is_file() and p!=receipt}
+            for invalid_receipt in (valid_receipt+lines[1]+"\n", ""):
+                receipt.write_text(invalid_receipt)
+                assert install("remove").returncode!=0
+                assert all((helper/p).read_bytes()==raw for p,raw in intact.items())
+            receipt.write_text(valid_receipt)
             assert install("remove").returncode==0
             assert not helper.exists() and (unrelated/"sentinel").read_text()=="preserve"
             results["package_C07_hash_installer_owned_rollback"]=True
@@ -352,10 +368,15 @@ def stage_supervisor(output):
     checked=lab_call(['docker','exec','--workdir',APP_STAGE,CONTAINER,'sha256sum','-c','SHA256SUMS'])
     if len(checked.stdout.splitlines()) != 12:
         raise RuntimeError('staged_manifest_count_mismatch')
-    lab_ha('store','reload')
+    reload=lab_call(['docker','exec',CONTAINER,'ha','store','reload','--raw-json'],check=False)
+    if reload.returncode and b'context deadline exceeded' not in reload.stderr:
+        raise RuntimeError('lab_store_reload_failed')
     info=lab_ha('apps','info',SLUG)
+    if info.get('slug')!=SLUG or info.get('version_latest')!='0.1.0b1' or not info.get('available'):
+        raise RuntimeError('exact_local_store_app_not_ready')
     if info.get('version') is not None:
         raise RuntimeError('existing_lab_install_refused')
+    receipt['lab_store_reload_acknowledged']=reload.returncode==0
     return receipt
 
 

@@ -488,6 +488,8 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 
 The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
 
+Installer cache receipts require a valid ownership header and unique allowlisted paths before any removal. Package case native-trial-package-C07 verifies duplicate and empty receipts preserve all source/cache bytes.
+
 The fixed HTTPS adapter explicitly requests identity encoding and refuses compressed or redirected responses, preserving its byte cap; case native-trial-adapter-C10 verifies negotiation. App-store README links use immutable absolute documentation URLs because Supervisor does not resolve repository-relative links.
 
 Every decoded protocol, bootstrap and provider JSON object is bounded to32 nested containers, including the root. Depth is checked independently of Python runtime recursion behavior; excess depth and non-finite JSON numbers fail closed before typed admission. Case native-trial-http-C05 and native-trial-adapter-C05 cover this bound across supported runtimes.

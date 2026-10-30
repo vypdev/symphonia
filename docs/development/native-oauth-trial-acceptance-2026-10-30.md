@@ -35,7 +35,7 @@ manifest covers twelve App files; the helper manifest covers eight source files.
 | State | 12/12 | Actual SQLite; explicit fake provider/cipher for application-state cases |
 | Adapters | 12/12 | Actual AEAD, files, CSR/TLS, c-ares timeout/cancellation; controlled provider responses |
 | HTTP/UI contracts | 10/10 | Actual local HTTP plus named actor/Ingress fixtures; semantic/localization assertions are not manual UX review |
-| Package suite | 8/8, 26.834 seconds | Fresh Core/Supervisor execution, not replayed receipts |
+| Package suite | 8/8, 50.658 seconds | Fresh Core/Supervisor execution, not replayed receipts |
 | Shipping-main supplement | Passed | Actual entry module, network disabled, new Linux volume; read-only coverage instrumentation |
 
 The package suite observes each of the following:
@@ -108,6 +108,12 @@ Core's header-only cache receipt. That one cache was checked against the exact s
 compilation before removal; the cleanup probe now uses Python's `-B` option. A fresh
 eight-case package campaign then completed all owned cleanup successfully.
 
+Code review identified duplicate cache receipt entries that could make a second
+unlink fail after partial removal. The generated installer now refuses duplicate
+paths and missing ownership headers before deleting anything. Package C07 injects
+duplicate and empty receipts and checks that every source/cache byte survives;
+the valid receipt still permits complete owned removal.
+
 The read-only Ingress used the browser's English language fallback despite the
 Spanish HA profile. Its paired-state next action was clarified after this review;
 the updated English/Spanish status is covered by HTTP cases, not a second manual
@@ -161,3 +167,29 @@ restart approval; live dedicated Spotify consent through My, fresh native
 confirmation, App restart, confirmed refresh/account match; owned retirement and
 separately observed Spotify revocation. No real account, token, verifier, code,
 private key, hostname or session route is included in this report.
+
+## Owner preflight rechecked before installation
+
+Read-only Chrome preflight again observed Core 2026.10.4, Supervisor 2026.10.5,
+HAOS 18.3, Frontend 20260930.5 and Home Assistant Green. The local backup
+location explicitly reports encryption enabled for future backups; the Cloud
+location only accepts encrypted backups. No archive or encryption key was opened,
+and no backup settings were changed. Existing Terminal provides sh, tar,
+sha256sum, base64, wget and curl. The Core configuration marker is present at
+`/homeassistant`, and the new helper namespace is absent.
+
+The corrected installer SHA-256 is
+`0eec44877099327b976e0fc86a53f57b7040cb51a5ff2aa6a4da1522f7068e9c`.
+All eight package cases were freshly repeated successfully with that installer,
+including the expanded duplicate/empty-cache receipt checks and complete cleanup.
+An earlier repeat stopped during store reload timeout after successful standalone
+Core checks; that partial run counted as no completed package suite. Its exact
+owned stage was removed before the successful fresh campaign. Laboratory setup
+now refuses errors other than that specific timeout and requires the exact named
+local App to be available before installation.
+
+Verify adopts the scheduling policy from PR #37 so this candidate's push does not
+launch duplicate verification; all existing jobs and permissions are retained.
+No new trial package, helper execution, Core restart or Spotify consent has yet
+been applied on the owner's installation. Installation still requires exact-package
+review and applicable browser action-time confirmation.

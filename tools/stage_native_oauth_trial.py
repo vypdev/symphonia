@@ -111,6 +111,7 @@ done
 if test -e "$trial_target/.cache-owned.sha256" || test -L "$trial_target/.cache-owned.sha256"; then
     owned_file "$trial_target/.cache-owned.sha256"
     trial_first=1
+    trial_seen_cache='|'
     while IFS=' ' read -r trial_hash trial_name; do
         if test "$trial_first" = 1; then
             test "$trial_hash $trial_name" = "# SYMPHONIA_NATIVE_OAUTH_TRIAL_CACHE_V1 $trial_expected" || refuse
@@ -118,10 +119,13 @@ if test -e "$trial_target/.cache-owned.sha256" || test -L "$trial_target/.cache-
             continue
         fi
         case "$trial_name" in __pycache__/__init__.cpython-314.pyc|__pycache__/config_flow.cpython-314.pyc|__pycache__/bridge.cpython-314.pyc|__pycache__/keys.cpython-314.pyc) ;; *) refuse;; esac
+        case "$trial_seen_cache" in *"|$trial_name|"*) refuse;; esac
+        trial_seen_cache="${trial_seen_cache}${trial_name}|"
         case "$trial_hash" in ''|*[!0-9a-f]*) refuse;; esac
         test "${#trial_hash}" = 64 || refuse
         owned_file "$trial_target/$trial_name"
     done < "$trial_target/.cache-owned.sha256"
+    test "$trial_first" = 0 || refuse
     # Header-only cache records are valid when Core disables bytecode writes.
     if test -d "$trial_target/__pycache__"; then
         test ! -L "$trial_target/__pycache__" || refuse
