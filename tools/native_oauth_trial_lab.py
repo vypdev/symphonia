@@ -62,6 +62,63 @@ async def app_fixture(directory, fresh):
     await serve(server, stop, host="127.0.0.1")
 
 
+def installer_signal_contracts(installer, root):
+    """Actual POSIX shells; pause at publish/first unlink, then signal the parent."""
+    import errno
+    import shlex
+    import shutil
+    import time
+    for sig in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
+        for mode in ('install','remove'):
+            folder=root/(mode+'-'+str(sig));folder.mkdir()
+            config=folder/'ha';config.mkdir();(config/'.HA_VERSION').write_text('2026.10.4')
+            helper=config/'custom_components'/DOMAIN
+            if mode=='remove':
+                subprocess.run(['sh',str(installer),'install',str(config)],check=True,capture_output=True)
+            original={p.relative_to(helper):p.read_bytes() for p in helper.rglob('*') if p.is_file()} if helper.exists() else {}
+            ready=folder/'ready';gate=folder/'gate';os.mkfifo(gate)
+            tool='mv' if mode=='install' else 'rm'
+            actual=shlex.quote(shutil.which(tool))
+            command=(actual+' "$@" || exit $?\n') if mode=='install' else ''
+            # A shell function also works with BusyBox standalone applets, which
+            # may bypass PATH shims. Only the command boundary is instrumented;
+            # the generated installer and its traps are sourced unchanged.
+            hook=tool+'() {\nif test ! -e "$SYMPHONIA_SIGNAL_READY"; then\n'+command+'printf ready > "$SYMPHONIA_SIGNAL_READY"\nread ignored < "$SYMPHONIA_SIGNAL_GATE" || true\nreturn 0\nfi\n'+actual+' "$@"\n}\n. "$1" "$2" "$3"\n'
+            env={**os.environ,'SYMPHONIA_SIGNAL_READY':str(ready),'SYMPHONIA_SIGNAL_GATE':str(gate)}
+            process=subprocess.Popen(['sh','-c',hook,'signal-fixture',str(installer),mode,str(config)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            try:
+                limit=time.monotonic()+5
+                while not ready.exists() and process.poll() is None and time.monotonic()<limit:
+                    time.sleep(.01)
+                if not ready.exists():
+                    stdout,stderr=process.communicate(timeout=5)
+                    raise AssertionError(('installer_signal_pause_not_reached',mode,int(sig),process.returncode,stderr.decode()[-500:]))
+                process.send_signal(sig)
+                while time.monotonic()<limit:
+                    try:
+                        fd=os.open(gate,os.O_WRONLY|os.O_NONBLOCK)
+                    except OSError as error:
+                        if error.errno!=errno.ENXIO: raise
+                        if process.poll() is not None: break
+                        time.sleep(.01)
+                    else:
+                        os.write(fd,b'continue\n');os.close(fd);break
+                stdout,stderr=process.communicate(timeout=5)
+                assert process.returncode!=0 and b'Installed verified trial helper' not in stdout
+                if mode=='remove':
+                    assert original=={p.relative_to(helper):p.read_bytes() for p in helper.rglob('*') if p.is_file()}
+                # An interrupted atomic publication is retained, never reported
+                # successful or recursively removed without its normal receipt.
+                if helper.exists():
+                    removed=subprocess.run(['sh',str(installer),'remove',str(config)],capture_output=True,timeout=10)
+                    assert removed.returncode==0, removed.stderr.decode()[-500:]
+                assert not list((config/'custom_components').glob('.symphonia-native-stage.*'))
+            finally:
+                if process.poll() is None:
+                    process.kill();process.communicate(timeout=5)
+    return True
+
+
 async def core_campaign():
     # Core must load the installed artifact, not this checkout's namespace.
     sys.path[:] = [item for item in sys.path if Path(item or '.').resolve() != REPO]
@@ -96,6 +153,8 @@ async def core_campaign():
         assert install("remove").returncode != 0 and (helper / "config_flow.py").exists()
         (helper / "unexpected").unlink()
         results["installer_conflicts_preserve_source_and_unrelated"] = True
+        signals=root/'installer-signals';signals.mkdir()
+        results['installer_signals_stop_without_false_success_or_further_unlink']=installer_signal_contracts(installer,signals)
         with socket.socket() as selection:
             selection.bind(("127.0.0.1", 0)); port = selection.getsockname()[1]
         app_root = root / "app"; app_root.mkdir(mode=0o700)
@@ -367,13 +426,16 @@ def lab_ha(*args, guarded=True):
     return value.get('data')
 
 
-def stage_supervisor(output):
+def stage_supervisor(output, on_acquired=lambda: None):
     supervisor_guard()
     from tools.stage_native_oauth_trial import stage
     receipt=stage(output)
-    exists=lab_call(['docker','exec',CONTAINER,'test','-e',APP_STAGE],check=False)
+    exists=lab_call(['docker','exec',CONTAINER,'sh','-c','test -e "$1" || test -L "$1"','sh',APP_STAGE],check=False)
     if exists.returncode == 0:
         raise RuntimeError('existing_lab_app_stage_refused')
+    if exists.returncode != 1 or exists.stdout or exists.stderr:
+        raise RuntimeError('lab_app_stage_absence_unconfirmed')
+    on_acquired()
     lab_call(['docker','cp',str(output/'app'),CONTAINER+':'+APP_STAGE])
     checked=lab_call(['docker','exec','--workdir',APP_STAGE,CONTAINER,'sha256sum','-c','SHA256SUMS'])
     if len(checked.stdout.splitlines()) != 12:
@@ -392,20 +454,23 @@ def stage_supervisor(output):
 
 
 
-def supervisor_channel():
+def supervisor_channel(on_helper_acquired=lambda: None):
     matrix=supervisor_guard()
     # Install the same hash-checked helper artifact into the disposable Core.
     installer=REPO/'tools/install_native_oauth_trial_helper.sh'
     publish="from pathlib import Path; import sys; p=Path('/tmp/symphonia-native-helper-installer.sh'); raw=sys.stdin.buffer.read(); assert not p.is_symlink(); assert not p.exists() or p.read_bytes()==raw; p.write_bytes(raw)"
     lab_call(['docker','exec','-i',CONTAINER,'docker','exec','-i','homeassistant','python3','-c',publish],data=installer.read_bytes())
-    existing=lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','test','-d','/config/custom_components/'+DOMAIN],check=False)
-    if existing.returncode:
+    existing=lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','-c','test -e "$1" || test -L "$1"','sh','/config/custom_components/'+DOMAIN],check=False)
+    if existing.returncode == 1 and not existing.stdout and not existing.stderr:
+        on_helper_acquired()
         lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','/tmp/symphonia-native-helper-installer.sh','install','/config'])
-    else:
+    elif existing.returncode == 0:
         from tools.stage_native_oauth_trial import source_manifest,HELPER_FILES,digest
         expected=digest(source_manifest({name:(REPO/'custom_components'/DOMAIN/name).read_bytes() for name in HELPER_FILES}))
-        verify="from pathlib import Path; import hashlib; p=Path('/config/custom_components/"+DOMAIN+"/.source-owned.sha256'); assert not p.is_symlink(); assert hashlib.sha256(p.read_bytes()).hexdigest()=='"+expected+"'"
+        verify="from pathlib import Path; import hashlib; root=Path('/config/custom_components/"+DOMAIN+"'); assert root.is_dir() and not root.is_symlink(); p=root/'.source-owned.sha256'; assert not p.is_symlink(); assert hashlib.sha256(p.read_bytes()).hexdigest()=='"+expected+"'"
         lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',verify])
+    else:
+        raise RuntimeError('lab_helper_absence_unconfirmed')
     info=lab_ha('apps','info',SLUG)
     assert info['version']=='0.1.0b1' and info['boot']=='manual'
     if info.get('state')!='started':
@@ -477,7 +542,7 @@ asyncio.run(main())'''
     return {'matrix':matrix,'results':{'package_C03_actual_supervisor_alias_csr_mtls':all(value.values())},'channel':value,'service_uid':identity['uid'],'host_ports':False,'boundary':'Ingress identity headers are synthetic; owner HA unused'}
 
 
-def supervisor_backup():
+def supervisor_backup(on_created=lambda slug: None):
     supervisor_guard()
     image=json.loads(lab_call(['docker','exec',CONTAINER,'docker','inspect','app_'+SLUG]).stdout)[0]['Image']
     import re
@@ -510,6 +575,7 @@ asyncio.run(main())'''
     backup=lab_ha('backups','new','--app',SLUG,'--name','Symphonia-native-trial-synthetic-package32','--uncompressed')
     slug=backup['slug']
     assert re.fullmatch('[a-f0-9]{8}',slug)
+    on_created(slug)
     inspect='''from pathlib import Path
 import io,json,sys,tarfile
 p=Path('/stage')/(sys.argv[1]+'.tar');assert p.is_file() and not p.is_symlink()
@@ -722,7 +788,7 @@ def shipping_main_campaign(output: Path, coverage_library: Path):
 
 
 
-def retire_supervisor_artifacts(backup_slug=None):
+def retire_supervisor_artifacts(backup_slug=None, *, remove_app=True, remove_helper=True):
     """Only an exact current manifest-owned trial; no wildcard deletion."""
     supervisor_guard()
     from tools.stage_native_oauth_trial import APP_FILES,APP,HELPER_FILES,source_manifest,digest
@@ -732,6 +798,9 @@ def retire_supervisor_artifacts(backup_slug=None):
     script='''from pathlib import Path
 import hashlib,json,sys
 root=Path('/stage/symphonia_native_oauth_trial');expected=json.loads(sys.stdin.read())
+assert not root.is_symlink()
+if not root.exists():
+ print('absent');sys.exit(0)
 assert root.is_dir() and not root.is_symlink()
 assert {p.name for p in root.iterdir()}==set(expected)|{'SHA256SUMS'}
 assert (root/'SHA256SUMS').read_text()==''.join(sha+'  '+name+'\\n' for name,sha in expected.items())
@@ -740,10 +809,11 @@ for name,sha in expected.items():
 print('owned')'''
     # This check precedes uninstall/deletion; a modified stage is preserved.
     lab_call([*sidecar,script],data=json.dumps(expected).encode())
-    info=lab_ha('apps','info',SLUG)
-    if info.get('version') is not None:
-        assert info['version']=='0.1.0b1'
-        lab_ha('apps','uninstall',SLUG)
+    if remove_app:
+        info=lab_ha('apps','info',SLUG)
+        if info.get('version') is not None:
+            assert info['version']=='0.1.0b1'
+            lab_ha('apps','uninstall',SLUG)
     if backup_slug:
         import re
         assert re.fullmatch('[a-f0-9]{8}',backup_slug)
@@ -754,14 +824,19 @@ print('owned')'''
     delete=script.replace("print('owned')", "for name in (*expected,'SHA256SUMS'): (root/name).unlink()\nroot.rmdir()\nprint('removed')")
     lab_call([*sidecar,delete],data=json.dumps(expected).encode())
     helper_hash=digest(source_manifest({name:(REPO/'custom_components'/DOMAIN/name).read_bytes() for name in HELPER_FILES}))
-    verify="from pathlib import Path;import hashlib; p=Path('/config/custom_components/"+DOMAIN+"/.source-owned.sha256'); assert hashlib.sha256(p.read_bytes()).hexdigest()=='"+helper_hash+"'"
-    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',verify])
+    verify="from pathlib import Path;import hashlib; root=Path('/config/custom_components/"+DOMAIN+"'); assert not root.is_symlink(); p=root/'.source-owned.sha256'; assert not root.exists() or (root.is_dir() and p.is_file() and not p.is_symlink() and hashlib.sha256(p.read_bytes()).hexdigest()=='"+helper_hash+"'); print('present' if root.exists() else 'absent')"
+    present=remove_helper and lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',verify]).stdout.strip()==b'present'
     cache="import sys;sys.path.insert(0,'/config'); from custom_components.symphonia_native_oauth_trial import record_runtime_cache;record_runtime_cache()"
     # Core may disable bytecode writes: a cleanup probe must not create a cache
     # after the native flow has recorded an intentionally header-only manifest.
-    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-B','-c',cache])
-    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','/tmp/symphonia-native-helper-installer.sh','remove','/config'])
-    return {'app_uninstalled':True,'owned_stage_removed':True,'helper_removed':True,'backup_removed':bool(backup_slug)}
+    if present:
+        lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-B','-c',cache])
+        lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','/tmp/symphonia-native-helper-installer.sh','remove','/config'])
+    installer_hash=digest((REPO/'tools/install_native_oauth_trial_helper.sh').read_bytes())
+    remove_installer="from pathlib import Path;import hashlib,os,stat; p=Path('/tmp/symphonia-native-helper-installer.sh'); assert not p.is_symlink(); exists=p.exists(); s=p.stat() if exists else None; assert not exists or (stat.S_ISREG(s.st_mode) and s.st_uid==os.getuid() and s.st_nlink==1 and s.st_size<=262144 and hashlib.sha256(p.read_bytes()).hexdigest()=='"+installer_hash+"'); p.unlink() if exists else None"
+    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',remove_installer])
+    return {'owned_app_cleanup_complete':True,'owned_stage_cleanup_complete':True,
+            'owned_helper_cleanup_complete':True,'known_backup_cleanup_complete':True,'owned_installer_cleanup_complete':True}
 
 
 def run_package_campaign(output: Path):
@@ -779,17 +854,44 @@ def run_package_campaign(output: Path):
     (output/'core.log').write_bytes(core_result.stdout+core_result.stderr)
     core=json.loads(core_result.stdout.decode().strip().splitlines()[-1])
     assert core['mode']=='isolated_exact_source_package_core' and all(core['results'].values())
-    artifacts=stage_supervisor(output/'artifacts')
-    lab_ha('apps','install',SLUG)
-    channel=supervisor_channel()
-    backup=supervisor_backup()
-    result={'format':'symphonia-native-package-campaign-v1','artifacts':artifacts,
-        'results':{**core['results'],**channel['results'],**backup['results']},
-        'core':core,'channel':channel,'backup':backup,
+    backup_slug=None
+    acquired={'stage':False,'app':False,'helper':False,'backup_attempted':False}
+    def acquire(name):
+        acquired[name]=True
+    def acquired_backup(slug):
+        nonlocal backup_slug
+        backup_slug=slug
+    result={'format':'symphonia-native-package-campaign-v1','artifacts':{},
+        'results':{},'core':core,
         'owner_ha_used':False,'live_spotify_used':False}
-    (output/'receipt.json').write_text(json.dumps(result,indent=2)+'\n')
-    result['cleanup']=retire_supervisor_artifacts(backup['backup_slug'])
-    (output/'receipt.json').write_text(json.dumps(result,indent=2)+'\n')
+    failure=None
+    try:
+        result['artifacts']=stage_supervisor(output/'artifacts',on_acquired=lambda:acquire('stage'))
+        acquire('app')
+        lab_ha('apps','install',SLUG)
+        channel=supervisor_channel(on_helper_acquired=lambda:acquire('helper'))
+        acquire('backup_attempted')
+        backup=supervisor_backup(on_created=acquired_backup)
+        result.update(results={**core['results'],**channel['results'],**backup['results']},channel=channel,backup=backup)
+    except BaseException as error:
+        failure=error
+        result['failure_type']=type(error).__name__
+        if acquired['backup_attempted'] and backup_slug is None:
+            result['backup_acquisition_unconfirmed']=True
+        raise
+    finally:
+        try:
+            result['cleanup']=(retire_supervisor_artifacts(backup_slug,remove_app=acquired['app'],remove_helper=acquired['helper'])
+                               if acquired['stage'] else {'no_supervisor_artifacts_acquired':True})
+        except BaseException as cleanup_error:
+            result['cleanup_error_type']=type(cleanup_error).__name__
+            if failure is not None:
+                failure.add_note('Owned lab cleanup was not confirmed; preserve unknown or modified artifacts.')
+            else:
+                raise
+        finally:
+            result['completed']=failure is None and 'cleanup' in result
+            (output/'receipt.json').write_text(json.dumps(result,indent=2)+'\n')
     return result
 
 

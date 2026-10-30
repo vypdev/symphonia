@@ -36,6 +36,11 @@ explicitly approved Core restart. Reload Terminal Ingress after Core returns and
 check the live prompt before sending another command; an old iframe may remain
 at `Reconnecting`. Do not start the App until Core returns.
 
+An interrupted installer exits nonzero. Source may already have been published,
+or removal may be partial; that exit does not prove rollback. Preserve the
+receipt and inspect the owned state before another command or Core restart.
+Unknown/modified files require explicit reconciliation, never forced deletion.
+
 ## Run one original twenty-minute trial
 
 1. Manually start **Symphonia Native OAuth Trial**. Its original deadline is

@@ -488,7 +488,7 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 
 The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
 
-Installer cache receipts require a valid ownership header and unique allowlisted paths before any removal. Package case native-trial-package-C07 verifies duplicate and empty receipts preserve all source/cache bytes.
+Installer cache receipts require an ownership header and unique allowlisted paths. Signals stop further mutation with nonzero exit. Campaign failures attempt cleanup only for acquired, hash-owned artifacts; unknown/modified state is preserved. Case native-trial-package-C07 covers receipts, signals and acquisition failures.
 
 Enrollment commits after certificate preparation. Signing/commit failure rolls back pair/bootstrap without extending either deadline; native-trial-adapter-C03 verifies restart/retry. Lost delivery after commit still requires retirement.
 

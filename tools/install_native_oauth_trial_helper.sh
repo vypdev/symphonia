@@ -39,7 +39,10 @@ cleanup_stage() {
         rmdir "$trial_stage" 2>/dev/null || true
     fi
 }
-trap cleanup_stage EXIT HUP INT TERM
+trap cleanup_stage EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 if test "$trial_mode" = install; then
     test ! -e "$trial_target" && test ! -L "$trial_target" || refuse
     if test ! -d "$trial_parent"; then mkdir "$trial_parent"; chmod 755 "$trial_parent"; fi
