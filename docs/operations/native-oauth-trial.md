@@ -17,8 +17,11 @@ records the selected trust and source-delivery model.
 4. Use only a dedicated Spotify developer app and public Client ID. Register
    exactly `https://my.home-assistant.io/redirect/oauth`. No Client Secret or
    existing Spotify integration credential is used.
-5. Add/install only the reviewed trial App source. Keep boot, watchdog and
-   automatic updates off. Building/installing the App does not start its timer.
+5. Add/install only the reviewed trial App source, using its separate reviewed
+   store branch when the existing Terminal does not mount `/addons`. Record the
+   resulting repository-prefixed App slug; preserve existing registrations. Keep
+   boot, watchdog and automatic updates off. Building/installing the App does not
+   start its timer.
 6. Upload the reviewed self-contained helper installer through existing File
    editor into an explicitly owned staging folder. In the existing Terminal,
    verify its SHA-256 against the reviewed receipt before running it. No new
@@ -29,7 +32,9 @@ requires its `.HA_VERSION` marker and rejects symlinked/existing/unowned targets
 With the exact reviewed installer filename, run `sh <installer> install
 /homeassistant`. It verifies every payload hash before publishing only the new
 custom-component namespace. Perform HA's normal configuration check, then the
-explicitly approved Core restart. Do not start the App until Core returns.
+explicitly approved Core restart. Reload Terminal Ingress after Core returns and
+check the live prompt before sending another command; an old iframe may remain
+at `Reconnecting`. Do not start the App until Core returns.
 
 ## Run one original twenty-minute trial
 
@@ -43,7 +48,11 @@ explicitly approved Core restart. Do not start the App until Core returns.
 3. Open the entry's native **Reconfigure** and select **Connect Spotify**. Review
    official public-client maturity, exactly `user-read-private`, custody and
    deadline. Confirm, then complete Spotify consent through Core and My in the
-   dedicated Chrome group. Never copy the callback URL, code or state.
+   dedicated Chrome group. HA may open the provider tab automatically; continue
+   that tab instead of opening the external link again. Close an accidental
+   duplicate without delivering its callback. Never copy the callback URL, code
+   or state. Existing dedicated consent may return directly through My; record
+   that distinction instead of claiming a new Spotify consent screen appeared.
 4. Return to the native form. Callback receipt has only staged the return; it
    has not exchanged. Confirm anew as the initiating active administrator.
    The App exchanges once, verifies stable `account_id`, encrypts and commits.

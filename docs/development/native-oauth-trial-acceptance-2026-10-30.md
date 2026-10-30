@@ -1,9 +1,10 @@
 # Native OAuth trial: validation on 2026-10-30
 
-The isolated implementation has passed its 54 source/package cases. It remains
-under review. Chrome laboratory pairing and retirement have passed;
-owner-instance/live Spotify acceptance is **pending**. No new trial package or Core restart has been applied to the
-owner's Home Assistant during this implementation campaign.
+The isolated implementation has passed its 54 source/package cases and the
+owner's real native Spotify OAuth, App restart, confirmed refresh/account match
+and local retirement in Chrome. Dedicated Spotify access removal was separately
+observed. The implementation remains under maintainer review; this bounded
+trial does not approve the production companion.
 
 The [SDD](../../specs/native-oauth-validation-trial.md) was marked Ready and its
 review committed before implementation began. The catalog remains `proposed`.
@@ -165,11 +166,10 @@ review above observes actual authenticated Ingress, without proving continuity
 with the initiating browser login session. The real Core My component runs, but the external My relay/browser is
 not visited by the offline campaign. All provider grants/accounts are synthetic.
 
-Still required: final clean artifact review and remote checks; applicable exact-package installation/Core
-restart approval; live dedicated Spotify consent through My, fresh native
-confirmation, App restart, confirmed refresh/account match; owned retirement and
-separately observed Spotify revocation. No real account, token, verifier, code,
-private key, hostname or session route is included in this report.
+Clean artifact review, exact-package installation/Core restart approval and the
+live flow have now occurred; see the owner campaign below. Final evidence review
+and protected PR checks remain separate gates. No real account, token, verifier,
+code, private key, hostname or session route is included in this report.
 
 ## Owner preflight rechecked before installation
 
@@ -193,9 +193,9 @@ local App to be available before installation.
 
 Verify adopts the scheduling policy from PR #37 so this candidate's push does not
 launch duplicate verification; all existing jobs and permissions are retained.
-No new trial package, helper execution, Core restart or Spotify consent has yet
-been applied on the owner's installation. Installation still requires exact-package
-review and applicable browser action-time confirmation.
+At this preflight stage, no new package, helper execution, Core restart or Spotify
+consent had been applied. The subsequent separately approved owner campaign is
+recorded below; preflight alone was not installation or live acceptance.
 
 A second code-review correction preserves `retired` status after explicit local
 retirement and process restart, while ordinary expiry remains `expired` and
@@ -209,3 +209,61 @@ The final App manifest SHA-256 is
 Combined coverage was recollected on this source: all twelve changed modules
 remain above85%, aggregate92%, pure policy branches100%. Final paired-state
 EN/ES screenshots are retained locally, separate from CI source review.
+
+## Real owner Chrome campaign
+
+The owner explicitly approved App/helper `0.1.0b1` at source
+`e21afcdd12905ec8ad69df509cbb82917a0c47f1`, both Core restarts, the dedicated My
+redirect, only `user-read-private`, one bounded trial and its removal. The remote
+branch still resolved to that commit immediately before installation. The
+installer hash above was checked again on the owner host before installation
+and removal. The clean helper ZIP hash is
+`b11d94d7a00ce7315a9c75e14e3abff1c9400d2b67b1005e78c81156d0d3bc2c`.
+The App was built by the owner's Supervisor from the reviewed store branch;
+its Dockerfile verifies the twelve-file source manifest and pinned dependencies.
+The laboratory image ID above is not asserted to be the owner's image ID.
+
+| Stage | Directly observed result |
+|---|---|
+| Owner matrix | Core2026.10.4, Supervisor2026.10.5, HAOS18.3, Frontend20260930.5, Green/aarch64; current owner Chrome |
+| Backup preflight | Future local backups report encryption enabled; Cloud accepts encrypted backups only; no archive/key was opened |
+| Installation | Distinct native App installed stopped; boot, watchdog and automatic updates off; helper installed after hash check; normal Core check passed and approved Core restart completed |
+| Delivery | Existing Terminal has no `/addons` mount; a separate reviewed store branch was registered without expanding Terminal permissions |
+| Pair | Native Spanish administrator form accepted the actual prefixed slug, dedicated public Client ID, private one-use block and encrypted-backup acknowledgement; HA reported configuration created |
+| Provider/My | Exact My URI saved in the dedicated developer app; Spotify returned using existing dedicated read consent; My selected the owner's already authenticated HTTPS instance |
+| Stage | Native HA displayed callback received, no exchange yet, and a new unchecked same-admin confirmation |
+| Exchange | New native confirmation completed; HA reported account verification and encrypted App grant |
+| Restart/refresh | Only the trial App was restarted; native Reconfigure still offered refresh with the same original deadline; one fresh confirmation reported OAuth, App restart and account match after refresh verified |
+| Local retirement | Native confirmation reported channel/grant retired and Core keys cleaned; the integration then showed no entries |
+| App removal | App stopped and uninstalled, including its private data; installed Apps list retained the separate older trial and normal services |
+| Helper removal | Same exact installer verified source/cache hashes and reported owned source removed; subsequent normal Core configuration check passed |
+| Spotify removal | Dedicated test grant disappeared from Spotify Account Apps, connected count changed12 to11, and the separate normal Home Assistant grant remained present |
+
+The App's persisted original deadline was `2026-10-30T17:12:33Z`; pairing,
+callback, exchange, restart, refresh, local retirement and App removal completed
+before it. Restart did not extend it. This campaign reused existing provider
+consent and does not claim a fresh Spotify permission checkbox appeared. It
+proves the real authorized round trip and explicit native App mutations, not
+continuity with an original browser login. No provider write/playback was run.
+
+HA opened its provider tab automatically. The operator also opened the external
+link once, creating a second authorization tab; it was closed before callback
+delivery. Only one return was delivered and one exchange/refresh confirmed.
+The runbook now directs the operator to continue the automatically opened tab.
+After Core restart an old Terminal iframe stayed at `Reconnecting`; reloading
+Ingress restored the actual shell prompt. No Terminal restart, new mount,
+credential, protection change or extra host privilege was used.
+
+Local screenshots capture the native verified and retired results without grant
+material. They remain private review artifacts, outside the source diff. The
+bounded trial's operator result is separate from independent visual review,
+broader accessibility/browser acceptance and production readiness.
+
+After the post-removal configuration check passed, the empty owned Core key
+directory and the separate trial store registration were removed. The approved
+second Core restart completed successfully and authenticated Terminal Ingress
+returned. Final checks observed the helper and private-key namespace absent.
+Only the exact hash-matching installer and its ownership marker were deleted;
+the staging directory was then removed empty. Normal HA services and the older
+stopped research App were preserved. The dedicated developer app retains the
+registered My URI for future explicit tests; its Spotify account grant is revoked.

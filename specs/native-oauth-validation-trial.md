@@ -3,14 +3,14 @@
 - Status: Ready for implementation
 - Date: 2026-10-30
 - Catalog capability ID: `native-oauth-validation-trial` (proposed)
-- Last verified: 2026-10-30, source/package campaign and Chrome lab pairing/retirement; final presentation reviewed with synthetic states; owner/live acceptance pending.
+- Last verified: 2026-10-30, 54 source/package cases and owner Chrome native OAuth, App restart, refresh/account match and retirement; see dated report for cleanup and review status.
 - Owners: Symphonia maintainers
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None. The dated engineering review is recorded in `docs/development/native-oauth-trial-preparation.md`; package and live acceptance remain subsequent gates.
+- Open decisions blocking readiness: None. The original review is in `docs/development/native-oauth-trial-preparation.md`; dated package/live results are linked below.
 
-The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. The bounded implementation is under review. The catalog remains proposed pending owner/live acceptance; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
+The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. Live owner OAuth passed; the bounded implementation remains under maintainer review. The catalog remains proposed; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
 
 ## 1. Executive summary
 
@@ -36,14 +36,14 @@ The owner needs an installable, bounded validation of native Spotify OAuth in th
 4. Existing OAuth companion research and a failed public-callback trial do not prove installed native OAuth acceptance.
 5. The owner reports HA Core 2026.10.4, Supervisor 2026.10.5, HAOS 18.3, Frontend 20260930.5, Green/aarch64. This is the sole supported trial matrix.
 
-The engineering readiness review was committed before implementation. The current bounded trial passes46 ordinary and8 freshly executed package cases; live owner acceptance remains pending. Broad production readiness is unchanged.
+The readiness review preceded implementation. The trial passes46 ordinary and8 package cases; owner native OAuth, restart, refresh/account match and local retirement also passed. Broad production readiness is unchanged.
 
 ### 2.3 Evidence
 
 - Code/workflow/documentation references: bounded research foundations include `tools/ha_oauth_companion_lab/core_probe.py`, `native_reset_probe.py`, `enrollment_probe.py`, and `key_custody_probe.py`; existing test foundations include `tests/test_ha_oauth_companion_lab.py`, `tests/test_ha_oauth_key_custody_fixture.py`, and `tests/test_ha_oauth_recovery_fixture.py`.
 - Incidents or concrete examples: public-callback validation did not establish native installed-provider success; default Core grant persistence does not meet App-only ownership.
 - External primary sources: exact official URLs and versioned source snapshots are recorded in section20 and the [hook report](../docs/development/native-oauth-trial-hooks-2026-10-30.md).
-- Current native hook feasibility is supported by22 real-Core main-flow/callback observations and the separate36-observation existing research rerun. The My-enabled flag, in-memory App port and four Ingress checks are named fixtures. Those research observations count as zero final-package cases. The current implementation passes all54 source/package cases, actual TLS, App-process restart and Supervisor backup/locked restore; [the report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md) names fixtures and limits. Manual UI and owner My/Spotify acceptance remain pending.
+- Native hook research comprises22 real-Core observations and a separate36-observation rerun. My enablement, the in-memory App port and four Ingress checks are fixtures; research counts as zero final-package cases. All54 source/package cases, actual TLS, restart and Supervisor backup/locked restore pass. The [report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md) separately records owner Chrome My/Spotify success, reused dedicated consent, fresh native confirmations, account match, retirement and external revocation; it does not establish production readiness.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 

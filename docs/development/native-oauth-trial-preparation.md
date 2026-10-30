@@ -68,4 +68,11 @@ Every changed Python module exceeds85% combined coverage; pure policy branches
 reach100%. This updates the preparation evidence, not owner/live acceptance.
 Chrome laboratory native pairing, unchecked consent review and confirmed retirement
 now pass, with English/Spanish narrow-form evidence in the report. Final exact-package
-status review, approval and owner/live installation remain gates.
+status review, approval and owner/live installation were the next gates.
+
+The subsequent owner-approved campaign has now passed native My/Spotify OAuth,
+fresh native confirmation, App restart, confirmed refresh/account match and
+owned removal. Dedicated Spotify access removal was independently observed.
+The dated report keeps these real results separate from the preparation and
+synthetic laboratory evidence; maintainer review and production readiness remain
+separate gates.

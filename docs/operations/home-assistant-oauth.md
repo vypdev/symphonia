@@ -8,7 +8,9 @@ for trust/recovery details.
 
 The separate [native validation trial](../../specs/native-oauth-validation-trial.md)
 has its bounded contract and [current-Core hook evidence](../development/native-oauth-trial-hooks-2026-10-30.md).
-It is proposed, with package and owner-browser acceptance still pending. Its
+It remains under maintainer review. Its package tests and bounded owner-browser
+OAuth, restart, refresh/account match and retirement have passed; see the
+[dated report](../development/native-oauth-trial-acceptance-2026-10-30.md). Its
 [preparation gates](../development/native-oauth-trial-preparation.md) preserve
 exact-package review before any owner installation; this production preview
 does not become installable through that separate design review.
@@ -140,4 +142,5 @@ tokens. Stable healthy connections do not generate periodic notifications.
 
 The bounded native trial now has its own [install/retire runbook](native-oauth-trial.md)
 and [dated validation report](../development/native-oauth-trial-acceptance-2026-10-30.md).
-Its package tests do not establish live owner OAuth acceptance.
+The report separates synthetic package evidence from the real owner trial;
+neither establishes production companion readiness.
