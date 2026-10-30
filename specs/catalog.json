@@ -312,7 +312,8 @@
       "status": "proposed",
       "lastVerified": "2026-10-30",
       "specs": [
-        "specs/home-assistant-oauth-companion.md"
+        "specs/home-assistant-oauth-companion.md",
+        "specs/home-assistant-oauth-pairing-lifecycle.md"
       ],
       "workflows": [
         ".github/workflows/verify.yml"
