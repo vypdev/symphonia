@@ -574,6 +574,39 @@
         "docs/open-questions.md",
         "docs/providers/home-assistant-ecosystem-review.md"
       ]
+    },
+    {
+      "id": "native-oauth-validation-trial",
+      "title": "Native OAuth validation trial",
+      "status": "proposed",
+      "scope": "Proposed twenty-minute native Spotify OAuth validation App and helper. Existing repository code and tests are research foundations, not an implemented or accepted installable trial.",
+      "owner": "Symphonia maintainers",
+      "lastVerified": "2026-10-30",
+      "specs": [
+        "specs/native-oauth-validation-trial.md"
+      ],
+      "workflows": [
+        ".github/workflows/verify.yml"
+      ],
+      "entrypoints": [
+        "tools/ha_ingress_probe.py"
+      ],
+      "code": [
+        "tools/ha_ingress_probe.py",
+        "tools/ha_app_lab.py",
+        "tools/oauth_callback_spike.py"
+      ],
+      "tests": [
+        "tests/test_ha_ingress_probe.py",
+        "tests/test_ha_app_lab.py",
+        "tests/test_oauth_callback_spike.py"
+      ],
+      "documentation": [
+        "docs/development/ha-app-lab.md",
+        "docs/development/oauth-callback-spike.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md"
+      ]
     }
   ]
 }
