@@ -51,7 +51,7 @@ trial_expected=@MANIFEST_SHA@
 trial_namespace=symphonia_native_oauth_trial
 trial_stage=
 refuse() { printf '%s\n' 'Refused: preserve existing, modified or unowned trial files.' >&2; exit 1; }
-case "$trial_mode" in install|remove) ;; *) printf '%s\n' 'Usage: sh installer.sh install|remove [Core-config-root]'; exit 2;; esac
+case "$trial_mode" in install|verify|remove) ;; *) printf '%s\n' 'Usage: sh installer.sh install|verify|remove [Core-config-root]'; exit 2;; esac
 case "$trial_root" in /*) ;; *) refuse;; esac
 case "$trial_root" in *[!A-Za-z0-9_./@-]*|*/../*|*/./*|*/..|*//*) refuse;; esac
 for trial_tool in base64 sha256sum stat id mkdir mktemp mv chmod rm rmdir tail; do command -v "$trial_tool" >/dev/null 2>&1 || refuse; done
@@ -149,6 +149,10 @@ elif test -e "$trial_target/__pycache__" || test -L "$trial_target/__pycache__";
     refuse
 fi
 # Every source and additional path was checked before any removal.
+if test "$trial_mode" = verify; then
+    printf '%s\n' 'Verified exact trial source and recorded caches. No files changed.'
+    exit 0
+fi
 @REMOVE_SOURCE@
 if test -f "$trial_target/.cache-owned.sha256"; then
     trial_first=1

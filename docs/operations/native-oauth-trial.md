@@ -41,6 +41,11 @@ or removal may be partial; that exit does not prove rollback. Preserve the
 receipt and inspect the owned state before another command or Core restart.
 Unknown/modified files require explicit reconciliation, never forced deletion.
 
+Use `sh <installer> verify /homeassistant` for a read-only check of every payload,
+allowed path, ownership/link invariant and recorded runtime cache. The exact
+reviewed installer must match the installed source; a receipt hash alone does
+not verify its payload. A refusal preserves the files and requires reconciliation.
+
 ## Run one original twenty-minute trial
 
 1. Manually start **Symphonia Native OAuth Trial**. Its original deadline is

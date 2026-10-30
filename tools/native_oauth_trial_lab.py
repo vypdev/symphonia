@@ -144,13 +144,21 @@ async def core_campaign():
         installed = install("install")
         assert installed.returncode == 0, ("install", installed.stderr.decode()[-2000:])
         helper = ha_root / "custom_components" / DOMAIN
+        def helper_bytes():
+            return {p.relative_to(helper).as_posix():p.read_bytes() for p in helper.rglob('*') if p.is_file()}
+        before=helper_bytes()
+        assert install('verify').returncode==0 and helper_bytes()==before
         unrelated = ha_root / "custom_components/unrelated"; unrelated.mkdir(); (unrelated / "sentinel").write_text("preserve")
         assert install("install").returncode != 0
         original = (helper / "bridge.py").read_bytes()
         (helper / "bridge.py").write_bytes(original + b"\n# modified\n")
+        before=helper_bytes()
+        assert install('verify').returncode!=0 and helper_bytes()==before
         assert install("remove").returncode != 0 and (helper / "config_flow.py").exists()
         (helper / "bridge.py").write_bytes(original)
         (helper / "unexpected").write_text("unowned")
+        before=helper_bytes()
+        assert install('verify').returncode!=0 and helper_bytes()==before
         assert install("remove").returncode != 0 and (helper / "config_flow.py").exists()
         (helper / "unexpected").unlink()
         results["installer_conflicts_preserve_source_and_unrelated"] = True
@@ -465,13 +473,11 @@ def supervisor_channel(on_helper_acquired=lambda: None):
     if existing.returncode == 1 and not existing.stdout and not existing.stderr:
         on_helper_acquired()
         lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','/tmp/symphonia-native-helper-installer.sh','install','/config'])
-    elif existing.returncode == 0:
-        from tools.stage_native_oauth_trial import source_manifest,HELPER_FILES,digest
-        expected=digest(source_manifest({name:(REPO/'custom_components'/DOMAIN/name).read_bytes() for name in HELPER_FILES}))
-        verify="from pathlib import Path; import hashlib; root=Path('/config/custom_components/"+DOMAIN+"'); assert root.is_dir() and not root.is_symlink(); p=root/'.source-owned.sha256'; assert not p.is_symlink(); assert hashlib.sha256(p.read_bytes()).hexdigest()=='"+expected+"'"
-        lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',verify])
-    else:
+    elif existing.returncode != 0:
         raise RuntimeError('lab_helper_absence_unconfirmed')
+    # Reuse the installer's full read-only preflight, including every payload
+    # byte, allowed entry, owner/link check and recorded runtime cache.
+    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','/tmp/symphonia-native-helper-installer.sh','verify','/config'])
     info=lab_ha('apps','info',SLUG)
     assert info['version']=='0.1.0b1' and info['boot']=='manual'
     if info.get('state')!='started':
@@ -541,7 +547,7 @@ async def main():
  with tempfile.TemporaryDirectory(prefix='symphonia-native-package-core-key32-') as directory:
   await probe(CoreKeys(Path(directory)/'peer'))
 asyncio.run(main())'''
-    value=json.loads(lab_call(['docker','exec','-i',CONTAINER,'docker','exec','-i','homeassistant','python3','-c',core_script],data=json.dumps(bundle).encode()).stdout)
+    value=json.loads(lab_call(['docker','exec','-i',CONTAINER,'docker','exec','-i','homeassistant','python3','-B','-c',core_script],data=json.dumps(bundle).encode()).stdout)
     return {'matrix':matrix,'results':{'package_C03_actual_supervisor_alias_csr_mtls':all(value.values())},'channel':value,'service_uid':identity['uid'],'host_ports':False,'boundary':'Ingress identity headers are synthetic; owner HA unused'}
 
 
@@ -691,7 +697,7 @@ async def helper_failure_contracts(hass, entry):
     f=flow();f.url='https://accounts.spotify.com/authorize'
     assert (await f.async_step_auth())['type']=='external'
     # Retirement never claims success on an unknown App outcome.
-    for outcome in ({'phase':'active'},bridge.BridgeError()):
+    for outcome in ({},{'phase':None},{'phase':[]},{'phase':{}},{'phase':True},{'phase':'active'},bridge.BridgeError()):
         f=flow();call=AsyncMock(side_effect=outcome) if isinstance(outcome,Exception) else AsyncMock(return_value=outcome)
         with patch.object(flows,'native_action',AsyncMock()),patch.object(f,'bridge',return_value=SimpleNamespace(call=call)):
             assert (await f.async_step_retire({'confirm':True}))['reason']=='retirement_unconfirmed'
@@ -702,6 +708,26 @@ async def helper_failure_contracts(hass, entry):
     request={KEY_HASS_USER:SimpleNamespace(id=old['actor'],is_active=True,is_admin=True)}
     class Removal(dict):
         method='DELETE';path='/api/config/config_entries/entry/'+entry.entry_id
+    # A transport-successful but unconfirmed revoke must preserve actual keys.
+    # App replies and request identity here are named fault fixtures, not TLS proof.
+    for outcome in ({},{'phase':None},{'phase':[]},{'phase':{}},{'phase':'active'},bridge.BridgeError(),{'phase':'expired'},{'phase':'retired'}):
+        with tempfile.TemporaryDirectory(prefix='native-unconfirmed-removal-') as temp:
+            root=Path(temp)/old['installation'];root.mkdir(mode=0o700)
+            for name in ('core.key','ca.crt','client.crt'):
+                target=root/name;target.write_bytes((keys.root/name).read_bytes());target.chmod(0o600)
+            owned=flows.CoreKeys(root);hashes=owned.hashes()
+            dummy=SimpleNamespace(entry_id=entry.entry_id,data={k:v for k,v in old.items() if k!='binding'})
+            import time
+            dummy.data.update(deadline=int(time.time())+120,material_hashes=hashes)
+            fake_hass=SimpleNamespace(config=SimpleNamespace(path=lambda *args:str(root)),async_add_executor_job=hass.async_add_executor_job)
+            call=AsyncMock(side_effect=outcome) if isinstance(outcome,Exception) else AsyncMock(return_value=outcome)
+            with patch.object(http,'current_request',SimpleNamespace(get=lambda:Removal(request))),patch.object(bridge,'Bridge',return_value=SimpleNamespace(call=call)):
+                await component.async_remove_entry(fake_hass,dummy)
+            assert call.await_count==1
+            if isinstance(outcome,dict) and outcome.get('phase') in ('expired','retired'):
+                assert not root.exists()
+            else:
+                assert owned.hashes()==hashes
     with tempfile.TemporaryDirectory(prefix='native-retirement-') as temp:
         root=Path(temp)/old['installation'];root.mkdir(mode=0o700)
         for name in ('core.key','ca.crt','client.crt'):

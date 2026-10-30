@@ -8,7 +8,7 @@
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None. The original review is in `docs/development/native-oauth-trial-preparation.md`; dated package/live results are linked below.
+- Open decisions blocking readiness: None; readiness and acceptance evidence are linked below.
 
 The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. Live owner OAuth passed; the bounded implementation remains under maintainer review. The catalog remains proposed; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
 
@@ -488,7 +488,7 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 
 The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
 
-Installer cache receipts require an ownership header and unique allowlisted paths. Signals stop further mutation with nonzero exit. Campaign failures attempt cleanup only for acquired, hash-owned artifacts; unknown/modified state is preserved. Case native-trial-package-C07 covers receipts, signals and acquisition failures.
+Installer cache receipts require an ownership header and unique allowlisted paths. Read-only verify checks all source/cache bytes before import. Signals stop further mutation with nonzero exit. Campaign failures attempt cleanup only for acquired, hash-owned artifacts; unknown/modified state is preserved. Case native-trial-package-C07 covers receipts, signals and acquisition failures.
 
 Enrollment commits after certificate preparation. Signing/commit failure rolls back pair/bootstrap without extending either deadline; native-trial-adapter-C03 verifies restart/retry. Lost delivery after commit still requires retirement.
 

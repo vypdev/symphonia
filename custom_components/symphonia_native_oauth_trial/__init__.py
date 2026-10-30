@@ -96,7 +96,9 @@ async def async_remove_entry(hass, entry):
         keys = CoreKeys(Path(hass.config.path(".storage", DOMAIN, value["installation"])))
         if value["deadline"] > time.time():
             bridge = Bridge(value["app_slug"], value["pin"], value["deadline"], keys)
-            await bridge.call({"version": 1, "op": "pair.revoke", "pair_id": value["pair_id"]})
+            result = await bridge.call({"version": 1, "op": "pair.revoke", "pair_id": value["pair_id"]})
+            if result.get("phase") not in ("expired", "retired"):
+                raise BridgeError("rejected")
         await hass.async_add_executor_job(keys.remove_owned, value["material_hashes"])
     except (BridgeError, KeyUnavailable, OSError):
         logging.getLogger(__name__).warning("trial_retirement_pending_stop_and_remove_trial_app")

@@ -4,11 +4,11 @@ set -eu
 umask 077
 trial_mode=${1:-}
 trial_root=${2:-/homeassistant}
-trial_expected=070f9aa48d334c2eb0f33c0028a25c46859bada8f0e86a76b843244884a5483d
+trial_expected=ae4834fdd01f90863229786855981bf6a0ea08fc488194a3f8280ac295053707
 trial_namespace=symphonia_native_oauth_trial
 trial_stage=
 refuse() { printf '%s\n' 'Refused: preserve existing, modified or unowned trial files.' >&2; exit 1; }
-case "$trial_mode" in install|remove) ;; *) printf '%s\n' 'Usage: sh installer.sh install|remove [Core-config-root]'; exit 2;; esac
+case "$trial_mode" in install|verify|remove) ;; *) printf '%s\n' 'Usage: sh installer.sh install|verify|remove [Core-config-root]'; exit 2;; esac
 case "$trial_root" in /*) ;; *) refuse;; esac
 case "$trial_root" in *[!A-Za-z0-9_./@-]*|*/../*|*/./*|*/..|*//*) refuse;; esac
 for trial_tool in base64 sha256sum stat id mkdir mktemp mv chmod rm rmdir tail; do command -v "$trial_tool" >/dev/null 2>&1 || refuse; done
@@ -123,13 +123,15 @@ YXRlX3JlZmVyZW5jZShlbnRyeS5kYXRhKQogICAgICAgIGtleXMgPSBDb3JlS2V5cyhQYXRoKGhh
 c3MuY29uZmlnLnBhdGgoIi5zdG9yYWdlIiwgRE9NQUlOLCB2YWx1ZVsiaW5zdGFsbGF0aW9uIl0p
 KSkKICAgICAgICBpZiB2YWx1ZVsiZGVhZGxpbmUiXSA+IHRpbWUudGltZSgpOgogICAgICAgICAg
 ICBicmlkZ2UgPSBCcmlkZ2UodmFsdWVbImFwcF9zbHVnIl0sIHZhbHVlWyJwaW4iXSwgdmFsdWVb
-ImRlYWRsaW5lIl0sIGtleXMpCiAgICAgICAgICAgIGF3YWl0IGJyaWRnZS5jYWxsKHsidmVyc2lv
-biI6IDEsICJvcCI6ICJwYWlyLnJldm9rZSIsICJwYWlyX2lkIjogdmFsdWVbInBhaXJfaWQiXX0p
-CiAgICAgICAgYXdhaXQgaGFzcy5hc3luY19hZGRfZXhlY3V0b3Jfam9iKGtleXMucmVtb3ZlX293
-bmVkLCB2YWx1ZVsibWF0ZXJpYWxfaGFzaGVzIl0pCiAgICBleGNlcHQgKEJyaWRnZUVycm9yLCBL
-ZXlVbmF2YWlsYWJsZSwgT1NFcnJvcik6CiAgICAgICAgbG9nZ2luZy5nZXRMb2dnZXIoX19uYW1l
-X18pLndhcm5pbmcoInRyaWFsX3JldGlyZW1lbnRfcGVuZGluZ19zdG9wX2FuZF9yZW1vdmVfdHJp
-YWxfYXBwIikK
+ImRlYWRsaW5lIl0sIGtleXMpCiAgICAgICAgICAgIHJlc3VsdCA9IGF3YWl0IGJyaWRnZS5jYWxs
+KHsidmVyc2lvbiI6IDEsICJvcCI6ICJwYWlyLnJldm9rZSIsICJwYWlyX2lkIjogdmFsdWVbInBh
+aXJfaWQiXX0pCiAgICAgICAgICAgIGlmIHJlc3VsdC5nZXQoInBoYXNlIikgbm90IGluICgiZXhw
+aXJlZCIsICJyZXRpcmVkIik6CiAgICAgICAgICAgICAgICByYWlzZSBCcmlkZ2VFcnJvcigicmVq
+ZWN0ZWQiKQogICAgICAgIGF3YWl0IGhhc3MuYXN5bmNfYWRkX2V4ZWN1dG9yX2pvYihrZXlzLnJl
+bW92ZV9vd25lZCwgdmFsdWVbIm1hdGVyaWFsX2hhc2hlcyJdKQogICAgZXhjZXB0IChCcmlkZ2VF
+cnJvciwgS2V5VW5hdmFpbGFibGUsIE9TRXJyb3IpOgogICAgICAgIGxvZ2dpbmcuZ2V0TG9nZ2Vy
+KF9fbmFtZV9fKS53YXJuaW5nKCJ0cmlhbF9yZXRpcmVtZW50X3BlbmRpbmdfc3RvcF9hbmRfcmVt
+b3ZlX3RyaWFsX2FwcCIpCg==
 SYMPHONIA_FILE_0
     base64 -d > "$trial_stage/manifest.json" <<'SYMPHONIA_FILE_1'
 ewogICJkb21haW4iOiAic3ltcGhvbmlhX25hdGl2ZV9vYXV0aF90cmlhbCIsCiAgIm5hbWUiOiAi
@@ -376,8 +378,8 @@ cjoKICAgICAgICAgICAgcmV0dXJuIHNlbGYuY29uZmlybWF0aW9uKCJyZXRpcmUiLCBlcnJvcj1U
 cnVlKQogICAgICAgIHRyeToKICAgICAgICAgICAgZGF0YSA9IHZhbGlkYXRlX3JlZmVyZW5jZShz
 ZWxmLmVudHJ5LmRhdGEpCiAgICAgICAgICAgIHJlc3VsdCA9IGF3YWl0IHNlbGYuYnJpZGdlKCku
 Y2FsbCh7InZlcnNpb24iOiAxLCAib3AiOiAicGFpci5yZXZva2UiLCAicGFpcl9pZCI6IGRhdGFb
-InBhaXJfaWQiXX0pCiAgICAgICAgICAgIGlmIHJlc3VsdC5nZXQoInBoYXNlIikgbm90IGluIHsi
-ZXhwaXJlZCIsICJyZXRpcmVkIn06CiAgICAgICAgICAgICAgICByYWlzZSBCcmlkZ2VFcnJvcigi
+InBhaXJfaWQiXX0pCiAgICAgICAgICAgIGlmIHJlc3VsdC5nZXQoInBoYXNlIikgbm90IGluICgi
+ZXhwaXJlZCIsICJyZXRpcmVkIik6CiAgICAgICAgICAgICAgICByYWlzZSBCcmlkZ2VFcnJvcigi
 cmVqZWN0ZWQiKQogICAgICAgIGV4Y2VwdCAoQnJpZGdlRXJyb3IsIEtleVVuYXZhaWxhYmxlKToK
 ICAgICAgICAgICAgcmV0dXJuIHNlbGYuYXN5bmNfYWJvcnQocmVhc29uPSJyZXRpcmVtZW50X3Vu
 Y29uZmlybWVkIikKICAgICAgICBwZW5kaW5nID0gRmFsc2UKICAgICAgICB0cnk6CiAgICAgICAg
@@ -1089,9 +1091,9 @@ OiAiUmV0aXJhciBwcnVlYmEiCiAgICAgIH0KICAgIH0KICB9Cn0K
 SYMPHONIA_FILE_7
     cat > "$trial_stage/.source-owned.sha256" <<'SYMPHONIA_SOURCE_MANIFEST'
 # SYMPHONIA_NATIVE_OAUTH_TRIAL_SOURCE_V1
-37fa1816c6e915788b898f68aed6e4b46abb8a7be30823251fa2331164a7e21c  __init__.py
+8dd9fc71ab42a388c55287f386d51f3b2fbf785689520676a65c37b6435ae061  __init__.py
 26a09ad0551d65ad8882e83bc26013b41d5f058884881331af5221f22195a3b2  manifest.json
-4bdc28598a45e7924ae7b137ca3950d0d36bb30d241d1f3adc8a0de3d626e342  config_flow.py
+054be59de5ca2839b6e85899063dbcb51cb4564e265303327e7e29b4b4335670  config_flow.py
 2b71fae84209a1027f89891e30d4d7cb64f072182c3a7e41d6126ca19a382b99  bridge.py
 a5a72e5b48ebf9802b176fe39d79953397ae9274d2da513ffd162d3fcb5372db  keys.py
 3786bacdaddea25a525c8e78334c1dd6cd8b9cf82bc22a11efc05cf354908a8c  strings.json
@@ -1175,6 +1177,10 @@ elif test -e "$trial_target/__pycache__" || test -L "$trial_target/__pycache__";
     refuse
 fi
 # Every source and additional path was checked before any removal.
+if test "$trial_mode" = verify; then
+    printf '%s\n' 'Verified exact trial source and recorded caches. No files changed.'
+    exit 0
+fi
 rm "$trial_target/__init__.py"
 rm "$trial_target/manifest.json"
 rm "$trial_target/config_flow.py"

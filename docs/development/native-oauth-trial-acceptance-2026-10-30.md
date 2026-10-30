@@ -128,9 +128,10 @@ not assert new HA login/cookie semantics or real provider outcomes. Epoch UTC de
 remain explicit trial limitations. This is partial manual acceptance, not a
 complete production UX or accessibility assessment.
 
-## Changed-module coverage
+## Changed-module coverage at e21afcd
 
-Coverage combines ordinary tests with actual installed-helper/Core and App
+This table records the owner-installed baseline; subsequent corrections and
+their fresh measurements are recorded below. Coverage combines ordinary tests with actual installed-helper/Core and App
 process runs, using verified source-path mappings. App instrumentation is
 laboratory-only. No changed production module is omitted.
 
@@ -209,7 +210,7 @@ eight-case campaign passed again and removed all owned artifacts.
 The final App manifest SHA-256 is
 `45c63d524923fbc60f77c0dd34ba8c09b68ed2e3bfb7ffd793db8f79e587151b`.
 Combined coverage was recollected on this source: all twelve changed modules
-remain above85%, aggregate92%, pure policy branches100%. Final paired-state
+remain above85%, aggregate92%, pure policy branches 100%. Final paired-state
 EN/ES screenshots are retained locally, separate from CI source review.
 
 ## Real owner Chrome campaign
@@ -287,7 +288,7 @@ enrollment works. This adds no recovery endpoint or replay permission. A lost
 response after successful commit still requires retirement; the native form
 continues to direct owned reconciliation for partial Core material.
 
-The full ordinary suite again passes616 tests with8 explicit skips; the fresh
+The full ordinary suite again passes 616 tests with 8 explicit skips; the fresh
 eight-case package campaign passes in30.781 seconds and removes its App, helper,
 source stage and backup. The corrected App manifest is
 `35524ae01146f727be843d76dce6ed9abf643f0236069037d32607e973e530ae`;
@@ -330,7 +331,7 @@ false-success behavior. Eight mocked acquisition/cleanup failures and two
 absence-error guards supplement the actual Supervisor campaign; those mocked
 ports do not count as real Supervisor failure observations.
 
-The final ordinary suite passes616 tests with8 explicit skips. The fresh full
+The final ordinary suite passes 616 tests with 8 explicit skips. The fresh full
 package campaign passes8/8 in30.817 seconds, reports completed=true and confirms
 cleanup of its App, source stage, helper, known backup and exact temporary
 installer. Its signal result is true. The corrected installer SHA-256 is
@@ -366,10 +367,50 @@ owner. The actual shipping supplement again reports completed=true, owned
 resources removed, UID10001, restart identity/deadline persistence and both
 locked/read-only startup failures. No provider network is enabled.
 
-The ordinary suite passes616 tests with8 explicit skips; the fresh integrated
+The ordinary suite passes 616 tests with 8 explicit skips; the fresh integrated
 campaign passes8/8 in26.744 seconds, including these failure probes and complete
 owned cleanup. App, helper payload and installer bytes are unchanged from the
 preceding correction (`35524ae0` App manifest, `92856d6f` installer). The measured
 production-module coverage therefore still applies to identical source bytes.
 The real owner proof remains specifically `e21afcd`; protected review and a new
 exact-package owner run remain outstanding for the corrected candidate.
+
+## Revocation confirmation and full helper preflight
+
+Unexpired native entry removal now requires the App's revoke result to report
+`retired` or `expired` before deleting Core pairing keys. Missing, pending,
+malformed or transport-unknown replies preserve actual key files and report
+retirement pending. The normal native retirement flow also rejects non-string
+phases safely. Installed-helper/Core fault probes exercise empty, null, array,
+object, active and failed replies plus confirmed retirement/expiry; actual key
+hashes remain unchanged for every unconfirmed outcome. These App replies and
+request actors are named fault fixtures, separate from the real TLS/admin proof.
+
+The installer now exposes read-only `verify`, reusing the complete removal
+preflight before any mutation: every source digest, allowed entry, owner/link
+invariant and recorded runtime cache is checked. The Supervisor probe runs this
+gate before importing either fresh or existing helper code and disables new
+bytecode writes. A receipt digest alone is no longer treated as payload proof.
+Case native-trial-package-C07 confirms that verification changes no bytes and
+refuses modified payload and unexpected files while preserving them.
+
+The DNS deadline fixture waits for its real loopback datagram before advancing
+the scheduler. Its outer safety timeout is now 20 seconds, longer than the
+request's own 10-second deadline, so it cannot cancel the request first under
+ordinary scheduler delay. The transport remains unchanged; the fixture still
+requires `TrialError(uncertain)` and completed resolver cancellation/closure.
+
+The full ordinary suite again passes 616 tests with 8 explicit skips. A fresh
+eight-case campaign passes in 40.336 seconds with completed=true and all owned
+cleanup categories confirmed. Coverage was recollected from current unit,
+installed-helper/Core, child-App and shipping-image execution: all 12 production
+modules exceed 85%, aggregate 92.55%, Core lifecycle 93.33%, pure branches 100%;
+root coverage remains 89%. No earlier helper fragments were merged.
+
+The current installer SHA-256 is
+`b06b9d44bcac5eb569407feb08681b0ed46f5098487a6bf37ccf96596255b099`;
+the helper source-manifest SHA-256 is
+`ae4834fdd01f90863229786855981bf6a0ea08fc488194a3f8280ac295053707`.
+The App manifest/image are unchanged (`35524ae0`, `7e55cdf6`). This corrected
+helper/installer has laboratory evidence only; owner validation remains the
+separate completed `e21afcd` campaign until a fresh exact-package run is approved.

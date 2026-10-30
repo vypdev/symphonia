@@ -239,10 +239,12 @@ class NativeTrialProviderTests(unittest.IsolatedAsyncioTestCase):
                 task = asyncio.create_task(FixedHTTP().request("POST", TOKEN, deadline=time.time()+1200))
                 await asyncio.wait_for(arrived.wait(), 1)
                 original_time = loop.time
+                # DNS arrival proves the request already entered its own 10s
+                # deadline. The outer 20s bound is only a longer safety net.
                 # Advance the scheduler, not wall time or a real ten-second wait.
                 with patch.object(loop, "time", lambda: original_time()+11):
                     with self.assertRaises(TrialError) as raised:
-                        await asyncio.wait_for(task, 1)
+                        await asyncio.wait_for(task, 20)
                     self.assertEqual("uncertain", raised.exception.reason)
             self.assertTrue(task.done() and resolver.finished and resolver.closed)
         finally:

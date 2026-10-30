@@ -250,7 +250,7 @@ class NativeTrialFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             data = validate_reference(self.entry.data)
             result = await self.bridge().call({"version": 1, "op": "pair.revoke", "pair_id": data["pair_id"]})
-            if result.get("phase") not in {"expired", "retired"}:
+            if result.get("phase") not in ("expired", "retired"):
                 raise BridgeError("rejected")
         except (BridgeError, KeyUnavailable):
             return self.async_abort(reason="retirement_unconfirmed")
