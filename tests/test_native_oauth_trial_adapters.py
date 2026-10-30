@@ -6,6 +6,7 @@ import hashlib
 import secrets
 import socket
 import ssl
+import sqlite3
 import time
 import aiohttp
 import json
@@ -308,6 +309,42 @@ class NativeTrialPrivateTLSTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("tls_identity", raised.exception.reason)
         self.assertFalse(self.server.state.meta()["bootstrap_used"])
         good = self.bridge()
+        original = self.server.state.meta()
+        challenge = self.server.challenge
+        for failure in (OSError("synthetic CA read failure"), TrialError("locked")):
+            with self.subTest(failure=type(failure).__name__):
+                with patch.object(self.server.authority, "issue_request", side_effect=failure):
+                    with self.assertRaises(core_bridge.BridgeError):
+                        await good.call(self.enrollment(), paired=False)
+                self.assertEqual(original, self.server.state.meta())
+                self.assertEqual(challenge, self.server.trial.challenge)
+                self.assertFalse(self.server.state.db.in_transaction)
+        self.server.state.db.set_authorizer(lambda action, operation, *_:
+            sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_TRANSACTION and operation == "COMMIT" else sqlite3.SQLITE_OK)
+        try:
+            with patch.object(self.server.authority, "issue_request", wraps=self.server.authority.issue_request) as issued:
+                with self.assertRaises(core_bridge.BridgeError):
+                    await good.call(self.enrollment(), paired=False)
+                self.assertEqual(1, issued.call_count)
+            self.assertEqual(original, self.server.state.meta())
+            self.assertEqual(challenge, self.server.trial.challenge)
+            self.assertFalse(self.server.state.db.in_transaction)
+        finally:
+            self.server.state.db.set_authorizer(None)
+        # Reopen the real files after signing failure: no new identity, challenge,
+        # bootstrap window or deadline is created, and valid enrollment still works.
+        self.listener.close()
+        await self.listener.wait_closed()
+        await self.server.close_connections()
+        state_path = self.server.state.path
+        provider = self.server.trial.provider
+        self.server.state.close()
+        self.server = compose(state_path.parent, provider)
+        self.assertEqual(original, self.server.state.meta())
+        self.assertEqual(challenge, self.server.challenge)
+        self.listener = await asyncio.start_server(self.server.private_stream, "127.0.0.1", 0,
+            ssl=self.server.authority.context(), ssl_handshake_timeout=3, ssl_shutdown_timeout=0.5)
+        self.port = self.listener.sockets[0].getsockname()[1]
         result = await good.call(self.enrollment(), paired=False)
         self.keys.accept(result["ca"], result["certificate"], installation=result["installation"],
                          pair_id=result["pair_id"], deadline=result["deadline"], server_der=good.server_der)

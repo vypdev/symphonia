@@ -1,10 +1,12 @@
 # Native OAuth trial: validation on 2026-10-30
 
 The isolated implementation has passed its 54 source/package cases and the
-owner's real native Spotify OAuth, App restart, confirmed refresh/account match
+owner's real native Spotify OAuth at `e21afcd`, App restart, confirmed refresh/account match
 and local retirement in Chrome. Dedicated Spotify access removal was separately
 observed. The implementation remains under maintainer review; this bounded
 trial does not approve the production companion.
+The later enrollment correction below has separate laboratory evidence and has
+not been installed on the owner instance.
 
 The [SDD](../../specs/native-oauth-validation-trial.md) was marked Ready and its
 review committed before implementation began. The catalog remains `proposed`.
@@ -267,3 +269,38 @@ Only the exact hash-matching installer and its ownership marker were deleted;
 the staging directory was then removed empty. Normal HA services and the older
 stopped research App were preserved. The dedicated developer app retains the
 registered My URI for future explicit tests; its Spotify account grant is revoked.
+
+## Post-live enrollment rollback correction
+
+Review of the evidence commit found that certificate preparation followed the
+durable pairing commit. A local CA read/signing error could therefore consume
+the bootstrap without delivering credentials. Enrollment is now a semantic
+transaction scope: the use case prepares the certificate inside it, SQLite
+commits only when preparation succeeds, and the in-memory challenge is cleared
+only after commit. No certificate response escapes a failed commit.
+
+Case native-trial-adapter-C03 now uses real loopback TLS and injects CA read,
+signing and SQLite COMMIT failures. Each failure preserves the complete original
+metadata and challenge with no transaction left open. Reopening the real files
+preserves the original identity, bootstrap window and deadline; subsequent valid
+enrollment works. This adds no recovery endpoint or replay permission. A lost
+response after successful commit still requires retirement; the native form
+continues to direct owned reconciliation for partial Core material.
+
+The full ordinary suite again passes616 tests with8 explicit skips; the fresh
+eight-case package campaign passes in30.781 seconds and removes its App, helper,
+source stage and backup. The corrected App manifest is
+`35524ae01146f727be843d76dce6ed9abf643f0236069037d32607e973e530ae`;
+the reproduced local image is
+`sha256:7e55cdf654674f0ac64ff5947b6125b114b45201b1c53d5937579a558da68a4b`.
+Core helper/installer bytes and their hashes are unchanged. Root coverage is89%.
+Fresh unit, installed-helper/Core, App child-process and shipping-image fragments
+give92.3% combined coverage; each of the twelve modules exceeds85% and pure
+policy branches remain100%. The real shipping image again proves UID10001,
+identity/deadline persistence, missing-key lock and read-only startup failure
+with external networking disabled. Protected review remains pending.
+
+The real owner result above applies to the exact earlier manifest, not this
+corrected image. The owner instance remains clean. A further exact-package owner
+run must be reviewed and explicitly approved before another installation and
+Core restart; no previous deadline, grant or consent is silently reused.

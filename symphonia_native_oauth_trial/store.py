@@ -110,7 +110,9 @@ class Store:
         Binding.parse(binding.wire()).require(binding, now)
         return meta
 
+    @contextmanager
     def enroll(self, actor: str, peer: str, now: float):
+        """Commit one-use enrollment only after local credentials are prepared."""
         identifier(actor)
         if not isinstance(peer, str) or len(peer) != 64 or any(c not in "0123456789abcdef" for c in peer):
             raise TrialError("tls_identity")
@@ -121,7 +123,7 @@ class Store:
                 raise TrialError("bootstrap_unavailable")
             meta.update(pair_id=secrets.token_hex(16), actor=actor, peer=peer, bootstrap_used=True)
             self._save_meta(meta)
-        return meta
+            yield meta
 
     def start(self, binding: Binding, now: float):
         with self.transaction():

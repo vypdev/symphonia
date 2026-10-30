@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from contextlib import AbstractContextManager
 import hmac
 from typing import Protocol
 
@@ -27,7 +28,7 @@ class Cipher(Protocol):
 
 
 class State(Protocol):
-    def enroll(self, actor, peer, now): ...
+    def enroll(self, actor, peer, now) -> AbstractContextManager[dict]: ...
     def start(self, binding, now): ...
     def stage(self, binding, now): ...
     def validate_staged(self, binding, now): ...
@@ -51,10 +52,10 @@ class Trial:
         if not self.challenge or not hmac.compare_digest(challenge, self.challenge):
             raise TrialError("bootstrap_unavailable")
         peer = self.authority.validate_request(csr, actor)
-        meta = self.state.enroll(actor, peer, self.clock())
+        with self.state.enroll(actor, peer, self.clock()) as meta:
+            result = {name: meta[name] for name in ("installation", "pair_id", "pair_epoch", "credential_epoch", "actor", "deadline")}
+            result.update(self.authority.issue_request(csr, actor, meta["pair_id"], meta["started"]))
         self.challenge = None
-        result = {name: meta[name] for name in ("installation", "pair_id", "pair_epoch", "credential_epoch", "actor", "deadline")}
-        result.update(self.authority.issue_request(csr, actor, meta["pair_id"], meta["started"]))
         return result
 
     def start(self, binding: Binding, verifier: str):

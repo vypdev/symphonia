@@ -59,7 +59,8 @@ class NativeTrialStateTests(unittest.IsolatedAsyncioTestCase):
         self.path = Path(self.directory.name) / "trial.sqlite"
         self.now = 1000
         self.store = Store.provision(self.path, "installation", 1000)
-        meta = self.store.enroll("admin", "a" * 64, self.now)
+        with self.store.enroll("admin", "a" * 64, self.now) as meta:
+            pass
         self.binding = Binding("installation", meta["pair_id"], "admin", "consent-flow", "attempt", 0, 0,
                                "spotify", "opaque-client", PROFILE, REDIRECT, 2200)
         self.provider, self.cipher = FakeProvider(), FakeCipher()
@@ -109,8 +110,8 @@ class NativeTrialStateTests(unittest.IsolatedAsyncioTestCase):
     async def test_state_C04_first_staged_code_and_binding_are_immutable(self):
         with self.assertRaises(TrialError):
             self.store.grant(self.binding, self.now)
-        with self.assertRaises(TrialError):
-            self.store.enroll("admin", "invalid-peer", self.now)
+        with self.assertRaises(TrialError), self.store.enroll("admin", "invalid-peer", self.now):
+            pass
         self.app.start(self.binding, "v" * 64)
         with self.assertRaises(TrialError):
             self.store.validate_staged(self.binding, self.now)

@@ -579,7 +579,7 @@
       "id": "native-oauth-validation-trial",
       "title": "Native OAuth validation trial",
       "status": "proposed",
-      "scope": "Bounded native Spotify OAuth trial under maintainer review: 54 source/package cases pass; owner Chrome native pair, My callback, fresh confirmation, App restart, refresh/account match, local retirement and dedicated Spotify access removal passed. Production companion remains out of scope.",
+      "scope": "Bounded native Spotify OAuth trial under maintainer review: 54 source/package cases pass; owner's e21afcd pair/My/confirmation, restart, refresh/account match, retirement and dedicated Spotify revocation passed. Subsequent enrollment rollback correction has laboratory evidence only. Production remains out of scope.",
       "owner": "Symphonia maintainers",
       "lastVerified": "2026-10-30",
       "specs": [

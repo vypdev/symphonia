@@ -490,6 +490,8 @@ The native Reconfigure menu includes an explicit Retire trial confirmation. A cu
 
 Installer cache receipts require a valid ownership header and unique allowlisted paths before any removal. Package case native-trial-package-C07 verifies duplicate and empty receipts preserve all source/cache bytes.
 
+Enrollment commits after certificate preparation. Signing/commit failure rolls back pair/bootstrap without extending either deadline; native-trial-adapter-C03 verifies restart/retry. Lost delivery after commit still requires retirement.
+
 Read-only status distinguishes persisted retirement from deadline expiry, including after restart. Clock rollback still reports locked; retirement never reopens grant authority. Cases native-trial-state-C12, native-trial-http-C10 and native-trial-package-C08 verify these outcomes.
 
 The fixed HTTPS adapter explicitly requests identity encoding and refuses compressed or redirected responses, preserving its byte cap; case native-trial-adapter-C10 verifies negotiation. App-store README links use immutable absolute documentation URLs because Supervisor does not resolve repository-relative links.
