@@ -3,7 +3,7 @@
 - Status: Ready for implementation
 - Date: 2026-10-30
 - Catalog capability ID: `native-oauth-validation-trial` (proposed)
-- Last verified: 2026-10-30, 54 source/package cases and owner Chrome native OAuth, App restart, refresh/account match and retirement; see dated report for cleanup and review status.
+- Last verified: 2026-10-30; 54 source/package cases; owner OAuth at e21afcd; later corrections lab-only. See dated report.
 - Owners: Symphonia maintainers
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
@@ -491,6 +491,8 @@ The native Reconfigure menu includes an explicit Retire trial confirmation. A cu
 Installer cache receipts require an ownership header and unique allowlisted paths. Signals stop further mutation with nonzero exit. Campaign failures attempt cleanup only for acquired, hash-owned artifacts; unknown/modified state is preserved. Case native-trial-package-C07 covers receipts, signals and acquisition failures.
 
 Enrollment commits after certificate preparation. Signing/commit failure rolls back pair/bootstrap without extending either deadline; native-trial-adapter-C03 verifies restart/retry. Lost delivery after commit still requires retirement.
+
+Import guards cover direct/from aliases; shipping volumes follow acquired-resource cleanup (native-trial-http-C06, native-trial-package-C07).
 
 Read-only status distinguishes persisted retirement from deadline expiry, including after restart. Clock rollback still reports locked; retirement never reopens grant authority. Cases native-trial-state-C12, native-trial-http-C10 and native-trial-package-C08 verify these outcomes.
 

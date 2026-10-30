@@ -10,6 +10,7 @@ import os
 import json
 from pathlib import Path
 import tempfile
+import secrets
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -76,6 +77,34 @@ def campaign_failure_cleanup_contracts(case):
     return observed
 
 
+def shipping_failure_cleanup_contracts(case):
+    """Real Docker failure cleanup; mocked foreign metadata is labeled separately."""
+    from tools import native_oauth_trial_lab as lab
+    image=json.loads(lab.lab_call(['docker','image','inspect',lab.CORE]).stdout)[0]['Id']
+    observed=[]
+    for with_container in (False,True):
+        volume='symphonia-native-main32-'+secrets.token_hex(6)
+        name='symphonia-native-main32-'+secrets.token_hex(4)
+        with case.subTest(real_shipping_failure=with_container),case.assertRaisesRegex(RuntimeError,'injected shipping failure'):
+            with lab.shipping_resources(volume,image) as claim:
+                if with_container:
+                    claim(name)
+                    lab.lab_call(['docker','run','--detach','--name',name,'--label','io.symphonia.validation.owner='+lab.LABEL,
+                                  '--network','none','--read-only','--mount','type=volume,src='+volume+',dst=/data',
+                                  '--entrypoint','python3',image,'-c','import time; time.sleep(30)'])
+                raise RuntimeError('injected shipping failure')
+        case.assertFalse(lab.shipping_object_exists('volume',volume))
+        case.assertFalse(lab.shipping_object_exists('container',name))
+        observed.append({'real_docker':True,'container_acquired':with_container,'resources_removed':True})
+    foreign={'Name':'/symphonia-native-main32-aaaaaaaa','Image':image,
+             'Config':{'Labels':{'io.symphonia.validation.owner':'unrelated'}},'State':{'Running':True}}
+    with patch.object(lab,'shipping_object_exists',return_value=True), \
+         patch.object(lab,'lab_call',return_value=SimpleNamespace(stdout=json.dumps([foreign]).encode())) as calls:
+        with case.assertRaises(AssertionError): lab.remove_shipping_container('symphonia-native-main32-aaaaaaaa',image)
+        case.assertEqual(1,calls.call_count)  # Metadata inspected; no kill/unlink.
+    return observed
+
+
 @unittest.skipUnless(os.environ.get("SYMPHONIA_NATIVE_TRIAL_PACKAGE_LAB") == "1",
                      "requires explicit pinned disposable Supervisor package campaign")
 class NativeTrialPackageTests(unittest.TestCase):
@@ -122,6 +151,8 @@ class NativeTrialPackageTests(unittest.TestCase):
         observed=campaign_failure_cleanup_contracts(self)
         path=Path(os.environ['SYMPHONIA_NATIVE_TRIAL_PACKAGE_OUTPUT'])/'failure-cleanup-contracts.json'
         path.write_text(json.dumps(observed,indent=2)+'\n')
+        shipping=shipping_failure_cleanup_contracts(self)
+        (path.parent/'shipping-failure-contracts.json').write_text(json.dumps(shipping,indent=2)+'\n')
 
     def test_package_C08_original_deadline_and_retirement(self):
         self.assertTrue(self.receipt["results"]["package_C08_deadline_retire_no_rebootstrap"])

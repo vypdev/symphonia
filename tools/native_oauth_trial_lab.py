@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import asyncio
+from contextlib import contextmanager
 import base64
 import hashlib
 import json
@@ -502,14 +503,13 @@ async def main():
    print(json.dumps(json.loads(html.unescape(m.group(1)))))
 asyncio.run(main())'''
     bundle=json.loads(lab_call(['docker','exec',CONTAINER,'docker','exec','hassio_supervisor','python3','-c',script]).stdout)
-    core_script='''import asyncio,json,sys,ssl
+    core_script='''import asyncio,json,sys,ssl,tempfile
 from pathlib import Path
 sys.path.insert(0,'/config')
 from custom_components.symphonia_native_oauth_trial.bridge import Bridge,BridgeError
 from custom_components.symphonia_native_oauth_trial.keys import CoreKeys
 x=json.load(sys.stdin)
-async def main():
- keys=CoreKeys(Path('/tmp/symphonia-native-package-core-key32-'+x['installation']))
+async def probe(keys):
  csr=keys.create_csr(x['installation'],'syntheticadmin')
  wrong=Bridge('local_symphonia_native_oauth_trial','0'*64,x['deadline'],keys)
  try: await wrong.call({'version':1,'op':'pair.enroll','actor':'syntheticadmin','challenge':x['challenge'],'csr':csr},paired=False)
@@ -537,6 +537,9 @@ async def main():
  from custom_components.symphonia_native_oauth_trial import record_runtime_cache
  record_runtime_cache()
  print(json.dumps({'paired':True,'wrong_pin_denied':True,'wrong_pair_denied':True,'raw_operation_denied':True,'unauthenticated_rpc_denied_before_body':True}))
+async def main():
+ with tempfile.TemporaryDirectory(prefix='symphonia-native-package-core-key32-') as directory:
+  await probe(CoreKeys(Path(directory)/'peer'))
 asyncio.run(main())'''
     value=json.loads(lab_call(['docker','exec','-i',CONTAINER,'docker','exec','-i','homeassistant','python3','-c',core_script],data=json.dumps(bundle).encode()).stdout)
     return {'matrix':matrix,'results':{'package_C03_actual_supervisor_alias_csr_mtls':all(value.values())},'channel':value,'service_uid':identity['uid'],'host_ports':False,'boundary':'Ingress identity headers are synthetic; owner HA unused'}
@@ -725,9 +728,63 @@ async def helper_failure_contracts(hass, entry):
 
 
 
+def shipping_object_exists(kind, name):
+    flags=['--all'] if kind=='container' else []
+    field='{{.Names}}' if kind=='container' else '{{.Name}}'
+    return bool(lab_call(['docker',kind,'ls',*flags,'--filter','name='+name,'--format',field]).stdout.strip())
+
+
+def remove_shipping_container(name, image):
+    if not shipping_object_exists('container',name): return
+    info=json.loads(lab_call(['docker','container','inspect',name]).stdout)[0]
+    assert info['Name']=='/'+name and info['Image']==image
+    assert info['Config']['Labels']['io.symphonia.validation.owner']==LABEL
+    if info['State']['Running']: lab_call(['docker','kill',name])
+    lab_call(['docker','rm',name])
+
+
+@contextmanager
+def shipping_resources(volume, image):
+    """Claim fresh names; retire only exact labeled resources, even on failure."""
+    import re
+    assert re.fullmatch(r'symphonia-native-main32-[a-f0-9]{12}',volume)
+    assert re.fullmatch(r'sha256:[a-f0-9]{64}',image)
+    if shipping_object_exists('volume',volume):
+        raise RuntimeError('existing_shipping_volume_refused')
+    containers=set()
+    def claim(name):
+        assert re.fullmatch(r'symphonia-native-main32-[a-f0-9]{8}',name)
+        if shipping_object_exists('container',name):
+            raise RuntimeError('existing_shipping_container_refused')
+        containers.add(name)
+    failure=None
+    try:
+        lab_call(['docker','volume','create','--label','io.symphonia.validation.owner='+LABEL,volume])
+        yield claim
+    except BaseException as error:
+        failure=error
+        raise
+    finally:
+        errors=[]
+        for name in sorted(containers):
+            try: remove_shipping_container(name,image)
+            except BaseException as error: errors.append(error)
+        try:
+            if shipping_object_exists('volume',volume):
+                info=json.loads(lab_call(['docker','volume','inspect',volume]).stdout)[0]
+                assert info['Name']==volume and info['Labels']['io.symphonia.validation.owner']==LABEL
+                lab_call(['docker','volume','rm',volume])
+        except BaseException as error:
+            errors.append(error)
+        if errors:
+            if failure is not None:
+                failure.add_note('Shipping cleanup unconfirmed; unknown or modified resources preserved: '+','.join(type(x).__name__ for x in errors))
+            else:
+                raise BaseExceptionGroup('Owned shipping resource cleanup failed',errors)
+
+
 def shipping_main_campaign(output: Path, coverage_library: Path):
     """Actual image entry module, with read-only coverage instrumentation only."""
-    import time
     image='symphonia-native-oauth-trial:lab-20261030'
     details=json.loads(lab_call(['docker','image','inspect',image]).stdout)[0]
     assert details['Config']['Labels']['io.symphonia.validation.owner']==LABEL
@@ -736,7 +793,22 @@ def shipping_main_campaign(output: Path, coverage_library: Path):
     output.mkdir(mode=0o777);output.chmod(0o777)
     (output/'.owned').write_text('symphonia-native-shipping-main-lab-v1\n')
     volume='symphonia-native-main32-'+secrets.token_hex(6)
-    lab_call(['docker','volume','create','--label','io.symphonia.validation.owner='+LABEL,volume])
+    result={'mode':'shipping_main_process_supplement','image_id':details['Id'],'completed':False}
+    try:
+        with shipping_resources(volume,details['Id']) as claim:
+            result=shipping_main_checks(output,coverage_library,details,volume,claim)
+        result.update(completed=True,owned_resources_removed=True)
+    except BaseException as error:
+        result.update(completed=False,failure_type=type(error).__name__)
+        raise
+    finally:
+        (output/'receipt.json').write_text(json.dumps(result,indent=2)+'\n')
+    return result
+
+
+def shipping_main_checks(output, coverage_library, details, volume, claim):
+    import time
+    image=details['Id']
     evidence=output/'coverage';evidence.mkdir(mode=0o777);evidence.chmod(0o777)
     common=['docker','run','--read-only','--network','none','--label','io.symphonia.validation.owner='+LABEL,
         '--mount','type=bind,src='+str(evidence)+',dst=/evidence',
@@ -746,6 +818,7 @@ def shipping_main_campaign(output: Path, coverage_library: Path):
         '--data-file=/evidence/.coverage-shipping','-m','symphonia_native_oauth_trial.run']
     def start(*, mounted=True):
         name='symphonia-native-main32-'+secrets.token_hex(4)
+        claim(name)
         mounts=['--mount','type=volume,src='+volume+',dst=/data'] if mounted else []
         container=lab_call([*common,'--detach','--name',name,*mounts,*arguments]).stdout.decode().strip()
         assert len(container)==64
@@ -754,35 +827,29 @@ def shipping_main_campaign(output: Path, coverage_library: Path):
         code=int(lab_call(['docker','wait',name],timeout=15).stdout)
         log=lab_call(['docker','logs',name]).stdout
         assert code==expected,(code,log.decode()[:150])
-        lab_call(['docker','rm',name])
+        remove_shipping_container(name,image)
         return log
     identities=[]
     for _ in range(2):
         name=start()
-        try:
-            for _ in range(60):
-                observed=lab_call(['docker','logs',name]);log=observed.stdout+observed.stderr
-                if b'trial_ready' in log:break
-                time.sleep(.05)
-            else:raise AssertionError('shipping_main_not_ready:'+log.decode()[:1500])
-            raw=lab_call(['docker','exec',name,'python','-c',"from pathlib import Path; print(Path('/data/native_trial/identity.json').read_text())"]).stdout
-            identities.append(json.loads(raw))
-            uid=lab_call(['docker','exec',name,'python','-c',"from pathlib import Path; print(next(x for x in Path('/proc/1/status').read_text().splitlines() if x.startswith('Uid:')).split()[1])"]).stdout.decode().strip()
-            assert uid=='10001'
-            lab_call(['docker','kill','--signal','TERM',name])
-            assert b'trial_stopped' in finish(name,0)
-        except BaseException:
-            lab_call(['docker','kill',name],check=False);lab_call(['docker','rm',name],check=False);raise
+        for _ in range(60):
+            observed=lab_call(['docker','logs',name]);log=observed.stdout+observed.stderr
+            if b'trial_ready' in log:break
+            time.sleep(.05)
+        else:raise AssertionError('shipping_main_not_ready:'+log.decode()[:1500])
+        raw=lab_call(['docker','exec',name,'python','-c',"from pathlib import Path; print(Path('/data/native_trial/identity.json').read_text())"]).stdout
+        identities.append(json.loads(raw))
+        uid=lab_call(['docker','exec',name,'python','-c',"from pathlib import Path; print(next(x for x in Path('/proc/1/status').read_text().splitlines() if x.startswith('Uid:')).split()[1])"]).stdout.decode().strip()
+        assert uid=='10001'
+        lab_call(['docker','kill','--signal','TERM',name])
+        assert b'trial_stopped' in finish(name,0)
     assert identities[0]==identities[1]
     remove="from pathlib import Path; import stat; p=Path('/data/native_trial/oauth_keys/wrapping.key'); s=p.lstat(); assert stat.S_ISREG(s.st_mode) and s.st_uid==10001 and s.st_nlink==1 and s.st_size==32; p.unlink()"
-    lab_call(['docker','run','--rm','--network','none','--mount','type=volume,src='+volume+',dst=/data','--entrypoint','python',image,'-c',remove])
+    cleaner='symphonia-native-main32-'+secrets.token_hex(4);claim(cleaner)
+    lab_call(['docker','run','--rm','--name',cleaner,'--label','io.symphonia.validation.owner='+LABEL,'--network','none','--mount','type=volume,src='+volume+',dst=/data','--entrypoint','python',image,'-c',remove])
     assert json.loads(finish(start(),78))=={'phase':'locked'}
     assert json.loads(finish(start(mounted=False),78))=={'phase':'unavailable'}
     result={'mode':'shipping_main_process_supplement','image_id':details['Id'],'actual_service_uid':10001,'restart_preserves_identity_deadline':True,'missing_key_locked_without_regeneration':True,'read_only_start_failure_closed':True,'provider_calls':0,'boundary':'Network none; coverage module supplied read-only; shipping source unchanged'}
-    (output/'receipt.json').write_text(json.dumps(result,indent=2)+'\n')
-    owned=json.loads(lab_call(['docker','volume','inspect',volume]).stdout)[0]
-    assert owned['Labels']['io.symphonia.validation.owner']==LABEL
-    lab_call(['docker','volume','rm',volume])
     return result
 
 

@@ -339,3 +339,37 @@ The helper ZIP/source bytes and App manifest/image remain those recorded in the
 enrollment correction: the App/Core Python coverage above measures identical
 source bytes. The owner live result remains tied to `e21afcd`; this final
 package has laboratory evidence only and has not been reinstalled on owner HA.
+
+## Import guards and shipping-resource failure cleanup
+
+The next review exposed two test-harness gaps. Case native-trial-http-C06 now
+collects both AST import forms, imported children and original alias names. Its
+negative fixtures reject direct/from/aliased native Spotify and Supervisor
+imports, aliased default OAuth helpers, pure-layer framework/SQLite imports and
+qualified or relative infrastructure adapters. Allowed domain/standard-library
+imports still pass. This is a declared-import boundary check; the real-Core
+default-token-path traps remain separate runtime evidence.
+
+The shipping supplement now claims fresh volume/container names and cleans them
+in a resource scope on success or failure. Removal checks the exact name, owner
+label and expected image ID; foreign/modified resources are preserved. Volumes
+are removed without force after owned containers, and cleanup failures preserve
+the original error and an incomplete receipt. Container creation is tracked
+before the call, including the temporary key-removal utility. Checks run the
+inspected immutable image ID. The Core peer-key probe also uses a disposable
+temporary-directory scope on every exit.
+
+Case native-trial-package-C07 now injects failure after real Docker volume
+creation and after an attached container starts, verifying both are absent
+afterward. A separately labeled metadata fixture refuses deletion of a foreign
+owner. The actual shipping supplement again reports completed=true, owned
+resources removed, UID10001, restart identity/deadline persistence and both
+locked/read-only startup failures. No provider network is enabled.
+
+The ordinary suite passes616 tests with8 explicit skips; the fresh integrated
+campaign passes8/8 in26.744 seconds, including these failure probes and complete
+owned cleanup. App, helper payload and installer bytes are unchanged from the
+preceding correction (`35524ae0` App manifest, `92856d6f` installer). The measured
+production-module coverage therefore still applies to identical source bytes.
+The real owner proof remains specifically `e21afcd`; protected review and a new
+exact-package owner run remain outstanding for the corrected candidate.

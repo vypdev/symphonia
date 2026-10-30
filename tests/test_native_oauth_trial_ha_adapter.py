@@ -16,6 +16,18 @@ from symphonia_native_oauth_trial.run import compose
 from symphonia_native_oauth_trial.server import ingress_allowed
 
 
+def imported_modules(tree):
+    result=set()
+    for node in ast.walk(tree):
+        if isinstance(node,ast.Import):
+            result.update(alias.name for alias in node.names)
+        elif isinstance(node,ast.ImportFrom):
+            base=node.module or ''
+            if base: result.add(base)
+            result.update('.'.join(filter(None,(base,alias.name))) for alias in node.names if alias.name!='*')
+    return result
+
+
 class RequestFixture(dict):
     def __init__(self, *, body=None, actor=None, path="/api/config/config_entries/flow/flow", method="POST"):
         super().__init__()
@@ -128,17 +140,32 @@ class NativeTrialHTTPTests(unittest.IsolatedAsyncioTestCase):
     async def test_http_C06_architecture_forbids_default_token_and_broad_core_paths(self):
         root = Path(__file__).resolve().parents[1]
         forbidden = {"OAuth2Session", "async_resolve_external_data", "async_refresh_token", "async_oauth_create_entry"}
+        def check(tree, *, integration):
+            imports=imported_modules(tree)
+            if integration:
+                identifiers={node.attr for node in ast.walk(tree) if isinstance(node,ast.Attribute)} | {node.id for node in ast.walk(tree) if isinstance(node,ast.Name)} | {node.name.rsplit('.',1)[-1] for node in ast.walk(tree) if isinstance(node,ast.alias)}
+                self.assertFalse(identifiers & forbidden)
+                prefixes=('homeassistant.components.spotify','homeassistant.components.hassio')
+            else:
+                adapters=('provider','server','store','keys','tls','run')
+                prefixes=('aiohttp','homeassistant','cryptography','sqlite3',*adapters,
+                          *('symphonia_native_oauth_trial.'+name for name in adapters))
+            self.assertFalse(any(value==prefix or value.startswith(prefix+'.') for value in imports for prefix in prefixes))
         for path in (root / "custom_components/symphonia_native_oauth_trial").glob("*.py"):
-            tree = ast.parse(path.read_text())
-            identifiers = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)} | {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
-            self.assertFalse(identifiers & forbidden, path.name)
-            imports = [node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-            self.assertFalse(any(value.startswith(("homeassistant.components.spotify", "homeassistant.components.hassio")) for value in imports))
+            with self.subTest(path=path.name): check(ast.parse(path.read_text()),integration=True)
         for name in ("policy.py", "application.py"):
-            tree = ast.parse((root / "symphonia_native_oauth_trial" / name).read_text())
-            imports = [node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-            self.assertFalse(any(value.startswith(("aiohttp", "homeassistant", "cryptography")) for value in imports))
-            self.assertFalse(any(value in {"provider", "server", "store", "keys", "tls", "run"} for value in imports))
+            with self.subTest(path=name): check(ast.parse((root / "symphonia_native_oauth_trial" / name).read_text()),integration=False)
+        for source in ('import homeassistant.components.spotify as native',
+                       'import json, homeassistant.components.hassio as supervisor',
+                       'from homeassistant.components import spotify as native',
+                       'from homeassistant.components.hassio import HassIO',
+                       'from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session as Session'):
+            with self.subTest(integration_import=source),self.assertRaises(AssertionError): check(ast.parse(source),integration=True)
+        for source in ('import aiohttp as client','import sqlite3 as db','import cryptography.hazmat.primitives',
+                       'from homeassistant import core','import symphonia_native_oauth_trial.store as storage',
+                       'from symphonia_native_oauth_trial import server','from .store import Store','from . import provider'):
+            with self.subTest(pure_import=source),self.assertRaises(AssertionError): check(ast.parse(source),integration=False)
+        check(ast.parse('import hmac\nfrom typing import Protocol\nfrom .policy import Binding'),integration=False)
 
     async def test_http_C07_only_verified_ingress_boundary_can_show_bootstrap(self):
         request = self.page_request()
