@@ -10,7 +10,7 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: None; readiness and acceptance evidence are linked below.
 
-The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. Live owner OAuth passed; the bounded implementation remains under maintainer review. The catalog remains proposed; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
+The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. Owner OAuth passed at `852f3ea`; the bounded implementation remains under maintainer review. The catalog remains proposed; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
 
 ## 1. Executive summary
 

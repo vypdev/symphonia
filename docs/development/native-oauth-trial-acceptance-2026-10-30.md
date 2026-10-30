@@ -1,12 +1,12 @@
 # Native OAuth trial: validation on 2026-10-30
 
 The isolated implementation has passed its 54 source/package cases and the
-owner's real native Spotify OAuth at `e21afcd`, App restart, confirmed refresh/account match
+owner's real native Spotify OAuth at `e21afcd` and corrected `852f3ea`, App restart, confirmed refresh/account match
 and local retirement in Chrome. Dedicated Spotify access removal was separately
 observed. The implementation remains under maintainer review; this bounded
 trial does not approve the production companion.
-The later corrections below have separate laboratory evidence and have
-not been installed on the owner instance.
+The final owner campaign below validates the corrected payload. Earlier sections
+retain their source-specific measurements and historical acceptance boundaries.
 
 The [SDD](../../specs/native-oauth-validation-trial.md) was marked Ready and its
 review committed before implementation began. The catalog remains `proposed`.
@@ -412,5 +412,59 @@ The current installer SHA-256 is
 the helper source-manifest SHA-256 is
 `ae4834fdd01f90863229786855981bf6a0ea08fc488194a3f8280ac295053707`.
 The App manifest/image are unchanged (`35524ae0`, `7e55cdf6`). This corrected
-helper/installer has laboratory evidence only; owner validation remains the
-separate completed `e21afcd` campaign until a fresh exact-package run is approved.
+helper/installer initially had laboratory evidence only. The following separately
+approved campaign supplies owner acceptance for those exact corrected bytes.
+
+## Corrected owner campaign at 852f3ea
+
+The owner explicitly approved installing App/helper `0.1.0b1` at
+`852f3eaca190c16f94a2f30290a875d2a10bfe4c`, two Core restarts, one bounded
+read-only provider campaign and complete owned retirement. Core 2026.10.4,
+Supervisor 2026.10.5, HAOS 18.3 and Green were rechecked. Future local backups
+were visibly encrypted; no archive or encryption key was opened or changed.
+Helper/key/staging namespaces and the App were absent before installation.
+Spotify showed no dedicated trial grant and preserved the normal HA grant.
+
+The reviewed branch head was checked at `852f3ea`; the separate store source was
+registered and the App rebuilt before manual start. The self-contained installer
+matched `b06b9d44` (full digest above). Install and read-only `verify` both passed.
+Core's normal configuration check and first restart completed. Boot, watchdog,
+automatic update and sidebar remained off. The unchanged twelve-file App
+manifest was `35524ae0`; helper manifest `ae4834fd` and ZIP `6e72e43a`.
+
+The real Chrome flow passed these observations:
+
+1. Native pairing accepted the actual repository-prefixed slug and private
+   one-use bootstrap. The original deadline was 20:30:02 UTC; restart retained it.
+2. Spotify visibly presented a new consent screen. Its actual authorization
+   request used the dedicated public client, exactly `user-read-private`, S256
+   and `https://my.home-assistant.io/redirect/oauth`. Agree was submitted once.
+3. One automatically opened provider tab returned through My to the selected
+   owner instance. The native form reported callback received but not exchanged
+   and required a new unchecked initiating-administrator confirmation.
+4. One fresh confirmation produced the native account-verified/encrypted-grant
+   result. Restarting only the App then completed successfully.
+5. A new native refresh confirmation performed its single renewal. HA reported
+   native OAuth, App restart and account match after renewal verified. No token
+   was read from Core, the provider UI or App storage.
+6. Native retirement confirmed local channel/grant retirement and Core-key
+   cleanup. Entry removal left no entries; the App was stopped/uninstalled.
+7. Spotify separately confirmed removal of the dedicated grant: connected apps
+   returned from twelve to eleven and the normal Home Assistant grant remained.
+8. The exact installer verified all source/cache bytes before owned removal.
+   The second Core configuration check passed. The empty key namespace, exact
+   two-file staging directory and separate store registration were removed;
+   the final Core restart completed after those checks, and the frontend returned.
+
+Pairing, exchange, restart, refresh, local retirement, App removal and dedicated
+provider revocation finished before the original deadline. Three representative
+original local captures and a sanitized receipt identify this campaign; no binary
+capture or private hostname is committed. An operator observation accidentally
+printed an encoded temporary callback link in local tool output. It was not
+written to repository evidence; the code completed once through the normal
+confirmation path and dedicated provider access was subsequently revoked.
+
+This is bounded real OAuth acceptance for the corrected payload, separate from
+laboratory fault/backup-restore evidence. No owner backup restore, original-login
+session continuity, broader scope, library import, playback or production rollout
+is claimed. Formal human review and normal protected merge remain outstanding.
