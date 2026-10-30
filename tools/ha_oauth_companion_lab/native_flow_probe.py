@@ -39,7 +39,7 @@ class Flow(config_entries.ConfigFlow,domain=DOMAIN):
         if current!=self.owner:
             return self.async_abort(reason="wrong_actor")
         if user_input and user_input.get("start") is True:
-            impl=LocalOAuth2ImplementationWithPkce(self.hass,DOMAIN,"synthetic-opaque-id", "", "https://accounts.spotify.com/authorize", "https://accounts.spotify.com/api/token")
+            impl=LocalOAuth2ImplementationWithPkce(self.hass,DOMAIN,client_id="synthetic-opaque-id", authorize_url="https://accounts.spotify.com/authorize", token_url="https://accounts.spotify.com/api/token", client_secret="")
             assert impl.redirect_uri==MY_AUTH_CALLBACK_PATH
             self.authorize_url=await impl.async_generate_authorize_url(self.flow_id)
             # TEST boundary: synthetic App port retains verifier only in memory.

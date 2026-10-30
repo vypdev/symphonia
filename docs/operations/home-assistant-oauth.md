@@ -137,3 +137,7 @@ Share only versions, negotiated profile, safe phase/result code and sanitized
 correlation ID. Do not share callback URLs, codes/state, private instance or
 Ingress routes, pairing challenges/keys, cookies, verifiers, client secrets or
 tokens. Stable healthy connections do not generate periodic notifications.
+
+The bounded native trial now has its own [install/retire runbook](native-oauth-trial.md)
+and [dated validation report](../development/native-oauth-trial-acceptance-2026-10-30.md).
+Its package tests do not establish live owner OAuth acceptance.

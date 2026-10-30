@@ -68,3 +68,11 @@ docker exec symphonia-ha-lab sh -lc 'tail -50 /mnt/supervisor/symphonia-supervis
 ```
 
 The `ha apps info` response can contain a live Ingress entry token. Do not paste its raw output into shared issues or release evidence; record only state, version, and health. The authenticated browser reached the App panel through a `/api/hassio_ingress/…` iframe URL; the probe never emits its route token or session cookie. The [operational dashboard](../../specs/operational-dashboard.md) is the bounded, owner-approved first view. The broader [UI foundation](../../specs/home-assistant-native-ui.md) still requires host-context, browser-matrix, accessibility, and visual-reference proof.
+
+## Native OAuth trial package campaign
+
+Issue32 adds an opt-in eight-case campaign using Core2026.10.4 and Supervisor2026.10.5.
+See the [test plan](native-oauth-trial-test-plan.md) and [dated results](native-oauth-trial-acceptance-2026-10-30.md).
+It uses synthetic accounts/provider grants, exact manifests and guarded cleanup.
+The privileged nested-Docker devcontainer is disposable lab infrastructure;
+those privileges are not granted to the trial App or the owner installation.

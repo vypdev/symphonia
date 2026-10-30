@@ -579,7 +579,7 @@
       "id": "native-oauth-validation-trial",
       "title": "Native OAuth validation trial",
       "status": "proposed",
-      "scope": "Proposed twenty-minute native Spotify OAuth validation App/helper; existing executable evidence is bounded real-Core research only, not an implemented or accepted final package.",
+      "scope": "Bounded native Spotify OAuth trial implementation under review: 54 source/package cases pass with synthetic providers in isolated Core/Supervisor; manual browser and owner/live acceptance remain pending.",
       "owner": "Symphonia maintainers",
       "lastVerified": "2026-10-30",
       "specs": [
@@ -589,19 +589,35 @@
         ".github/workflows/verify.yml"
       ],
       "entrypoints": [
-        "tools/ha_ingress_probe.py",
-        "tools/ha_oauth_companion_lab/native_flow_probe.py"
+        "symphonia_native_oauth_trial/run.py",
+        "custom_components/symphonia_native_oauth_trial/config_flow.py",
+        "tools/install_native_oauth_trial_helper.sh",
+        "tools/native_oauth_trial_lab.py"
       ],
       "code": [
-        "tools/ha_ingress_probe.py",
-        "tools/ha_app_lab.py",
-        "tools/oauth_callback_spike.py",
-        "tools/ha_oauth_companion_lab/native_flow_probe.py"
+        "symphonia_native_oauth_trial/policy.py",
+        "symphonia_native_oauth_trial/application.py",
+        "symphonia_native_oauth_trial/store.py",
+        "symphonia_native_oauth_trial/keys.py",
+        "symphonia_native_oauth_trial/provider.py",
+        "symphonia_native_oauth_trial/tls.py",
+        "symphonia_native_oauth_trial/server.py",
+        "symphonia_native_oauth_trial/run.py",
+        "custom_components/symphonia_native_oauth_trial/__init__.py",
+        "custom_components/symphonia_native_oauth_trial/config_flow.py",
+        "custom_components/symphonia_native_oauth_trial/bridge.py",
+        "custom_components/symphonia_native_oauth_trial/keys.py",
+        "symphonia_native_oauth_trial/config.yaml",
+        "symphonia_native_oauth_trial/Dockerfile",
+        "tools/stage_native_oauth_trial.py",
+        "tools/native_oauth_trial_lab.py"
       ],
       "tests": [
-        "tests/test_ha_ingress_probe.py",
-        "tests/test_ha_app_lab.py",
-        "tests/test_oauth_callback_spike.py"
+        "tests/test_native_oauth_trial_policy.py",
+        "tests/test_native_oauth_trial_state.py",
+        "tests/test_native_oauth_trial_adapters.py",
+        "tests/test_native_oauth_trial_ha_adapter.py",
+        "tests/test_native_oauth_trial_packaging.py"
       ],
       "documentation": [
         "docs/development/ha-app-lab.md",
@@ -609,7 +625,11 @@
         "docs/providers/provider-research.md",
         "docs/providers/home-assistant-ecosystem-review.md",
         "docs/development/native-oauth-trial-hooks-2026-10-30.md",
-        "docs/development/native-oauth-trial-preparation.md"
+        "docs/development/native-oauth-trial-preparation.md",
+        "symphonia_native_oauth_trial/README.md",
+        "docs/operations/native-oauth-trial.md",
+        "docs/development/native-oauth-trial-test-plan.md",
+        "docs/development/native-oauth-trial-acceptance-2026-10-30.md"
       ]
     }
   ]

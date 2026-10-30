@@ -154,7 +154,7 @@ The My-enabled component flag and the App stage/admission port are explicit test
 | `setup_unauthenticated_denied` | true |
 | `synthetic_code_verifiers_absent_from_saved_files` | true |
 
-Probe SHA-256: `881242ab5b4f549fbbfb7103c6ccb07eac89a71143b15ec1a2ee7b60e840223f`. No owner HA account is created or changed. Reproduce from the repository root:
+Probe SHA-256: `87824e70e202bdfeef2af8f678bec55d87e6722c684d1a52822702f414b25a8a`. No owner HA account is created or changed. Reproduce from the repository root:
 
 ```sh
 docker run --rm --network none --read-only --cap-drop ALL \
@@ -166,3 +166,7 @@ docker run --rm --network none --read-only --cap-drop ALL \
   ghcr.io/home-assistant/home-assistant@sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133 \
   /probe.py
 ```
+
+The22-observation native probe was rerun after matching the public PKCE constructor
+with named arguments. All22 observations remain true. Exact-package execution
+and its separate54 cases are recorded in the [trial validation report](native-oauth-trial-acceptance-2026-10-30.md).

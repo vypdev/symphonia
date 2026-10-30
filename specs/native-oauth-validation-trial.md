@@ -3,14 +3,14 @@
 - Status: Ready for implementation
 - Date: 2026-10-30
 - Catalog capability ID: `native-oauth-validation-trial` (proposed)
-- Last verified: not applicable; this is a prospective specification.
+- Last verified: 2026-10-30, source and isolated package campaign only; manual browser and owner/live acceptance pending.
 - Owners: Symphonia maintainers
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: None. The dated engineering review is recorded in `docs/development/native-oauth-trial-preparation.md`; package and live acceptance remain subsequent gates.
 
-The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. This prospective contract describes no implemented trial. The catalog remains proposed; current executable evidence is research only.
+The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. The bounded implementation is under review. The catalog remains proposed pending manual browser and owner/live acceptance; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
 
 ## 1. Executive summary
 
@@ -36,14 +36,14 @@ The owner needs an installable, bounded validation of native Spotify OAuth in th
 4. Existing OAuth companion research and a failed public-callback trial do not prove installed native OAuth acceptance.
 5. The owner reports HA Core 2026.10.4, Supervisor 2026.10.5, HAOS 18.3, Frontend 20260930.5, Green/aarch64. This is the sole supported trial matrix.
 
-These are supplied evidence and reported facts, not proof of future implementation or acceptance. Implementation must wait for this SDD to become Ready.
+The engineering readiness review was committed before implementation. The current bounded trial passes46 ordinary and8 freshly executed package cases; live owner acceptance remains pending. Broad production readiness is unchanged.
 
 ### 2.3 Evidence
 
 - Code/workflow/documentation references: bounded research foundations include `tools/ha_oauth_companion_lab/core_probe.py`, `native_reset_probe.py`, `enrollment_probe.py`, and `key_custody_probe.py`; existing test foundations include `tests/test_ha_oauth_companion_lab.py`, `tests/test_ha_oauth_key_custody_fixture.py`, and `tests/test_ha_oauth_recovery_fixture.py`.
 - Incidents or concrete examples: public-callback validation did not establish native installed-provider success; default Core grant persistence does not meet App-only ownership.
 - External primary sources: exact official URLs and versioned source snapshots are recorded in section20 and the [hook report](../docs/development/native-oauth-trial-hooks-2026-10-30.md).
-- Current native hook feasibility is supported by22 real-Core main-flow/callback observations and the separate36-observation existing research rerun. The My-enabled flag, in-memory App port and four Ingress checks are named fixtures. Final exact-package TLS, Supervisor backup and owner My/Spotify behavior remain unobserved acceptance gates; none of these research observations counts toward the54 final-package cases.
+- Current native hook feasibility is supported by22 real-Core main-flow/callback observations and the separate36-observation existing research rerun. The My-enabled flag, in-memory App port and four Ingress checks are named fixtures. Those research observations count as zero final-package cases. The current implementation passes all54 source/package cases, actual TLS, App-process restart and Supervisor backup/locked restore; [the report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md) names fixtures and limits. Manual UI and owner My/Spotify acceptance remain pending.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -180,7 +180,7 @@ Duplicate, stale, or out-of-order events cannot replace a staged return or regai
 | Spotify public Client ID | Text | Owner-created dedicated client ID | 1–256 printable ASCII characters; reject blank, controls, non-ASCII, and over-limit values; preserve opaque value and encode as one parameter | Trial config snapshot; never logged or echoed |
 | Consent profile | Enum | `trial_read_private` | Exactly one fixed profile requesting only `user-read-private` | Immutable for each attempt and grant |
 | Redirect profile | Enum | `my_home_assistant` | Exactly `https://my.home-assistant.io/redirect/oauth` | Immutable for each attempt |
-| App target | Validated Supervisor slug | `symphonia_native_oauth_trial` with optional exact local/eight-hex repository prefix | Strict slug grammar; derive only named internal hyphen alias and TLS port 8098 | Pairing snapshot; no arbitrary host, URL, path, or port |
+| App target | Validated Supervisor slug | Actual installed slug, beginning with local_ or its eight-hex repository prefix | Bare slug is not a target; derive only named internal hyphen alias and TLS port 8098 | Pairing snapshot; no arbitrary host, URL, path, or port |
 | Trial duration | Integer seconds | 1200 seconds | Fixed; not configurable | Original persisted deadline survives restart unchanged |
 | Bootstrap duration | Integer seconds | 300 seconds | Fixed, single-use | Consumed/expired state cannot be rearmed |
 
@@ -223,6 +223,8 @@ flowchart LR
 The App's attempt verifier and staged code remain volatile; no database, Core entry or log persists them. A restart cancels an unadmitted transient attempt. An admitted incomplete exchange/refresh becomes uncertain, and health/status cannot finish or replay it. This disposable version permits one consent attempt and one forced refresh per installation; denial, cancellation or definitive failure requires retirement and a fresh explicit trial namespace, without extending the old deadline.
 
 The original UTC deadline and a nondecreasing observed clock bound survive restart. Clock rollback or invalid persisted metadata locks. Service lifetime, certificates and bootstrap cannot outlive the original deadline. Native start constructs a separate public PKCE authorizer per attempt, transfers its verifier over the paired channel and drops redundant Core references after caching the authorize URL; memory zeroization is not promised. Staging must originate through the real Core callback HTTP route and validated exact state, not just a submitted flow identifier or state-shaped object. Confirmation additionally requires a new native POST to the current flow by the initiating active administrator.
+
+The safe original consent binding remains immutable after activation. A later refresh carries that original binding plus a separate confirmation_flow identifying the NEW native reconfigure flow. Core validates current HTTP actor and that current flow before sending; App binds the refresh fence to the new flow and original grant/install/pair/actor/profile/deadline. It must not relabel the original consent flow as the fresh confirmation or infer continuity from a saved flow ID.
 
 Grant ciphertext, account binding, generation and active reference commit in one SQLite transaction under the admitted owner/epoch. Wrapping key is immutable, separately referenced and excluded from backups; authenticated data also binds credential generation. No multi-file secret publication or key rotation is part of this trial. All Core/App private files follow ADR0008: owned0700 directories, regular single-link0600 files, bounded no-follow reads, explicit first-provision marker and no rekey on partial or invalid existing state. Core restore requires operator revocation of the old App pair and explicit re-pairing; clone detection is not promised.
 
@@ -420,6 +422,8 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 | `symphonia_native_oauth_trial/config.yaml` | create |
 | `symphonia_native_oauth_trial/Dockerfile` | create |
 | `symphonia_native_oauth_trial/requirements.txt` | create |
+| `symphonia_native_oauth_trial/SHA256SUMS` | create |
+| `pyproject.toml` | update |
 | `symphonia_native_oauth_trial/README.md` | create |
 | `symphonia_native_oauth_trial/run.py` | create |
 | `symphonia_native_oauth_trial/policy.py` | create |
@@ -472,7 +476,7 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 | `tools/ha_oauth_companion_lab/app/server.py` | reference |
 | `tests/test_ha_oauth_companion_lab.py` | reference |
 | `tests/test_ha_oauth_key_custody_fixture.py` | reference |
-| `.github/workflows/verify.yml` | reference |
+| `.github/workflows/verify.yml` | update |
 | `tools/ha_oauth_companion_lab/key_custody_probe.py` | reference |
 | `tests/test_ha_oauth_recovery_fixture.py` | reference |
 | `docs/operations/home-assistant-oauth.md` | update |
@@ -480,7 +484,9 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 | `specs/CATALOG.md` | update |
 | `docs/development/ha-app-lab.md` | update |
 
-New user/setup/operator documentation MUST be linked from the App README and repository navigation appropriate to the existing conventions. Examples and command snippets must be validated against implementation fixtures. Catalog metadata must use the supplied proposed inventory values and must describe existing evidence as research foundations, not trial implementation. The Action remains sole publisher and branch owner.
+New user/setup/operator documentation MUST be linked from the App README and repository navigation appropriate to the existing conventions. Examples and command snippets must be validated against implementation fixtures. Catalog metadata retains proposed status and distinguishes implementation/laboratory evidence from research and pending manual/live acceptance. The Action remains sole publisher and branch owner.
+
+The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
 
 ## 16. Acceptance scenarios
 

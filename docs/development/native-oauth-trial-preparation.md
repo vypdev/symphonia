@@ -58,3 +58,12 @@ slug and no host port, Core/Supervisor API or broad mounts.
 Final package hashes and runnable owner installer commands are intentionally
 absent until those artifacts exist and pass their laboratory gates. No token,
 code, verifier, key, private hostname or session route belongs in public evidence.
+
+## Implementation validation update
+
+The [dated report](native-oauth-trial-acceptance-2026-10-30.md) records46 ordinary
+and8 freshly executed package cases passing. Actual TLS, process restart,
+Supervisor backup/locked restore and owned package removal are now observed.
+Every changed Python module exceeds85% combined coverage; pure policy branches
+reach100%. This updates the preparation evidence, not owner/live acceptance.
+Manual Chrome review, exact-package approval and owner installation remain gates.

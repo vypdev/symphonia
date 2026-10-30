@@ -1,0 +1,83 @@
+{
+  "title": "Symphonia OAuth Trial",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pair the isolated OAuth trial",
+        "description": "Experimental official Spotify public-client test, read-only user-read-private. The App owns provider grants and excludes its private keys from backups. Core stores a private pairing key on the trusted HA host; encrypted Core backups are required. Missing keys lock the trial. The original twenty-minute window never restarts. Paste the private bootstrap block from the distinct trial App. Never enter a Client Secret, token or another integration's credentials.",
+        "data": {
+          "app_slug": "Installed trial App slug",
+          "client_id": "Dedicated public Spotify Client ID",
+          "bootstrap": "Private bootstrap block",
+          "encrypted_core_backups": "I accept the trusted-host model and use encrypted Core backups"
+        },
+        "data_description": {
+          "app_slug": "Use local_symphonia_native_oauth_trial or the exact eight-hex repository prefix. No URL or port.",
+          "client_id": "Public opaque identifier only; no Client Secret.",
+          "bootstrap": "One-use challenge and server pin, valid five minutes. Keep it private."
+        }
+      },
+      "connect": {
+        "title": "Start read-only Spotify consent",
+        "description": "Only {scope}, using the official public PKCE client through Core and My. No playback, writes or existing Spotify credentials. The return will only be staged; a new same-admin confirmation is still required. Original deadline: {deadline} UTC epoch. The external grant can outlive this trial and must be revoked separately.",
+        "data": {
+          "confirm": "Open Spotify read-only consent"
+        }
+      },
+      "confirm": {
+        "title": "Confirm the staged Spotify return",
+        "description": "The callback was received and staged. No code has been exchanged. Confirm now as the same active administrator to admit one App-only exchange and account check. Original deadline: {deadline}. Do not repeat an uncertain operation.",
+        "data": {
+          "confirm": "Confirm this read-only exchange"
+        }
+      },
+      "refresh": {
+        "title": "Verify the persisted App grant",
+        "description": "Restart only the trial App first. Confirm one forced refresh using the same encrypted grant, then compare the account. Scope remains {scope}; no new consent or Core token storage is used. Original deadline: {deadline}.",
+        "data": {
+          "confirm": "Run the one refresh and account check"
+        }
+      },
+      "reconfigure": {
+        "title": "Choose the trial operation",
+        "description": "Choose connect, refresh or retire from the available states. Retirement requires another confirmation and does not revoke the external Spotify grant. Original deadline: {deadline}.",
+        "data": {
+          "operation": "Operation"
+        }
+      },
+      "retire": {
+        "title": "Retire the isolated trial",
+        "description": "Revoke the private pair, remove the local sealed grant and clean only hash-matching Core keys. Then remove this integration, stop/remove the App and separately revoke dedicated Spotify access. Modified or unknown files are preserved. If retirement is unconfirmed, stop the App; grant deletion is not claimed.",
+        "data": {
+          "confirm": "Confirm local retirement"
+        }
+      }
+    },
+    "error": {
+      "administrator_required": "Use the active administrator who started the trial. No provider operation was admitted.",
+      "trial_unavailable": "The trial is unavailable. Retire it; never repeat an uncertain exchange or refresh."
+    },
+    "abort": {
+      "administrator_required": "Use the active administrator who paired and started this trial.",
+      "pairing_failed_retire_trial": "Pairing was not confirmed. No provider consent was started. Retire the isolated trial; follow the owned-key cleanup guide before trying a fresh installation.",
+      "consent_denied": "Spotify consent was denied. No grant is active. Retire this trial before a fresh installation.",
+      "oauth_active": "The App verified the account and sealed the grant. Restart only the trial App, then use Reconfigure to confirm its one refresh before the original deadline.",
+      "trial_verified": "Native OAuth, App restart and refresh account match are verified. Remove this integration, stop/remove the trial App and revoke the dedicated Spotify access separately.",
+      "trial_unavailable": "The trial cannot continue safely; its result may be uncertain or expired. Do not repeat a code or refresh. Retire the isolated trial and record the observed outcome.",
+      "already_configured": "This installation is already paired. Reconfigure the existing trial entry.",
+      "trial_retired": "Local pair and grant retired; Core keys cleaned. Remove this integration and trial App, then revoke dedicated Spotify access separately.",
+      "retirement_key_cleanup_pending": "App retirement is confirmed. Modified or unknown Core key files remain; follow the cleanup guide without forcing removal.",
+      "retirement_unconfirmed": "Retirement is unconfirmed. Stop and remove the trial App; grant deletion and external revocation are not claimed. Keys remain for verified cleanup.",
+      "unsupported_core": "This trial supports only Core 2026.10.4 on aarch64. Do not downgrade Home Assistant; revalidate the trial before installation."
+    }
+  },
+  "selector": {
+    "trial_operation": {
+      "options": {
+        "connect": "Connect Spotify",
+        "refresh": "Verify refresh",
+        "retire": "Retire trial"
+      }
+    }
+  }
+}

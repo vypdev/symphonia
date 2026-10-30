@@ -1,0 +1,83 @@
+{
+  "title": "Symphonia OAuth Trial",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Emparejar la prueba OAuth aislada",
+        "description": "Prueba experimental de la API oficial de Spotify, con cliente público y solo user-read-private. La App guarda los grants y excluye sus claves privadas de los backups. Core guarda una clave de emparejamiento en el host de confianza; requiere backups de Core cifrados. La pérdida de claves bloquea la prueba. El plazo original de veinte minutos no se reinicia. Pega el bloque privado de la App de prueba. No introduzcas Client Secret, tokens ni credenciales de otra integración.",
+        "data": {
+          "app_slug": "Slug de la App de prueba instalada",
+          "client_id": "Client ID público de Spotify dedicado",
+          "bootstrap": "Bloque privado de emparejamiento",
+          "encrypted_core_backups": "Acepto el modelo de host de confianza y uso backups de Core cifrados"
+        },
+        "data_description": {
+          "app_slug": "local_symphonia_native_oauth_trial o el prefijo exacto de ocho caracteres hexadecimales. Sin URL ni puerto.",
+          "client_id": "Solo el identificador público; sin Client Secret.",
+          "bootstrap": "Desafío de un solo uso y huella del servidor, válidos cinco minutos. Mantenlo privado."
+        }
+      },
+      "connect": {
+        "title": "Iniciar consentimiento de lectura de Spotify",
+        "description": "Solo {scope}, con cliente PKCE público y API oficial a través de Core y My. Sin reproducción, escrituras ni credenciales de la integración Spotify existente. El retorno solo queda pendiente: después debes confirmar de nuevo como el mismo administrador. Límite original: {deadline}, epoch UTC. El grant externo puede durar más que la prueba y debe revocarse aparte.",
+        "data": {
+          "confirm": "Abrir consentimiento de lectura de Spotify"
+        }
+      },
+      "confirm": {
+        "title": "Confirmar el retorno pendiente de Spotify",
+        "description": "El callback se ha recibido y está pendiente. El código aún no se ha intercambiado. Confirma ahora como el mismo administrador activo para permitir un intercambio y una comprobación de cuenta solo en la App. Límite original: {deadline}. No repitas una operación incierta.",
+        "data": {
+          "confirm": "Confirmar este intercambio de lectura"
+        }
+      },
+      "refresh": {
+        "title": "Verificar el grant persistido de la App",
+        "description": "Reinicia primero solo la App de prueba. Confirma una renovación con el mismo grant cifrado y la comparación de cuenta. Permisos: {scope}; sin nuevo consentimiento ni tokens en Core. Límite original: {deadline}.",
+        "data": {
+          "confirm": "Ejecutar la única renovación y comprobar la cuenta"
+        }
+      },
+      "reconfigure": {
+        "title": "Elegir operación de la prueba",
+        "description": "Selecciona conectar, renovar o retirar según el estado disponible. Retirar requiere otra confirmación y no revoca el grant externo de Spotify. Límite original: {deadline}.",
+        "data": {
+          "operation": "Operación"
+        }
+      },
+      "retire": {
+        "title": "Retirar la prueba aislada",
+        "description": "Se revoca el canal privado, se elimina el grant cifrado local y se limpian solo las claves de Core con hashes coincidentes. Después elimina esta integración, detén/elimina la App y revoca por separado el acceso dedicado en Spotify. Los archivos modificados o ajenos se conservan. Si no puede confirmarse la retirada, detén la App; no se afirmará que el grant fue eliminado.",
+        "data": {
+          "confirm": "Confirmar retirada local"
+        }
+      }
+    },
+    "error": {
+      "administrator_required": "Usa el administrador activo que inició la prueba. No se ha admitido ninguna operación con Spotify.",
+      "trial_unavailable": "La prueba no está disponible. Retírala; no repitas un intercambio o una renovación inciertos."
+    },
+    "abort": {
+      "administrator_required": "Usa el administrador activo que emparejó e inició esta prueba.",
+      "pairing_failed_retire_trial": "El emparejamiento no se ha confirmado. No se ha iniciado consentimiento de Spotify. Retira la prueba aislada y sigue la guía para limpiar solo sus claves antes de una instalación nueva.",
+      "consent_denied": "Se ha rechazado el consentimiento. No hay grant activo. Retira esta prueba antes de instalar otra nueva.",
+      "oauth_active": "La App ha verificado la cuenta y cifrado el grant. Reinicia solo la App de prueba y usa Reconfigurar para confirmar su única renovación antes del límite original.",
+      "trial_verified": "OAuth nativo, reinicio de la App y coincidencia de cuenta tras renovar verificados. Elimina esta integración, detén/elimina la App de prueba y revoca por separado el acceso dedicado de Spotify.",
+      "trial_unavailable": "La prueba no puede continuar con seguridad: el resultado puede ser incierto o haber caducado. No repitas el código ni la renovación. Retira la prueba y registra el resultado observado.",
+      "already_configured": "Esta instalación ya está emparejada. Reconfigura la entrada existente.",
+      "trial_retired": "Canal y grant locales retirados; claves de Core limpiadas. Elimina esta integración y la App de prueba, y revoca el acceso dedicado en Spotify por separado.",
+      "retirement_key_cleanup_pending": "La App ha confirmado la retirada. Se conservan claves de Core modificadas o desconocidas: sigue la guía de limpieza sin forzar su eliminación.",
+      "retirement_unconfirmed": "Retirada no confirmada. Detén y elimina la App de prueba; no se afirma eliminación del grant ni revocación externa. Se conservan las claves para una limpieza verificada.",
+      "unsupported_core": "Esta prueba está validada solo para Core 2026.10.4 en aarch64. No bajes de versión tu HA; solicita revalidar la prueba antes de instalarla."
+    }
+  },
+  "selector": {
+    "trial_operation": {
+      "options": {
+        "connect": "Conectar Spotify",
+        "refresh": "Verificar renovación",
+        "retire": "Retirar prueba"
+      }
+    }
+  }
+}
