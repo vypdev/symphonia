@@ -8,12 +8,15 @@ for trust/recovery details.
 
 The separate [native validation trial](../../specs/native-oauth-validation-trial.md)
 has its bounded contract and [current-Core hook evidence](../development/native-oauth-trial-hooks-2026-10-30.md).
-It remains under maintainer review. Its package tests and bounded owner-browser
-OAuth, restart, refresh/account match and retirement have passed; see the
-[dated report](../development/native-oauth-trial-acceptance-2026-10-30.md). Its
+PR #35 merged that separate bounded implementation. Its package tests and
+corrected owner-browser OAuth, restart, refresh/account match and retirement
+passed; see the [dated report](../development/native-oauth-trial-acceptance-2026-10-30.md). Its
 [preparation gates](../development/native-oauth-trial-preparation.md) preserve
 exact-package review before any owner installation; this production preview
-does not become installable through that separate design review.
+does not become installable through that separate design review. The trial
+App/helper/keys and dedicated Spotify access are removed. The [production
+readiness review](../development/native-oauth-production-readiness-2026-10-30.md)
+records the remaining long-lived pairing, recovery and compatibility work.
 
 The [laboratory validation](../development/ha-oauth-companion-lab-2026-10-25.md)
 now proves some mechanics, not a released package. It confirms that private

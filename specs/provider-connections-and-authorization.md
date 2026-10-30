@@ -1,13 +1,14 @@
 # Provider connections and authorization
 
 - Status: Draft
-- Date: 2026-10-25
+- Date: 2026-10-30
 - Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `provider-connections-and-authorization`
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
 - Related requirements: `SYM-ACC-002`–`SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`–`SYM-PROV-003`, `SYM-PROV-008`–`SYM-PROV-009`, `SYM-PROV-015`–`SYM-PROV-020`, `SYM-SEC-001`–`SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-015`, `SYM-HA-012`
 - Related decisions/research: [provider specification](../docs/providers/provider-specification.md), [official API research](../docs/providers/provider-research.md), [ecosystem review](../docs/providers/home-assistant-ecosystem-review.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [UI foundation](home-assistant-native-ui.md), `OQ-001`, `OQ-004`, `RG-001`, `RG-002`
+- Related follow-up: [production readiness review](../docs/development/native-oauth-production-readiness-2026-10-30.md), [issue #38](https://github.com/vypdev/symphonia/issues/38)
 - Required review gates: product UX, architecture, provider feasibility, testing, documentation, security/privacy
 - Open decisions blocking readiness: native companion redirect/actor/pairing conformance (`RG-002`/`RG-008`); provider-specific registration/scopes/token lifecycle; App token exchange/refresh/revocation and encrypted secret-store publication/recovery; unofficial YouTube Music MVP decision; final key adapter/package and reset/rotation/publication conformance under accepted ADR 0008
 
@@ -66,9 +67,10 @@ disconnect without the dedicated cleanup operation. Two SQLite connections
 exercise this boundary in the [dated regression review](../docs/development/bugbot-review-2026-10-21.md).
 
 Provider token exchange, refresh/revocation adapters, encrypted secret
-storage, end-to-end account verification, authenticated actor/session binding,
-and provider-specific callback integration do not yet exist. Invalid attempt
-metadata is rejected before SQLite writes. Spotify is the strongest official
+storage, end-to-end account verification and native callback/actor integration
+do not yet exist in the primary production App. The separate native trial
+now proves its bounded read-only flow; section 2.4 distinguishes that evidence.
+Invalid attempt metadata is rejected before SQLite writes. Spotify is the strongest official
 MVP candidate; full YouTube Music access is not established through an
 official API; Apple Music is future research. This is foundation evidence,
 not a claim that the connection capability is implemented.
@@ -104,6 +106,22 @@ transport guards do not complete the Draft authorization capability.
 
 Authenticated server API transports refuse all automatic redirects, including same-origin redirects, before any second request can forward Bearer or Apple user-token headers. Loopback fixtures prove the policy with fake credentials. The policy concerns server API requests; consent/callback browser flows remain governed by the authorization contract.
 
+### 2.4 Corrected native trial, 2026-10-30
+
+The [owner campaign at 852f3ea](../docs/development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+completed explicit Spotify `user-read-private` consent through Core/My, fresh
+same-admin exchange confirmation, App-owned sealed grant, App restart and one
+confirmed refresh/account match. Native local retirement and separate dedicated
+Spotify revocation passed while the normal HA grant remained. PR #35 merged
+the separate trial, which was fully removed from the owner instance.
+
+This is evidence for that exact client/profile and payload, not production
+connection publication, multi-account single-flight refresh, key rotation,
+capability discovery, library/copy scopes or other-provider feasibility. The
+[production readiness review](../docs/development/native-oauth-production-readiness-2026-10-30.md)
+orders the remaining work. The 82-case budget and related 80/58-case budgets,
+sixteen production bridge cases, accepted key trust and Draft status stand.
+
 ## 3. Actors, surfaces, and terminology
 
 Research update: the [2026-10-25 OAuth/HA proof](../docs/development/spotify-oauth-proof-2026-10-25.md)
@@ -131,9 +149,11 @@ observed with synthetic Chrome forms; it does not establish that cause. The corr
 rejected manual start. Approved trial.3 passed the bounded private-context
 check with the tunnel off and on, then admitted authorization start. Its
 provider handoff remained incomplete and the trial was stopped and cleaned up;
-the earlier rejection category remains unknown. Real provider return/finalization,
-Core login revocation and the full live matrix remain unproven. No production
-endpoint, secret-store contract or readiness status changes.
+the earlier rejection category remains unknown. At the end of that older
+direct-callback campaign, provider return/finalization remained unproven. The later native trial in section 2.4 supersedes that narrow
+feasibility gap; exact Core-login continuity and full production conformance
+remain unproven. No production endpoint, secret-store contract or readiness
+status changes.
 
 | Actor | Goal | Entry point | Visible surfaces |
 | --- | --- | --- | --- |

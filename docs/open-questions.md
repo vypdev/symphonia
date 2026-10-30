@@ -1,7 +1,7 @@
 # Open questions, risks, and next design work
 
 **Status:** open items and resolved decisions are marked individually
-**Last reviewed:** 2026-10-25 (native OAuth companion and accepted automatic-start key/backup profile)
+**Last reviewed:** 2026-10-30 (bounded native owner OAuth passed; production readiness remains open)
 
 ## Owner decisions and recorded outcomes
 
@@ -57,6 +57,12 @@ handoff, fresh native same-admin confirmation and private paired transport.
 `RG-002`/`RG-008`, secret/key/backup and exact provider scope gates remain open.
 The direction is accepted. The owner subsequently authorized continuing through
 readiness, implementation and testing; the SDD readiness gate still applies.
+
+The [corrected native owner trial](development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+now establishes this read-only public-client/My route on its exact declared
+matrix. It does not choose library/copy scopes, other-provider credentials or
+production support. The [readiness review](development/native-oauth-production-readiness-2026-10-30.md)
+keeps those remaining decisions and lifecycle gates explicit.
 
 ### OQ-005 — What authentication/exposure does standalone mode use, and when does it ship?
 
@@ -119,8 +125,9 @@ If Apple Music is considered as a future provider or fallback for an official mu
 ### RG-002 — Provider OAuth for the Home Assistant App
 
 Validate the ADR 0007 native companion/Core callback route, with App-owned
-exchange/refresh and the paired protocol from `RG-008`. First prove the minimal
-Spotify PKCE profile; Google needs its own accepted registration/secret/scopes.
+exchange/refresh and the paired protocol from `RG-008`. The minimal Spotify
+PKCE profile now has bounded native trial proof; production lifecycle and scope
+conformance remain required. Google needs its own accepted registration/scopes.
 Test:
 
 - local and externally reachable Home Assistant URLs;
@@ -183,6 +190,17 @@ A [disposable Core/MA Compose lab](development/playback-lab/README.md) is now pr
 
 ### RG-008 — Native OAuth companion conformance
 
+**Further evidence (2026-10-30):** [PR #35](https://github.com/vypdev/symphonia/pull/35)
+merged a separate native App/helper whose corrected `852f3ea` payload passed
+real owner pairing, explicit read consent, Core/My staged return, fresh admin
+confirmation, App restart/refresh/account match and complete local plus dedicated
+provider retirement. The [report](development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+separates its 54 source/package cases and actual owner run. The [production
+readiness review](development/native-oauth-production-readiness-2026-10-30.md)
+maps these to L01–L16 without claiming production completion. Long-lived
+renewal/reset, concurrency, final packaging/restore and supported-profile gates
+below remain open; no new owner-HA operation occurs in this documentation work.
+
 **Bounded evidence (2026-10-25):** [the lab run](development/ha-oauth-companion-lab-2026-10-25.md)
 now demonstrates native main-flow/request-actor feasibility, an actual paired
 TLS route and App exclusion/locked-restore behavior. It also confirms that
@@ -223,7 +241,8 @@ disposable HA installation with dedicated public client registration:
    example or the previous direct tunnel trial is not a bridge pass.
 
 The owner authorized continuation through readiness and subsequent implementation/
-testing. This does not make a Draft SDD ready or claim an owner-instance pass.
+testing. This does not make a Draft SDD ready. The separate bounded owner pass above
+is not acceptance of the production companion.
 The planned 80-case offline budget does not replace the authorization/runtime
 budgets or the 16-case release matrix.
 

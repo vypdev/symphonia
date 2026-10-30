@@ -20,6 +20,16 @@ callback. A Supervisor App does not inherit that config-flow machinery merely
 because it has Ingress. A loopback callback instead reaches the browser's
 computer; it does not reach an App on another HA host.
 
+## Later evidence, 2026-10-30
+
+The [native owner trial](../development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+subsequently completed the selected Core/My route with private pairing, fresh
+same-admin exchange confirmation and App-owned grant/restart/refresh. Its
+installation and dedicated provider access were removed. This supports the
+accepted authority direction without accepting the full proposed production
+protocol. The [readiness review](../development/native-oauth-production-readiness-2026-10-30.md)
+records remaining gates; the production SDDs stay Draft.
+
 ## Decision
 
 In the Home Assistant profile, require a **thin Symphonia custom integration
@@ -64,5 +74,7 @@ stated feasibility/security review; this ADR does not certify that protocol.
 Only the authority direction is accepted. The new companion SDD, authorization
 SDD and runtime SDD remain **Draft**. Native actor/flow proof, private-channel
 pairing, secret/key/backup policy, provider scopes and local/remote browser
-evidence remain blockers. This request approves design work, not production
-code, installation, migration, merge or release.
+evidence remain production gates despite the bounded trial proof above. The
+original request approved design work. Later explicit trial and continuation
+authorizations are separate; they do not themselves establish SDD readiness
+or production release conformance.

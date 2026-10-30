@@ -1,13 +1,14 @@
 # Home Assistant OAuth companion
 
 - Status: Draft
-- Date: 2026-10-25
+- Date: 2026-10-30
 - Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `home-assistant-oauth-companion`
 - Owners: Symphonia maintainers
 - Scope: pair a thin HA integration with the App, run native provider consent without a public App callback, and admit one App-owned grant exchange through a verified native flow.
 - Related requirements: `SYM-ACC-002`, `SYM-ACC-004`–`SYM-ACC-006`, `SYM-HA-002`, `SYM-HA-004`–`SYM-HA-007`, `SYM-HA-012`, `SYM-SEC-001`–`SYM-SEC-008`, `SYM-SEC-010`, `SYM-SEC-012`–`SYM-SEC-015`, `SYM-PROV-009`, `SYM-PROV-012`, `SYM-PROV-013`, `SYM-PROV-022`
 - Related decisions/research: [ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md), [protocol RFC](../docs/architecture/home-assistant-oauth-companion-rfc.md), [official research](../docs/providers/provider-research.md#2026-10-25--native-home-assistant-oauth-companion), [ecosystem evidence](../docs/providers/home-assistant-ecosystem-review.md#2026-10-25--oauth-companion-evidence), [authorization](provider-connections-and-authorization.md), [runtime](home-assistant-app-runtime-and-ingress.md), [UI foundation](home-assistant-native-ui.md), `OQ-004`, `RG-002`, `RG-008`
+- Related follow-up: [production readiness review](../docs/development/native-oauth-production-readiness-2026-10-30.md), [issue #38](https://github.com/vypdev/symphonia/issues/38)
 - Required review gates: product UX, architecture, HA platform, provider feasibility, testing, documentation, security/operations
 - Open decisions blocking readiness: supported-version/browser/package conformance of the native hooks; production enrollment/certificate lifecycle and durable pairing; final local-key adapter/package, reset/rotation and backup/restore conformance under accepted ADR 0008; App secret publication/recovery; production PKCE-only credential UX and exact provider scopes; full live conformance. Bounded HTTP/TLS/backup evidence is now recorded below.
 
@@ -39,11 +40,13 @@ to native integrations and adds registration and exposed-listener complexity.
 
 ### 2.2 Current behavior
 
-The production runtime has no OAuth integration/endpoints. The separate trial
-proved private session/start admission, not a real App grant. It is stopped;
-its temporary redirects were removed. The native Spotify integration is
-independent and is never a source of Symphonia credentials. Existing foundation
-attempt/connection persistence is reusable policy evidence, not this adapter.
+The primary production runtime has no OAuth integration/endpoints. The earlier
+direct-callback trial proved private session/start admission, not a real App
+grant. A later separate native App/helper completed real owner OAuth, restart,
+refresh/account match and owned retirement at `852f3ea`; see section 2.5. It is
+not the production adapter. The native Spotify integration remains independent
+and is never a credential source. Existing foundation persistence remains
+reusable policy evidence rather than this complete capability.
 
 ### 2.3 Evidence and unknowns
 
@@ -76,6 +79,24 @@ No provider exchange, real Spotify consent, personal HA changes, public callback
 or production implementation occurred. All partial live-case claims are scoped
 in the report. This evidence narrows `RG-008`; it does not close it or the 80-case
 production budget.
+
+### 2.5 Native owner trial and production gap, 2026-10-30
+
+The [corrected native campaign](../docs/development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+passed on Core 2026.10.4, Supervisor 2026.10.5, HAOS 18.3 and Green/aarch64 in
+Chrome: private native pairing, explicit public-client read consent, Core/My
+staging, new same-admin confirmation, App-only encrypted grant, App restart,
+confirmed refresh/account match and local plus separate provider retirement.
+The App/helper/keys/staging/store were removed; both Core restarts completed.
+PR #35 merged this bounded implementation into develop at `9601681`.
+
+Its 54 source/package cases and real owner run establish the selected route's
+bounded feasibility. They do not execute this SDD's 80 production cases or 16
+live production cases. Long-lived enrollment/renewal, key recovery/rotation,
+concurrent connection publication and supported artifact/browser conformance
+remain open. The [manual readiness review](../docs/development/native-oauth-production-readiness-2026-10-30.md)
+maps every L-case to relevant observations and the remaining work. This SDD
+stays Draft; no trial grant, key or config entry migrates to production.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -146,7 +167,9 @@ define the dependent browser, Core and App transitions.
    artifact exists. Native pairing enrolls the App identity and `oauth` profile.
    One HA config entry represents the pair. Provider connect/reconnect uses a
    main reconfigure/reauth config flow, not options/subentries, so Core's native
-   callback manager resumes the correct kind of flow. This hook needs proof.
+   callback manager resumes the correct kind of flow. The trial proves its main
+   reconfigure path; the production reconfigure/reauth adapter still needs its
+   own conformance evidence.
 2. Start in HA settings; an App Connect action is a documented navigation link,
    not an HA API client or a secret-bearing URL.
 3. Capture a server-validated administrator and per-attempt authorizer. Prepare
@@ -524,7 +547,7 @@ scopes and additional native entities/actions remain outside this increment.
 
 The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
 
-The listed probes and fixture tests are isolated research evidence. They do not constitute a shipping integration or completed OAuth acceptance on the owner’s installation.
+The listed research probes do not constitute a production integration. The separate native trial now has bounded owner OAuth acceptance in section 2.5; it does not complete this production contract.
 
 Requirement inventory retained from the previous catalog:
 

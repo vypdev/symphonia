@@ -69,9 +69,13 @@ and rejects the wrong password. The exact fixture files and both backups were
 removed. Core was never restored. The owner's current local backup destination
 was separately observed encrypted; its configuration was not changed.
 
-These mechanisms do not prove the final integration, CSR/certificate lifecycle,
-rotation/reset/publication races, complete supported matrix or a real Spotify
-bridge. The companion, authorization and runtime SDDs remain Draft until their
+These mechanisms do not prove the final production integration, certificate
+lifecycle, rotation/reset/publication races or complete supported matrix. A
+separate [native trial](../development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+subsequently completed real owner Spotify consent, grant reopen/refresh and
+retirement. It did not exercise production key recovery or restore owner
+archives; see the [readiness review](../development/native-oauth-production-readiness-2026-10-30.md).
+The companion, authorization and runtime SDDs remain Draft until their
 remaining gates are resolved. The owner authorized continuing through those
 gates and implementation/testing; that authorization does not itself make an
 SDD ready or establish release conformance.
