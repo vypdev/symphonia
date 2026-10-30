@@ -220,6 +220,9 @@ class Store:
             with self.transaction():
                 self._guard(now)
         except TrialError as error:
-            return {"phase": "expired" if error.reason == "expired" else "locked", "deadline": meta["deadline"]}
+            phase = "locked"
+            if error.reason == "expired":
+                phase = "retired" if meta["retired"] else "expired"
+            return {"phase": phase, "deadline": meta["deadline"]}
         row = self.db.execute("SELECT phase FROM attempt WHERE id=1").fetchone()
         return {"phase": row[0] if row else "paired" if meta["pair_id"] else "unpaired", "deadline": meta["deadline"]}

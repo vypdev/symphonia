@@ -3,14 +3,14 @@
 - Status: Ready for implementation
 - Date: 2026-10-30
 - Catalog capability ID: `native-oauth-validation-trial` (proposed)
-- Last verified: 2026-10-30, source/package campaign and Chrome lab pairing/retirement; final status review and owner/live acceptance pending.
+- Last verified: 2026-10-30, source/package campaign and Chrome lab pairing/retirement; final presentation reviewed with synthetic states; owner/live acceptance pending.
 - Owners: Symphonia maintainers
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: None. The dated engineering review is recorded in `docs/development/native-oauth-trial-preparation.md`; package and live acceptance remain subsequent gates.
 
-The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. The bounded implementation is under review. The catalog remains proposed pending final status review and owner/live acceptance; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
+The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. The bounded implementation is under review. The catalog remains proposed pending owner/live acceptance; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
 
 ## 1. Executive summary
 
@@ -489,6 +489,8 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
 
 Installer cache receipts require a valid ownership header and unique allowlisted paths before any removal. Package case native-trial-package-C07 verifies duplicate and empty receipts preserve all source/cache bytes.
+
+Read-only status distinguishes persisted retirement from deadline expiry, including after restart. Clock rollback still reports locked; retirement never reopens grant authority. Cases native-trial-state-C12, native-trial-http-C10 and native-trial-package-C08 verify these outcomes.
 
 The fixed HTTPS adapter explicitly requests identity encoding and refuses compressed or redirected responses, preserving its byte cap; case native-trial-adapter-C10 verifies negotiation. App-store README links use immutable absolute documentation URLs because Supervisor does not resolve repository-relative links.
 

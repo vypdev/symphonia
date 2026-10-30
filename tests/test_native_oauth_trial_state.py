@@ -215,3 +215,10 @@ class NativeTrialStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(0, self.provider.accounts)
         row = self.store.db.execute("SELECT phase,sealed FROM attempt").fetchone()
         self.assertEqual(("retired", None), tuple(row))
+        self.assertEqual({"phase": "retired", "deadline": 2200}, self.store.status(self.now))
+        self.restart()
+        self.assertEqual("retired", self.store.status(self.now)["phase"])
+        self.assertEqual("retired", self.store.status(2200)["phase"])
+        self.assertEqual("locked", self.store.status(999)["phase"])
+        with self.assertRaises(TrialError):
+            self.store.grant(self.binding, self.now)

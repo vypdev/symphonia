@@ -224,7 +224,17 @@ async def core_campaign():
                 results["package_C05_process_restart_confirmed_refresh"]=True
                 assert await helper_failure_contracts(hass,entry)
                 path=await reconfigure("retire",1)
-                result=await posted(path,{"confirm":True},1)
+                from unittest.mock import patch
+                channel_module=__import__('custom_components.'+DOMAIN+'.bridge',fromlist=['Bridge'])
+                original_call=channel_module.Bridge.call
+                retire_replies=[]
+                async def observe_retire(channel,payload,**kwargs):
+                    value=await original_call(channel,payload,**kwargs)
+                    if payload.get('op')=='pair.revoke':retire_replies.append(value.get('phase'))
+                    return value
+                with patch.object(channel_module.Bridge,'call',observe_retire):
+                    result=await posted(path,{"confirm":True},1)
+                assert retire_replies==['retired']
                 assert result.get("reason")=="trial_retired",("retire",result.get("reason"))
                 assert entry.data.get("retired") is True and entry.data.get("key_cleanup_pending") is False
                 assert not (ha_root/".storage"/DOMAIN/identity["installation"]).exists()

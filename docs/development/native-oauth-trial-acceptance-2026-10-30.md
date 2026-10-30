@@ -18,7 +18,7 @@ Broad production companion/authorization/runtime specifications remain Draft.
 | Guarded Supervisor | 2026.10.5, aarch64, unsupported devcontainer environment; not HAOS hardware proof |
 | Devcontainer image | `sha256:81ea6e6892125d08e88b5a873c12da00131dfc3a184d335179576ec60bc0ecb0` |
 | App Python base index | `sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8` |
-| Local reproduced App image | `sha256:024b797f8eb9d368ce1ed7e479bf287c1958737c0d0a06063300829a55afd130` |
+| Local reproduced App image | `sha256:6e580d539ccf4e2836892181244b03266a222ebacda43f80c9278b804dc6e270` |
 | Host quality runtime | Python 3.11.15, coverage 7.16.1 |
 | App runtime | Python 3.14.10; fifteen pinned dependencies in the App requirements |
 
@@ -35,7 +35,7 @@ manifest covers twelve App files; the helper manifest covers eight source files.
 | State | 12/12 | Actual SQLite; explicit fake provider/cipher for application-state cases |
 | Adapters | 12/12 | Actual AEAD, files, CSR/TLS, c-ares timeout/cancellation; controlled provider responses |
 | HTTP/UI contracts | 10/10 | Actual local HTTP plus named actor/Ingress fixtures; semantic/localization assertions are not manual UX review |
-| Package suite | 8/8, 50.658 seconds | Fresh Core/Supervisor execution, not replayed receipts |
+| Package suite | 8/8, 36.529 seconds | Fresh Core/Supervisor execution, not replayed receipts |
 | Shipping-main supplement | Passed | Actual entry module, network disabled, new Linux volume; read-only coverage instrumentation |
 
 The package suite observes each of the following:
@@ -116,8 +116,12 @@ the valid receipt still permits complete owned removal.
 
 The read-only Ingress used the browser's English language fallback despite the
 Spanish HA profile. Its paired-state next action was clarified after this review;
-the updated English/Spanish status is covered by HTTP cases, not a second manual
-Ingress review. Epoch UTC deadlines and the semantic diagnostic presentation
+the final English/Spanish wording and narrow layout were subsequently inspected
+in Chrome at 390 × 844 with the actual shipping renderer and named synthetic
+status/Ingress-header fixtures. Tab focused the read-only link. Staged, active,
+verified, locked, uncertain and expired text was also inspected with synthetic
+states. This supplements the earlier real authenticated Ingress review; it does
+not assert new HA login/cookie semantics or real provider outcomes. Epoch UTC deadlines and the semantic diagnostic presentation
 remain explicit trial limitations. This is partial manual acceptance, not a
 complete production UX or accessibility assessment.
 
@@ -161,8 +165,7 @@ review above observes actual authenticated Ingress, without proving continuity
 with the initiating browser login session. The real Core My component runs, but the external My relay/browser is
 not visited by the offline campaign. All provider grants/accounts are synthetic.
 
-Still required: final exact-package status review; clean artifact review and remote checks; owner version and
-encrypted-future-backup preflight; applicable exact-package installation/Core
+Still required: final clean artifact review and remote checks; applicable exact-package installation/Core
 restart approval; live dedicated Spotify consent through My, fresh native
 confirmation, App restart, confirmed refresh/account match; owned retirement and
 separately observed Spotify revocation. No real account, token, verifier, code,
@@ -193,3 +196,16 @@ launch duplicate verification; all existing jobs and permissions are retained.
 No new trial package, helper execution, Core restart or Spotify consent has yet
 been applied on the owner's installation. Installation still requires exact-package
 review and applicable browser action-time confirmation.
+
+A second code-review correction preserves `retired` status after explicit local
+retirement and process restart, while ordinary expiry remains `expired` and
+backwards-clock state remains `locked`. No grant/channel authority is restored.
+The state and HTTP cases exercise these distinctions, and package C08 observes
+the real mTLS retirement reply without substituting the response. The final
+eight-case campaign passed again and removed all owned artifacts.
+
+The final App manifest SHA-256 is
+`45c63d524923fbc60f77c0dd34ba8c09b68ed2e3bfb7ffd793db8f79e587151b`.
+Combined coverage was recollected on this source: all twelve changed modules
+remain above85%, aggregate92%, pure policy branches100%. Final paired-state
+EN/ES screenshots are retained locally, separate from CI source review.

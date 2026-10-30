@@ -198,3 +198,8 @@ class NativeTrialHTTPTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(self.server.challenge, response.text)
         self.assertNotIn("externally revoked", response.text)
         self.assertEqual(original, self.server.state.meta()["deadline"])
+        self.server.state.retire()
+        response = await self.server.page(self.page_request())
+        self.assertIn("role='status'>retired", response.text)
+        self.assertNotIn(self.server.challenge, response.text)
+        self.assertNotIn("externally revoked", response.text)
