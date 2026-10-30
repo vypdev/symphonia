@@ -90,6 +90,17 @@ adapter requests for reset admission. The 18-case research plan does not add
 to or replace the unchanged production budgets. Results must identify the
 exact crypto/runtime/package and distinguish synthetic state from owner HA.
 
+## Native trial evidence, 2026-10-30
+
+The [corrected native owner campaign](../development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+proved the trial's App grant/key reopen across App restart, confirmed refresh,
+local retirement and Core-key cleanup. Its separate package run observed actual
+App-only backup exclusion and locked restoration. Owner backups were not opened
+or restored; only the current encryption setting was inspected. This does not
+accept the production reset authority, prove long-lived renewal/rotation or
+close concurrent publication/collection. See the [readiness review](../development/native-oauth-production-readiness-2026-10-30.md).
+The accepted trust profile and all production budgets remain unchanged.
+
 ## Planned acceptance before production
 
 ### Fresh reset authority candidate — not accepted or implemented

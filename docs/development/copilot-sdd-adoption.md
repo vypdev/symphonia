@@ -62,7 +62,8 @@ arrays: `specs`, `workflows`, `entrypoints`, `code`, `tests`, `documentation`.
 Its supported statuses are `proposed`, `implemented`, `as-built-baseline`, and
 `deprecated`. The former local JSON Schema and custom status renderer are retired.
 
-Nine prospective capabilities are `proposed`. Their owning documents retain
+At the 2026-10-29 migration, nine prospective capabilities were `proposed`.
+Their owning documents retained
 `Draft` or `Ready for review`, existing requirement identifiers, decisions,
 blockers, acceptance scenarios and numeric budgets. The bounded read-only
 dashboard alone retains `implemented`. Inventory status describes the capability;
@@ -78,7 +79,7 @@ is still proposed. In particular:
 | Capability | Existing executable evidence | Limit |
 |---|---|---|
 | Playback control | Disposable Compose configuration; `playback-lab-config` CI job | Configuration validity only; no player/broker implementation or live provider proof |
-| OAuth companion | Core/transport/key/recovery probes and fixture tests | Isolated laboratory proof; no installed production helper or completed owner-instance OAuth |
+| OAuth companion | Core/transport/key/recovery probes; separate bounded native trial | No installed production helper; real trial owner acceptance is separate from production readiness |
 | UI foundation | Shared theme, boundary checks and UI entrypoint | Full component/browser/visual matrix remains pending |
 | Recording identity | Normalization module and identity tests | No complete scoring/resolver or labeled-corpus acceptance |
 
@@ -104,6 +105,15 @@ standard and the owning SDD's Definition of Done. Reviewers must verify:
 These are the standard's human review gates, not a parallel machine contract.
 Structural validation must never change `Draft` to ready automatically or count
 planned tests as executed evidence.
+
+## Native trial follow-up, 2026-10-30
+
+PR #35 added the eleventh inventory capability, the separate native OAuth trial.
+Its [corrected owner campaign](native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+passed and was removed. The [production readiness review](native-oauth-production-readiness-2026-10-30.md)
+reconciles that evidence into the existing Draft companion/authorization/runtime
+contracts; it creates no readiness schema or alternative validation mechanism.
+The historical migration counts/results below retain their original date.
 
 ## Tracking
 
@@ -143,5 +153,5 @@ claimed fixed and hostile concurrent checkout mutation is outside this preflight
   [Copilot #786](https://github.com/vypdev/copilot/issues/786), closed not planned.
 - Installation guidance request:
   [Copilot #787](https://github.com/vypdev/copilot/issues/787).
-- Real OAuth follow-up remains [Symphonia #32](https://github.com/vypdev/symphonia/issues/32)
-  and must use normal Action admission after the compatible base is merged.
+- Bounded real OAuth follow-up: [Symphonia #32](https://github.com/vypdev/symphonia/issues/32) and merged [PR #35](https://github.com/vypdev/symphonia/pull/35).
+- Production evidence/readiness reconciliation: [Symphonia #38](https://github.com/vypdev/symphonia/issues/38), using normal Action admission and the existing SDD owners.

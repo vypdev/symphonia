@@ -4,6 +4,16 @@
 **Date:** 2026-10-25. Authority direction: [ADR 0007](../decisions/0007-home-assistant-oauth-companion.md).
 Capability contract: [OAuth companion SDD](../../specs/home-assistant-oauth-companion.md).
 
+## Evidence update, 2026-10-30
+
+The separate [native trial](../development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+now proves real Core/My consent, staged-only return, new same-admin confirmation,
+private pairing, App-owned grant/restart/refresh and retirement on its declared
+owner matrix. PR #35 merged the bounded source; the owner installation and its
+dedicated Spotify access were removed. This is not a production protocol or
+long-lived recovery/renewal pass. The [readiness review](../development/native-oauth-production-readiness-2026-10-30.md)
+maps remaining decisions and production acceptance without changing these bounds.
+
 ## Topology and ownership
 
 ```mermaid
@@ -85,7 +95,9 @@ are denied; there is no WebSocket, inbound Core endpoint or unsolicited push
 in this profile. Core polls safe status only while a flow is pending. There is no host
 port mapping, public ingress to this route, HA Core proxy token, `host_network`,
 host/config mount or Docker/SSH access. Internal DNS/network proximity does not
-authenticate either side. This is a proposed transport, not a proven topology.
+authenticate either side. The bounded trial has actual Supervisor-internal
+TLS/topology proof; this complete production message/lifecycle contract remains
+proposed and requires final-package conformance.
 
 1. App Ingress creates a single-use 256-bit pairing challenge valid for five
    minutes and displays its installation ID and TLS public-key fingerprint.
@@ -277,7 +289,9 @@ No production component from this design is installed. The separately authorized
 [laboratory validation](../development/ha-oauth-companion-lab-2026-10-25.md)
 proves bounded native HTTP, internal TLS and backup mechanisms. Its temporary
 Supervisor App was removed afterwards. Existing owner-instance research
-trial/tunnel remains stopped; native Spotify configuration is not a migration source.
+trial/tunnel is historical research. The later native owner campaign is
+recorded above and removed; no trial or native Spotify configuration/grant is
+a production migration source.
 
 Native current-request actor and main reconfigure/reauth hooks now have real
 framework HTTP evidence. Pre-issued PKI tests show the private route can reject

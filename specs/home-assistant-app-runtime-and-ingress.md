@@ -1,13 +1,14 @@
 # Home Assistant App runtime and Ingress
 
 - Status: Draft
-- Date: 2026-10-25
+- Date: 2026-10-30
 - Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `home-assistant-app-runtime`
 - Owners: Symphonia maintainers
 - Scope: define the install, lifecycle, authentication, persistence, recovery, upgrade, backup, and diagnostics contract for the primary Supervisor-managed App.
 - Related requirements: `SYM-PROD-001`, `SYM-ACC-005`, `SYM-HA-001`–`SYM-HA-009`, `SYM-HA-011`–`SYM-HA-012`, `SYM-DEP-001`–`SYM-DEP-010`, `SYM-SEC-008`–`SYM-SEC-015`
 - Related decisions/research: [ADR 0003](../docs/decisions/0003-home-assistant-app-primary.md), [ADR 0004](../docs/decisions/0004-home-assistant-native-ui.md), [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md), [system architecture](../docs/architecture/system-architecture.md), [Home Assistant platform research](../docs/providers/provider-research.md#home-assistant-platform), [UI foundation](home-assistant-native-ui.md)
+- Related follow-up: [production readiness review](../docs/development/native-oauth-production-readiness-2026-10-30.md), [issue #38](https://github.com/vypdev/symphonia/issues/38)
 - Required review gates: product UX, architecture, Home Assistant platform, testing, documentation, security/operations
 - Open decisions blocking readiness: storage/recovery result from `RG-004`; supported Home Assistant versions and CPU architectures; final local-key package/adapter and reset/rotation/restore conformance under accepted ADR 0008; `RG-008` internal OAuth companion pairing/profile/lifecycle conformance; standalone release timing from `OQ-005`
 
@@ -89,6 +90,23 @@ proves install-local reopen in a second container, private Core identity reopen
 in a new process and actual protected Core archives. ADR 0008 accepts this
 automatic-start trust direction; final package/adapter, reset/rotation/full
 restore and platform gates remain open. The runtime stays Draft.
+
+### 2.5 Native trial packaging and owner lifecycle, 2026-10-30
+
+The [corrected native trial](../docs/development/native-oauth-trial-acceptance-2026-10-30.md#corrected-owner-campaign-at-852f3ea)
+installed a distinct manually started App/helper on the owner's Core 2026.10.4,
+Supervisor 2026.10.5, HAOS 18.3 and Green/aarch64. OAuth, App restart and confirmed
+refresh/account match passed. Entry/App/helper/keys/staging/store were removed;
+normal Core checks/restarts and post-restart absence passed. Its controlled
+package campaign separately proves App-key exclusion and locked App-only restore.
+No owner archive/key was opened and no owner restore was performed.
+
+That twenty-minute artifact is separate from the primary App runtime. It does
+not prove long-lived renewal/recovery, production migration/upgrade/downgrade,
+active-worker backup/restore or the complete supported matrix. The [production
+readiness review](../docs/development/native-oauth-production-readiness-2026-10-30.md)
+connects this evidence to the remaining lifecycle work. This SDD remains Draft
+with its 58-case budget; authorization/companion budgets are not replaced.
 
 ## 3. Actors, surfaces, and terminology
 

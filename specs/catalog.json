@@ -7,7 +7,7 @@
       "scope": "Install, start, authenticate, persist, upgrade, back up, restore, and diagnose the primary Supervisor-managed Symphonia App",
       "owner": "Symphonia maintainers",
       "status": "proposed",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/home-assistant-app-runtime-and-ingress.md"
       ],
@@ -89,7 +89,9 @@
         "docs/decisions/0008-install-local-oauth-keys-and-backups.md",
         "docs/architecture/local-key-custody-rfc.md",
         "docs/development/local-key-custody-lab-2026-10-25.md",
-        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md"
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "docs/development/native-oauth-production-readiness-2026-10-30.md",
+        "docs/development/native-oauth-trial-acceptance-2026-10-30.md"
       ]
     },
     {
@@ -232,7 +234,7 @@
       "scope": "Disclose provider risk, authorize an account, store and refresh grants, probe effective capabilities, and disconnect safely",
       "owner": "Symphonia maintainers",
       "status": "proposed",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/provider-connections-and-authorization.md"
       ],
@@ -297,7 +299,9 @@
         "docs/decisions/0008-install-local-oauth-keys-and-backups.md",
         "docs/architecture/local-key-custody-rfc.md",
         "docs/development/local-key-custody-lab-2026-10-25.md",
-        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md"
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "docs/development/native-oauth-production-readiness-2026-10-30.md",
+        "docs/development/native-oauth-trial-acceptance-2026-10-30.md"
       ]
     },
     {
@@ -306,7 +310,7 @@
       "scope": "Native HA consent and Core/My callback with paired one-use code delivery and App-owned grants, without Cloudflare or a public App callback",
       "owner": "Symphonia maintainers",
       "status": "proposed",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/home-assistant-oauth-companion.md"
       ],
@@ -348,7 +352,9 @@
         "docs/decisions/0008-install-local-oauth-keys-and-backups.md",
         "docs/architecture/local-key-custody-rfc.md",
         "docs/development/local-key-custody-lab-2026-10-25.md",
-        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md"
+        "docs/development/oauth-recovery-and-pairing-lab-2026-10-25.md",
+        "docs/development/native-oauth-production-readiness-2026-10-30.md",
+        "docs/development/native-oauth-trial-acceptance-2026-10-30.md"
       ]
     },
     {
