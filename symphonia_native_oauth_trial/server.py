@@ -60,6 +60,7 @@ class Server:
         title = "Prueba OAuth de Symphonia" if spanish else "Symphonia OAuth trial"
         actions = {
             "unpaired": "Copia el bloque en la integración nativa de Home Assistant." if spanish else "Copy the block into the native Home Assistant integration.",
+            "paired": "Abre la integración de prueba en Home Assistant, luego Reconfigurar → Conectar Spotify." if spanish else "Open the trial integration in Home Assistant, then Reconfigure → Connect Spotify.",
             "pending": "Completa el consentimiento de Spotify; aún no hay grant activo." if spanish else "Finish Spotify consent; no grant is active yet.",
             "staged": "Confirma de nuevo en el formulario nativo; el código aún no se ha intercambiado." if spanish else "Confirm again in the native form; the code has not been exchanged.",
             "active": "Reinicia solo la App y confirma una renovación en el formulario nativo." if spanish else "Restart only the App, then confirm one refresh in the native form.",

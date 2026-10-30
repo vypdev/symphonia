@@ -200,7 +200,15 @@ class NativeTrialProviderTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(sessions[-1].closed and resolvers[-1].closed)
             self.assertFalse(sessions[-1].options["trust_env"])
             self.assertFalse(sessions[-1].request_options["allow_redirects"])
+            self.assertEqual("identity", sessions[-1].request_options["headers"]["Accept-Encoding"])
             self.assertIs(True, sessions[-1].options["connector"]._ssl)
+        response = ResponseFixture(200, {}, b'{"account_id":"synthetic"}')
+        with patch("symphonia_native_oauth_trial.provider.aiohttp.AsyncResolver", ResolverFixture), patch("symphonia_native_oauth_trial.provider.aiohttp.ClientSession", factory):
+            observed = await FixedHTTP().request("GET", ME, deadline=time.time()+1200,
+                headers={"Authorization": "Bearer synthetic", "Accept-Encoding": "gzip"})
+        self.assertEqual(b'{"account_id":"synthetic"}', observed.body)
+        self.assertEqual({"Authorization": "Bearer synthetic", "Accept-Encoding": "identity"},
+                         sessions[-1].request_options["headers"])
         for method, url in (("GET", TOKEN), ("POST", ME), ("GET", ME+"/other"), ("GET", "http://127.0.0.1")):
             with self.subTest(url=url), self.assertRaises(TrialError):
                 await FixedHTTP().request(method, url, deadline=time.time()+1200)

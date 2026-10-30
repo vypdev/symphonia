@@ -37,7 +37,8 @@ class FixedHTTP:
                 connector = aiohttp.TCPConnector(resolver=resolver, use_dns_cache=False, limit=1)
                 async with aiohttp.ClientSession(connector=connector, trust_env=False,
                         auto_decompress=False, timeout=aiohttp.ClientTimeout(total=remaining)) as session:
-                    async with session.request(method, url, data=data, headers=headers,
+                    async with session.request(method, url, data=data,
+                                               headers={**(headers or {}), "Accept-Encoding": "identity"},
                                                allow_redirects=False) as response:
                         if response.status in range(300, 400) or response.headers.get("Content-Encoding", "identity") != "identity":
                             raise TrialError("uncertain")

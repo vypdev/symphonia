@@ -176,6 +176,12 @@ class NativeTrialHTTPTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("width=device-width", rendered.text)
             self.assertIn("user-read-private", rendered.text)
             self.assertNotIn("<form", rendered.text)
+        for language, action in (("en", "Reconfigure → Connect Spotify"), ("es", "Reconfigurar → Conectar Spotify")):
+            with patch.object(self.server.state, "status", return_value={"phase": "paired", "deadline": self.server.state.meta()["deadline"]}):
+                paired = await self.server.page(self.page_request(language))
+            self.assertIn(action, paired.text)
+            self.assertNotIn(self.server.challenge, paired.text)
+            self.assertNotIn("<form", paired.text)
         for data in (english, spanish):
             self.assertIn("encrypted_core_backups", data["config"]["step"]["user"]["data"])
             self.assertIn("retire", data["config"]["step"])

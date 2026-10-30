@@ -66,4 +66,6 @@ and8 freshly executed package cases passing. Actual TLS, process restart,
 Supervisor backup/locked restore and owned package removal are now observed.
 Every changed Python module exceeds85% combined coverage; pure policy branches
 reach100%. This updates the preparation evidence, not owner/live acceptance.
-Manual Chrome review, exact-package approval and owner installation remain gates.
+Chrome laboratory native pairing, unchecked consent review and confirmed retirement
+now pass, with English/Spanish narrow-form evidence in the report. Final exact-package
+status review, approval and owner/live installation remain gates.

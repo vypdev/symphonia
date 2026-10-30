@@ -3,14 +3,14 @@
 - Status: Ready for implementation
 - Date: 2026-10-30
 - Catalog capability ID: `native-oauth-validation-trial` (proposed)
-- Last verified: 2026-10-30, source and isolated package campaign only; manual browser and owner/live acceptance pending.
+- Last verified: 2026-10-30, source/package campaign and Chrome lab pairing/retirement; final status review and owner/live acceptance pending.
 - Owners: Symphonia maintainers
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: None. The dated engineering review is recorded in `docs/development/native-oauth-trial-preparation.md`; package and live acceptance remain subsequent gates.
 
-The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. The bounded implementation is under review. The catalog remains proposed pending manual browser and owner/live acceptance; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
+The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. The bounded implementation is under review. The catalog remains proposed pending final status review and owner/live acceptance; see the [dated validation report](../docs/development/native-oauth-trial-acceptance-2026-10-30.md).
 
 ## 1. Executive summary
 
@@ -336,7 +336,7 @@ Errors follow `impact -> cause -> action -> retained state`. A provider operatio
 
 ## 14. Testing strategy and numeric budget
 
-The floor is 54 distinct deterministic trial cases: 12 pure/configuration, 12 state/replay/concurrency, 12 provider/TLS/secret adapters, 10 native HTTP/UI/sanitization, and 8 integration/package/restart/security. No package cases are executed yet. Live dedicated-client and owner-browser checks supplement, and do not count toward, this floor. Existing research rerun evidence of 36 observations with Ingress stubbed is research only and counts as zero final-package cases.
+The floor is 54 distinct deterministic trial cases: 12 pure/configuration, 12 state/replay/concurrency, 12 provider/TLS/secret adapters, 10 native HTTP/UI/sanitization, and 8 integration/package/restart/security. All pass in the isolated campaign; see the dated report for boundaries. Live dedicated-client and owner-browser checks supplement, and do not count toward, this floor. Existing research rerun evidence of 36 observations with Ingress stubbed is research only and counts as zero final-package cases.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -454,6 +454,11 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 | `docs/development/native-oauth-trial-hooks-2026-10-30.md` | create |
 | `docs/development/native-oauth-trial-preparation.md` | create |
 | `docs/development/native-oauth-trial-acceptance-2026-10-30.md` | create |
+| `docs/development/evidence/native-oauth-trial/en-narrow.png` | create |
+| `docs/development/evidence/native-oauth-trial/es-narrow.png` | create |
+| `docs/development/evidence/native-oauth-trial/pair-success-es.png` | create |
+| `docs/development/evidence/native-oauth-trial/connect-review-es.png` | create |
+| `docs/development/evidence/native-oauth-trial/retire-success-es.png` | create |
 | `specs/README.md` | reference |
 | `specs/_template.md` | reference |
 | `specs/home-assistant-oauth-companion.md` | reference |
@@ -487,6 +492,8 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 New user/setup/operator documentation MUST be linked from the App README and repository navigation appropriate to the existing conventions. Examples and command snippets must be validated against implementation fixtures. Catalog metadata retains proposed status and distinguishes implementation/laboratory evidence from research and pending manual/live acceptance. The Action remains sole publisher and branch owner.
 
 The native Reconfigure menu includes an explicit Retire trial confirmation. A current active administrator may revoke the local pair/grant; Core then removes only hash-matching private files and records any cleanup still pending. Normal entry removal accepts that receipt. Lost revocation acknowledgement preserves keys and reports uncertainty; stop the App. The installer verifies source and recorded runtime-cache hashes before removal, preserving unexpected files. Failed enrollment without an entry may leave protected partial Core material for explicit owned reconciliation; never claim automatic removal.
+
+The fixed HTTPS adapter explicitly requests identity encoding and refuses compressed or redirected responses, preserving its byte cap; case native-trial-adapter-C10 verifies negotiation. App-store README links use immutable absolute documentation URLs because Supervisor does not resolve repository-relative links.
 
 Every decoded protocol, bootstrap and provider JSON object is bounded to32 nested containers, including the root. Depth is checked independently of Python runtime recursion behavior; excess depth and non-finite JSON numbers fail closed before typed admission. Case native-trial-http-C05 and native-trial-adapter-C05 cover this bound across supported runtimes.
 

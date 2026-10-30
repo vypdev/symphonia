@@ -726,7 +726,9 @@ print('owned')'''
     verify="from pathlib import Path;import hashlib; p=Path('/config/custom_components/"+DOMAIN+"/.source-owned.sha256'); assert hashlib.sha256(p.read_bytes()).hexdigest()=='"+helper_hash+"'"
     lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',verify])
     cache="import sys;sys.path.insert(0,'/config'); from custom_components.symphonia_native_oauth_trial import record_runtime_cache;record_runtime_cache()"
-    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-c',cache])
+    # Core may disable bytecode writes: a cleanup probe must not create a cache
+    # after the native flow has recorded an intentionally header-only manifest.
+    lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','python3','-B','-c',cache])
     lab_call(['docker','exec',CONTAINER,'docker','exec','homeassistant','sh','/tmp/symphonia-native-helper-installer.sh','remove','/config'])
     return {'app_uninstalled':True,'owned_stage_removed':True,'helper_removed':True,'backup_removed':bool(backup_slug)}
 

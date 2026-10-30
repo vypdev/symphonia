@@ -18,8 +18,8 @@ Initial supported owner matrix: Core2026.10.4, Supervisor2026.10.5, HAOS18.3,
 Frontend20260930.5, Green/aarch64 and the observed Chrome version. The helper
 rejects another Core version; do not downgrade HA to run this trial.
 
-Follow the [setup and retirement runbook](../docs/operations/native-oauth-trial.md)
-and [preparation gates](../docs/development/native-oauth-trial-preparation.md).
+Follow the [setup and retirement runbook](https://github.com/vypdev/symphonia/blob/94710dbf042e1bae0519780a68aadda85d27eabe/docs/operations/native-oauth-trial.md)
+and [preparation gates](https://github.com/vypdev/symphonia/blob/94710dbf042e1bae0519780a68aadda85d27eabe/docs/development/native-oauth-trial-preparation.md).
 Review the exact source/package hashes, permissions and Core restart before
 installing experimental code. Automatic start and watchdog must remain off.
 
@@ -46,4 +46,4 @@ Contributor source artifacts are generated with
 The helper script is self-contained, requires no host Python/network and refuses
 existing or changed namespaces. App dependency and base-image identities are
 pinned; the staged receipt identifies every source and package hash. See the
-[test plan](../docs/development/native-oauth-trial-test-plan.md) for evidence limits.
+[test plan](https://github.com/vypdev/symphonia/blob/94710dbf042e1bae0519780a68aadda85d27eabe/docs/development/native-oauth-trial-test-plan.md) for evidence limits.
