@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-10-25
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `home-assistant-oauth-companion`
 - Owners: Symphonia maintainers
 - Scope: pair a thin HA integration with the App, run native provider consent without a public App callback, and admit one App-owned grant exchange through a verified native flow.
@@ -120,7 +121,9 @@ authority and imports no existing integration's credential or config entry.
 5. Ingress remains the App's UI management boundary. The independent OAuth
    channel permits only its typed bridge operations, never UI/API management.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -187,7 +190,9 @@ define the dependent browser, Core and App transitions.
 Denied/expired/cancelled/failed attempts are terminal tombstones. Duplicate or
 out-of-order callbacks cannot replace a staged return or create another owner.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 All names/limits below are proposed, not shipped options. Validate before
 creating a flow; configuration cannot weaken identity, TLS, scope or expiry.
@@ -514,3 +519,22 @@ transport proposal await conformance/security review. ADR 0003's App-primary
 and ADR 0006's narrow playback decisions continue under that refinement.
 Standalone, confidential-client/other-provider profiles, full library/copy
 scopes and additional native entities/actions remain outside this increment.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+The listed probes and fixture tests are isolated research evidence. They do not constitute a shipping integration or completed OAuth acceptance on the owner’s installation.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-ACC-002`, `SYM-ACC-004`, `SYM-ACC-005`, `SYM-ACC-006`, `SYM-HA-002`, `SYM-HA-004`, `SYM-HA-005`, `SYM-HA-006`, `SYM-HA-007`, `SYM-HA-012`, `SYM-SEC-001`, `SYM-SEC-002`, `SYM-SEC-003`, `SYM-SEC-004`, `SYM-SEC-005`, `SYM-SEC-006`, `SYM-SEC-007`, `SYM-SEC-008`, `SYM-SEC-010`, `SYM-SEC-012`, `SYM-SEC-013`, `SYM-SEC-014`, `SYM-PROV-009`, `SYM-PROV-012`, `SYM-PROV-013`, `SYM-PROV-022`, `SYM-SEC-015`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-008 production package/browser/deployment conformance beyond isolated native HTTP proof on Core 2026.9.4 and 2026.10.3
+- RG-008 final enrollment/renewal adapter, deployment concurrency and full size/rate conformance beyond actual generated-CSR/Supervisor wire proof
+- Final local-key adapter/package, production rotation/publication concurrency, recovery authority/UX and full backup/restore conformance under accepted ADR 0008
+- RG-002 App-only provider exchange, secret publication, uncertain-outcome and disconnect recovery
+- RG-001 production PKCE-only client UX and exact provider capability/scope profiles
+- 80 planned production cases and 16 live bridge cases remain unimplemented/unproven; research fixtures are separate

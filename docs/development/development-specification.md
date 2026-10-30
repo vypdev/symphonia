@@ -23,7 +23,12 @@ Product requirements say **what** must happen; domain documents define terms/inv
 
 ## SDD content
 
-The complete required structure lives in [`specs/_template.md`](../../specs/_template.md). At minimum, every material SDD contains:
+The complete required structure lives in [`specs/_template.md`](../../specs/_template.md).
+Follow the Copilot standard and SDK v1 catalog strictly; request improvements
+upstream instead of introducing another mechanism. See the
+[adoption and validation notes](copilot-sdd-adoption.md) for commands, provenance,
+inventory statuses, evidence limits and manual readiness review. At minimum,
+every material SDD contains:
 
 - status, owner, date, and related requirement IDs;
 - user outcome and explicit non-goals;

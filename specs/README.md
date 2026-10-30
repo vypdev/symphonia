@@ -1,161 +1,254 @@
-# Software Design Document standard
+# Product Specification Standard
 
-This directory contains Symphonia's implementation-driving Software Design Documents (SDDs). An SDD is a vertical contract for one product capability: it joins product behavior, domain rules, architecture, provider boundaries, user experience, failure recovery, security, testing, documentation, and acceptance.
+This directory contains implementation-driving product and engineering
+specifications. A spec is a shared product contract, not only a technical design.
+It must make the intended behavior understandable to someone who did not take
+part in the original discussion and testable by someone who did not implement it.
 
-Start new SDDs from [`_template.md`](./_template.md). The capability inventory and readiness state live in [`catalog.json`](./catalog.json); [`CATALOG.md`](./CATALOG.md) is its human-readable companion.
+New specifications start from [`_template.md`](./_template.md). Existing specs
+should converge on this standard when they are materially revised.
 
-## Relationship to the shared specifications
+The capability inventory and its implementation evidence live in
+[`catalog.json`](./catalog.json); [`CATALOG.md`](./CATALOG.md) is the generated
+human-readable view. Run `pnpm run validate:specifications` after changing a
+specification or any catalogued path, and `pnpm run generate:specifications`
+after changing catalog metadata.
 
-The existing `docs/` documents remain the horizontal sources of truth:
+### Retrospective (as-built) specifications
 
-| Source | Owns |
-| --- | --- |
-| [`docs/product/product-specification.md`](../docs/product/product-specification.md) | Product scope, journeys, and stable requirement IDs |
-| [`docs/product/home-assistant-ui-specification.md`](../docs/product/home-assistant-ui-specification.md) | Cross-cutting UI/component, host-context, accessibility, responsive, and visual compatibility requirements |
-| [`docs/domain/domain-model.md`](../docs/domain/domain-model.md) | Shared language, identity, invariants, copy/sync semantics |
-| [`docs/architecture/system-architecture.md`](../docs/architecture/system-architecture.md) | System-wide boundaries, security, persistence, and operations |
-| [`docs/providers/provider-specification.md`](../docs/providers/provider-specification.md) | Provider port and capability contract |
-| [`docs/providers/provider-research.md`](../docs/providers/provider-research.md) | Dated official API evidence |
-| [`docs/providers/home-assistant-ecosystem-review.md`](../docs/providers/home-assistant-ecosystem-review.md) | Dated implementation patterns and cautions |
-| [`docs/providers/playback-integration-source-review.md`](../docs/providers/playback-integration-source-review.md) | Dated HA/MA/YT Music source-code behavior, operation limits and live proof matrix |
-| [`docs/decisions/README.md`](../docs/decisions/README.md) | Accepted architectural decisions |
-| [`docs/open-questions.md`](../docs/open-questions.md) | Unresolved owner choices and research gates |
+An already implemented capability MAY be documented with status
+`As-built baseline`. This is not a claim that the feature is perfect or that all
+historic design choices were intentional. Its purpose is to establish a
+reviewable contract before subsequent changes.
 
-An SDD does not duplicate or quietly override those sources. It selects the applicable requirements and makes them implementable end to end. If an SDD discovers a missing or conflicting global rule, update the owning document or record an ADR before marking the SDD ready.
+An as-built baseline MUST:
 
-## Status model
+- label verified repository behavior as **observed behavior**;
+- label the behavior maintainers choose to preserve as the **intentional
+  contract**;
+- record defects, missing evidence, and architectural weaknesses under **known
+  debt and limitations**;
+- mark historic motivation as **unknown** when evidence does not establish it;
+- keep desired improvements separate from the current contract and link them to
+  follow-up work rather than presenting them as implemented;
+- cite current code, workflows, tests, and user documentation; and
+- use the same UX, architecture, configuration, security, testing,
+  documentation, acceptance, and Definition of Done standard as a prospective
+  specification.
 
-| Status | Meaning | Implementation consequence |
-| --- | --- | --- |
-| `Draft` | The capability boundary is useful, but evidence or decisions remain open | No production implementation |
-| `Ready for review` | The contract is complete enough for owner and specialist review | No production implementation |
-| `Ready for implementation` | Blocking decisions are resolved and all readiness gates pass | Implementation may begin only after explicit owner approval |
-| `Implemented` | Code, tests, documentation, migrations, and evidence satisfy the SDD | Changes must update all evidence together |
-| `Superseded` | A newer SDD or decision replaces this contract | No new work should target it |
+The baseline date and `Last verified` catalog date identify the repository
+snapshot that was audited. A behavior-changing implementation MUST update the
+relevant SDD, catalog evidence, tests, and user documentation in the same change.
 
-The initial Symphonia SDDs are prospective drafts. There is no implemented behavior to describe as an as-built baseline.
+## 1. Core criteria
 
-## Required contract
+Every spec must be:
 
-Every SDD MUST cover these concerns or state why a concern is not applicable:
+- **Product-near:** use the names, states, actions, and surfaces that users and
+  operators will actually see.
+- **Visual where it helps:** show multi-step flows, state changes, ownership, or
+  several relationships with a compact diagram, table, timeline, or Markdown
+  wireframe.
+- **Textually complete:** every visual has an adjacent textual equivalent; color,
+  emoji, screenshots, and Mermaid are never the only source of meaning.
+- **Explicit:** distinguish current facts, proposed behavior, recommended
+  defaults, configurable choices, fixed safety limits, non-goals, and open
+  questions.
+- **End-to-end:** include happy paths, alternatives, partial success, failure,
+  retry, cancellation, migration, and cleanup where relevant.
+- **Verifiable:** important statements use normative language and map to an
+  automated test, contract check, or explicit human acceptance artifact.
+- **Proportional:** a concern may be marked not applicable with a reason; it must
+  not disappear silently.
+
+Use `MUST`, `SHOULD`, and `MAY` deliberately. A `MUST` requires an acceptance
+scenario. Avoid prescribing implementation details unless they protect product
+behavior, architecture, interoperability, or safety.
+
+## 2. Required specification contract
+
+A specification must cover the following concerns or mark them not applicable:
 
 | Concern | Required outcome |
-| --- | --- |
-| Decision metadata | Status, date, owner, scope, review gates, blockers |
-| Problem and evidence | Affected actor, current absence/behavior, primary sources, unknowns |
-| Goals and limits | Outcomes, non-goals, fixed safety and product invariants |
-| Product journey | Entrypoints, visible surfaces, normal and alternative flows |
-| Domain/state model | Shared terms, ownership of facts, states, transitions, invariants |
-| Configuration | Safe defaults, bounded alternatives, validation, precedence, persistence, migration |
-| Architecture | Dependency direction, pure policy, use cases, ports, adapters, trust/state boundaries |
-| UI/UX | Information hierarchy and concrete pending/action/partial/failure/completed examples |
-| Failure and recovery | Retained facts, retryability, idempotency, cleanup, operator/user action |
-| Security/privacy | Authorization, secrets, untrusted input, abuse/replay, data lifecycle |
-| Observability | User status, logs/metrics, correlation, rate-limit and noise behavior |
-| Compatibility/rollout | Existing data/jobs, migration, upgrade, rollback, irreversible effects |
-| Testing | Numeric risk-derived budget and deterministic evidence |
-| Documentation | User, setup, operator, recovery, architecture, and discoverability artifacts |
-| Acceptance/DoD | Observable scenarios, requirement traceability, implementation order, gates |
+|---|---|
+| Decision metadata | Status, date, owners, scope, review gates, and unresolved decisions |
+| Problem and evidence | Current behavior, concrete pain, affected actors, and evidence/source |
+| Goals and limits | Measurable outcomes, non-goals, fixed safety/product invariants |
+| Product journey | Current versus proposed flow, actors, entrypoints, visible surfaces, next actions |
+| Domain model | Shared terminology, invariants, states, transitions, and ownership of facts |
+| Configuration | Recommended defaults, bounded alternatives, validation, precedence, persistence, migration |
+| Architecture | Dependency direction, pure policy, use cases, ports, adapters, presentation, state and trust boundaries |
+| UI/UX and content | Information hierarchy, examples for every primary state, navigation, accessibility, localization |
+| Failure and recovery | Impact, partial-success facts, retryability, idempotency, cleanup, operator action |
+| Security and privacy | Permissions, untrusted input, secrets, execution boundaries, auditability |
+| Observability | User status, operator evidence, logs/metrics, correlation, noise budget |
+| Compatibility and rollout | Existing in-flight state, migration, deprecation, rollout and rollback |
+| Testing | Numeric risk-derived budget, distribution, coverage, fixtures, integration and human evidence |
+| Documentation | User, setup, configuration, recovery, migration, architecture and discoverability |
+| Acceptance and DoD | Observable scenarios, traceability, implementation order, all quality gates |
 
-## Authoring rules
+## 3. Product and GitHub UI/UX standard
 
-- Use the existing `SYM-*` requirement IDs. A new normative rule needs an ID in the horizontal document that owns it before the SDD becomes ready.
-- Distinguish accepted facts, proposed defaults, configurable alternatives, fixed limits, and open decisions.
-- Use diagrams only when they clarify a multi-step flow, state machine, trust boundary, or dependency graph. Every diagram requires a nearby textual equivalent.
-- A `MUST` needs an acceptance scenario and planned verification. A `SHOULD` needs a documented exception rule.
-- Provider names belong in adapters and evidence, not in provider-independent policy branches.
-- Live provider tests supplement but never replace deterministic offline contract tests.
-- Partial success and unknown external write outcomes are first-class states, not generic failures.
-- User-facing errors follow: impact, cause, next action, retained state.
-- Configuration cannot weaken authorization, secret handling, auditability, identity provenance, or idempotency safeguards.
-- Every web-surface SDD maps its feature-specific states and actions onto the Home Assistant-native UI foundation; it does not create a parallel design system or depend on private Home Assistant frontend modules.
+GitHub issues, pull requests, reviews, comments, checks, labels, releases, and Job
+Summaries are product surfaces when a person uses them to understand or operate a
+feature. CLI output and generated documentation are product surfaces for the same
+reason.
 
-## Numeric test budget
+For each primary state, the first visible content must answer in this order:
 
-Each implementation-driving SDD defines a minimum number of distinct cases distributed across its real risks. The number is a floor, not a substitute for covering every requirement.
+1. What is happening now?
+2. What completed already?
+3. What happens next?
+4. Is human action required?
+5. What is the impact, especially for partial success or failure?
+6. Where can the result or transition be inspected?
+7. Where are technical details available?
 
-Budgets should cover, where applicable:
+A spec affecting these surfaces must include representative rendered Markdown
+or a wireframe for at least pending, action-required, blocked/failed, partially
+complete, and complete states. Use actual product terminology and plausible data.
+Do not specify only abstract fields such as `status`, `message`, and `url`.
 
-- pure domain/configuration/planning;
-- state transitions, concurrency, replay, cancellation, and unknown outcomes;
+The UX contract must define, when applicable:
+
+- one primary status and one primary action;
+- progress/state representation and the facts behind it;
+- deterministic titles, headings, labels, and durable markers;
+- descriptive links to the issue, PR, comparison, commit, run, artifact, release,
+  package, documentation, and recovery action;
+- progressive disclosure: user meaning first, technical diagnostics later;
+- error content in `impact -> cause -> action -> retained state` order;
+- idempotent update behavior and a bounded comment/notification budget;
+- locale source, supported locales, and fallback behavior;
+- narrow/mobile readability, light/dark themes, and logical heading/table use;
+- sanitization of mentions, commands, Markdown, HTML markers, URLs, and diagrams;
+  and
+- a textual fallback for Mermaid, images, icons, and other visual elements.
+
+For a flow with three or more dependent transitions, include one overview visual.
+For a user-facing issue or PR change, include at least one concrete content
+mockup. Screenshots can supplement these artifacts but cannot replace the
+semantic written contract.
+
+## 4. Clean Architecture standard
+
+Apply Clean Architecture to the repository's real boundaries rather than
+inventing a parallel folder taxonomy. A design must identify:
+
+- domain entities, value objects, invariants, and pure policies;
+- application use cases and narrow immutable input/output contracts;
+- semantic ports that express capabilities without provider DTOs;
+- data/provider adapters and their error mappings;
+- infrastructure and composition ownership;
+- entrypoint responsibility and trusted/untrusted event boundaries;
+- presentation view models and renderers, separate from mutation policy;
+- durable state, concurrency, idempotency, and migration ownership; and
+- forbidden dependency directions that can be enforced automatically.
+
+Use a component/dependency diagram when three or more layers or external systems
+interact. Use a sequence or state diagram when ordering, retries, asynchronous
+events, or partial completion affect correctness.
+
+Architecture requirements are incomplete without executable constraints. The
+spec must state which dependency, contract, cycle, schema, or workflow checks
+will prevent boundary erosion.
+
+## 5. Configuration standard
+
+Configuration exists to support legitimate product variation, not to make every
+implementation detail optional. Every input must define:
+
+| Field | Required information |
+|---|---|
+| Name and type | Stable public name, type, and owning surface |
+| Recommended default | Safe default and why it is recommended |
+| Allowed values/range | Bounded choices with observable semantics |
+| Validation | Invalid values and invalid cross-field combinations |
+| Scope and precedence | Project/repository/operation scope and override order |
+| Persistence | Whether an in-flight operation snapshots or rereads the value |
+| Migration | Behavior for absent, retired, renamed, or future values |
+| Security | Values that must never accept arbitrary code, refs, URLs, or secrets |
+
+Show at least one recommended configuration and one meaningful alternative.
+State which correctness and safety invariants are intentionally not configurable.
+
+## 6. Test budget standard
+
+Every implementation-driving spec must contain a numeric test budget. Derive it
+from the behavior and risk inventory; do not reuse one universal count for small
+and large changes.
+
+The budget table must distribute a minimum number of distinct cases across the
+applicable areas:
+
+- domain/configuration/pure planning;
+- state transitions, idempotency, replay, cancellation, and races;
 - application use cases;
-- provider/App/persistence adapters and error mapping;
-- HTTP/UI/accessibility/sanitization;
-- integration, migration, backup/restore, and security abuse cases.
+- adapters and provider error mapping;
+- workflows, permissions, schemas, and setup contracts;
+- presentation states, links, localization, accessibility, and sanitization;
+- integration/end-to-end and compatibility/migration; and
+- security/abuse cases.
 
-Parameterized cases count separately only when they represent distinct behavior. No test budget may require live provider calls in the ordinary suite.
+Each `it`/`test` case counts once. Parameterized rows count separately only when
+they represent distinct behavior. The number is a floor, not a substitute for
+covering every requirement and failure mode.
 
-## Readiness gate
+The spec must also define:
 
-Before changing an SDD to `Ready for implementation`, reviewers must be able to answer yes:
+- repository-wide thresholds that remain in force;
+- higher branch coverage for new pure policy where justified;
+- changed-module expectations;
+- deterministic fakes instead of real waits or live services;
+- fixtures/golden output without relying only on snapshots;
+- workflow/contract checks that parse structure rather than grep prose;
+- required manual UX evidence that automation cannot establish; and
+- a traceability mapping from each normative requirement to tests or evidence.
 
-- Is the user outcome understandable without reading code?
-- Are non-goals and fixed safety rules explicit?
-- Are all owner choices and research blockers resolved or removed from scope?
-- Are provider capabilities treated as runtime evidence rather than assumptions?
-- Are architecture and trust boundaries enforceable by tests or static checks?
-- Are failure, restart, retry, cancellation, partial success, and cleanup specified?
-- Does every normative requirement map to acceptance and verification?
-- Is the numeric test budget proportional to the risks?
-- Are documentation, migration, backup, and rollback deliverables named?
-- Are pending, action-required, partial, failed, and completed UX states concrete?
+## 7. Documentation standard
 
-Readiness is necessary but not authorization to implement. The owner must still explicitly approve implementation.
+Documentation is an implementation deliverable. Identify the applicable
+audiences and artifacts:
 
-## Current foundation set
+- user journey and recommended default;
+- setup, permissions, environments, credentials, and external prerequisites;
+- complete configuration reference and examples;
+- operator state model, troubleshooting, recovery, replay, and cleanup;
+- upgrade, migration, compatibility, deprecation, and rollback;
+- architecture, contracts, trust boundaries, and contributor guidance; and
+- route/navigation registration, links, assets, examples, and validation jobs.
 
-| Capability | SDD | Why it exists before code |
-| --- | --- | --- |
-| Home Assistant App runtime | [App runtime and Ingress](home-assistant-app-runtime-and-ingress.md) | Packaging, lifecycle, authentication boundary, persistence, backup |
-| Home Assistant-native UI | [UI foundation](home-assistant-native-ui.md) | Shared component families, host context, accessibility, responsive behavior, catalog, visual compatibility |
-| Operational dashboard | [Operational dashboard](operational-dashboard.md) | Bounded administrator view of live persisted App state while the full UI foundation remains under review |
-| Listening and playback control | [Listening and playback control](listening-and-playback-control.md) | Explicit source/player/output selection, now playing, supported controls, and command confirmation without an audio engine |
-| Provider connections | [Provider connections and authorization](provider-connections-and-authorization.md) | OAuth/cookies, secrets, callback boundary, effective capabilities |
-| HA OAuth companion | [Home Assistant OAuth companion](home-assistant-oauth-companion.md) | Native consent/Core callback, private pairing, current-admin binding and App-only grant lifecycle without Cloudflare |
-| Provider imports | [Library import and provider projections](library-import-and-provider-projections.md) | Completeness, provenance, unavailable items, retention |
-| Recording identity | [Recording identity resolution](recording-identity-resolution.md) | Conservative matching, evidence, manual decisions |
-| Playlist copy | [One-time playlist copy](one-time-playlist-copy.md) | Immutable plan, strict readiness, safe external writes |
-| Durable execution | [Durable operations and recovery](durable-operations-and-recovery.md) | Leases, checkpoints, retries, restarts, partial outcomes |
+Lead documentation with the normal path and one helpful visual, then disclose
+configuration, failures, and internals progressively. Examples must be checked
+against implementation fixtures or contract tests whenever practical.
 
-Persistent synchronization intentionally has no implementation SDD yet. It remains future scope until playlist ownership, conflict semantics, provider revision evidence, and the copy contract are resolved.
+## 8. Acceptance, traceability, and review
 
-## Automated and manual validation
+Acceptance scenarios describe observable behavior, not implementation activity.
+Cover normal, alternative, boundary, invalid, duplicate, out-of-order, partial,
+failure, recovery, migration, security, UX, and accessibility behavior as
+applicable.
 
-Run after every SDD or catalog change:
+Maintain a traceability table for substantial specs:
 
 ```text
-git diff --check
-PYTHONPATH=. python3 tools/validate_specs.py
+Requirement -> domain/policy/use case/adapter/presentation -> test or evidence -> documentation
 ```
 
-The validator checks that `catalog.json` parses, referenced files exist,
-capability IDs are unique across entries,
-malformed IDs and primary paths produce diagnostics rather than tracebacks,
-catalog paths are repository-relative and cannot escape through traversal or
-symlinks, each SDD has one known catalog capability ID, catalog statuses and paths agree with
-`CATALOG.md`, requirement IDs are present in the horizontal specifications,
-and local Markdown links resolve. Network-path links (`//host/path`) are external;
-single-slash filesystem paths remain subject to repository containment.
-It also rejects a `Ready for implementation`
-or `Implemented` catalog entry with remaining blockers, requires an implemented
-entry to list code, test, and documentation evidence, and requires exactly one
-SDD status declaration. These are structural guards, **not** a substitute for
-owner approval, threat review, live provider proof, or the readiness checklist.
-The JSON Schema is a structural shape check. Running the repository validator
-is required: schema-only validation does not enforce cross-entry ID uniqueness,
-repository-path containment or requirement/SDD consistency.
-Generated/vendor directories such as
-`node_modules`, `dist`, and virtual environments are excluded from Markdown
-scanning; owned documentation is still checked even when dependencies are
-installed locally.
+Before changing a spec to `Ready for implementation`, reviewers must be able to
+answer yes to the following:
 
-Also verify:
+- Is the origin/current behavior supported by evidence?
+- Can a user understand the proposed product without reading implementation code?
+- Are product defaults and non-configurable safety limits explicit?
+- Are architecture boundaries and executable constraints clear?
+- Is the numeric test budget proportional and complete?
+- Are documentation and migration deliverables named?
+- Do UI examples cover pending, action, error/partial, and completed states?
+- Can status and required action be understood quickly without logs?
+- Are security, idempotency, retries, concurrency, and cleanup addressed?
+- Does every `MUST` map to acceptance and verification?
+- Are material decisions resolved or explicitly blocking readiness?
 
-1. `catalog.json` parses as JSON and every referenced local path exists.
-2. Each catalog capability has exactly one primary SDD.
-3. Every SDD uses a catalog ID present in `catalog.json`.
-4. Local Markdown links resolve.
-5. Requirement IDs referenced by SDDs exist in the horizontal specifications.
-6. `CATALOG.md` agrees with `catalog.json`.
-
-The repository-native validator uses only the Python standard library. A generated catalog and richer semantic checks may be added later; tooling must not drive the application stack.
+The Definition of Done must repeat these gates. A concern mentioned only in an
+introductory paragraph is not an enforceable delivery requirement.

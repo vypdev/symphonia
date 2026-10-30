@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-09-28
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `listening-and-playback-control`
 - Owners: Symphonia maintainers
 - Scope: browse playable content, choose an explicit playback source and output, observe now-playing state, and control a configured external player from the Home Assistant-integrated Symphonia UI.
@@ -87,7 +88,9 @@ The PR #1 documentation correction aligns the README with this proposed listenin
 7. Unofficial YouTube Music paths remain opt-in and visibly unofficial/best-effort; an official YouTube Data connection is not relabeled YouTube Music playback.
 8. A server-side App action is not assumed to carry the Ingress listener's HA/MA identity. Private browsing or per-user playback is blocked until caller attribution and account authorization are proven.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -152,7 +155,9 @@ Text equivalent: a separately configured source and explicitly chosen target pre
 
 State reports and command results are separate dimensions: a later external action may change `playing` to `paused` without a Symphonia command. Out-of-order observations and old command responses are fenced by target, observation time/version, and command correlation. Player selection changes cancel the prior UI pending view but do not cancel an already accepted external effect.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 | --- | --- | --- | --- | --- |
@@ -377,3 +382,21 @@ The ordinary suite uses synthetic HA entity states, feature flags, service respo
 - Accepted authority decision: [ADR 0006](../docs/decisions/0006-narrow-home-assistant-playback-broker.md) requires a narrow Home Assistant companion broker for listening; App-to-Core Supervisor proxy is not the initial playback path. The broker transport/pairing protocol and supported source matrix are **not accepted** yet.
 - Rejected: automatic provider-to-player linking, guessing playlist URIs from titles, command-success from HTTP acceptance, silent YT Music unofficial fallback, and treating Symphonia as an audio streamer.
 - Follow-up: queue editing, cross-player handoff/multi-room, other direct-provider playback, and listening history require separate scope/evidence decisions. The proposed Spotify Connect complement remains unaccepted until its own approval and review.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Current executable evidence is limited to the disposable playback Compose configuration and the `playback-lab-config` job in `.github/workflows/verify.yml`, which runs `docker compose config --quiet`. It does not implement or verify player control, the playback broker, or real provider behavior.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-PLAY-001`, `SYM-PLAY-002`, `SYM-PLAY-003`, `SYM-PLAY-004`, `SYM-PLAY-005`, `SYM-PLAY-006`, `SYM-PLAY-007`, `SYM-PLAY-008`, `SYM-PLAY-009`, `SYM-PROV-021`, `SYM-PROV-022`, `SYM-UI-016`, `SYM-HA-011`, `SYM-ARCH-016`, `SYM-ACC-005`, `SYM-SEC-004`, `SYM-SEC-008`.
+
+Outstanding blockers retained from the previous catalog:
+
+- OQ-011 broker RFC needs topology/security/secret/caller proof and complete playback profile matrix; narrow-broker authority accepted, active-session-only release rejected
+- RG-007 Spotify idle-start/exact-output, MA caller/queue, account/source/player and exact playlist-reference feasibility; direct Spotify Connect complement needs separate approval
+- Threat review of broker pairing, versioning, replay, caller identity, and action/entity allowlist
+- Accepted observation freshness and command-reconciliation budgets
+- YouTube Music community-source support and risk decision

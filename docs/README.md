@@ -26,6 +26,7 @@ This documentation is the horizontal implementation contract for Symphonia. It d
 | [App callback/session preflight, 2026-10-25](development/app-oauth-session-preflight-2026-10-25.md) | Actual HA installation preflight, isolated session-finalization experiment and deployment/live-proof requirements | An installed research App, a real HA session-binding pass or production OAuth readiness |
 | [Installable OAuth trial, 2026-10-25](development/ha-oauth-trial-2026-10-25.md) | Separate disposable App, immutable export, callback-only temporary HTTPS option and lab installation evidence | Owner-installation deployment, live provider/session binding or production release readiness |
 | [Development specification](development/development-specification.md) | Specification workflow, testing and delivery gates | Product scope |
+| [Copilot SDD adoption](development/copilot-sdd-adoption.md) | Original standard and validator provenance, commands, inventory/evidence limits and readiness review | Alternative schemas or publication mechanisms |
 | [Local quality audit](development/quality-audit.md) | Reproducible offline RepoWise/Graphify review and current architecture/test debt | A release or SDD readiness claim |
 | [Bugbot review, 2026-10-21](development/bugbot-review-2026-10-21.md) | Disposition of twelve findings, bounded corrections, regression budget and preserved Copilot configuration | A completed Draft capability or live provider guarantee |
 | [ADRs](decisions/README.md) | Decisions that have actually been accepted | Proposals and guesses |

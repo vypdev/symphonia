@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-09-27
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `library-import-and-provider-projections`
 - Owners: Symphonia maintainers
 - Scope: import approved provider collections and ordered playlists into complete, provenance-rich provider projections without confusing them with provider-independent recordings.
@@ -157,7 +158,9 @@ A standalone YouTube continuation initializes its absolute offset from the first
 5. Raw provider data is separable/deletable from user-authored mappings and audit history.
 6. Import failure cannot erase the last known complete projection.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -218,7 +221,9 @@ Text equivalent: each planned collection is read into staged normalized observat
 
 Collection outcomes separately record `complete`, `complete_with_item_issues`, `incomplete`, `unsupported`, or `not_requested`.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 Exact names remain open, but behavior is bounded:
 
@@ -411,3 +416,19 @@ The eight feature-specific UI cases supplement the UI-foundation budget and inhe
 - Accepted: provider projections remain distinct from recordings; only complete results can infer missing items.
 - Rejected: silent truncation, skipping unavailable entries, delete-on-partial, matching during import.
 - Follow-up: incremental imports and persistent sync after official evidence and baseline semantics exist.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-PROD-003`, `SYM-LIB-001`, `SYM-LIB-002`, `SYM-LIB-003`, `SYM-LIB-004`, `SYM-LIB-005`, `SYM-LIB-006`, `SYM-PROV-004`, `SYM-PROV-005`, `SYM-PROV-006`, `SYM-PROV-007`, `SYM-PROV-008`, `SYM-PROV-011`, `SYM-PROV-012`, `SYM-PROV-013`, `SYM-PROV-014`, `SYM-PROV-018`, `SYM-ARCH-004`, `SYM-ARCH-005`, `SYM-TEST-003`, `SYM-TEST-006`, `SYM-TEST-010`, `SYM-TEST-011`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-001 collection semantics and completeness per provider
+- OQ-008 local data retention and export policy
+- OQ-007 representative library sizes and import-duration targets
+- Durable page-level staging/checkpoints and memory bounds
+- Provider-specific refresh and deletion obligations

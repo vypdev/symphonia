@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-10-25
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `provider-connections-and-authorization`
 - Owners: Symphonia maintainers
 - Scope: disclose provider risk, authorize one external account, protect and refresh its grant, probe effective capabilities, reauthorize, and disconnect safely.
@@ -169,7 +170,9 @@ endpoint, secret-store contract or readiness status changes.
 5. An unofficial adapter is distinct, opt-in, visibly labeled, and independently disableable.
 6. Disconnect stops admissions immediately and cannot erase user-authored identity decisions merely because provider payloads are removed.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -247,7 +250,9 @@ Disconnected does not certify external grant revocation. Show its distinct
 outcome as confirmed, pending, failed or unsupported, with provider-account
 revocation guidance when needed; local credential erasure remains complete.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 Exact provider field names remain adapter-owned. Every field declares type, secret status, validation, persistence, and documentation URL.
 
@@ -523,3 +528,19 @@ counts toward the unchanged production budgets.
 - Accepted HA direction: [ADR 0007](../docs/decisions/0007-home-assistant-oauth-companion.md), native OAuth companion plus App-only grant lifecycle; protocol/secret/readiness gates remain open.
 - Accepted key-custody direction: [ADR 0008](../docs/decisions/0008-install-local-oauth-keys-and-backups.md), automatic restart with private local keys, encrypted Core identity backups and excluded App OAuth keys; final adapter/recovery conformance remains open.
 - Rejected: tokens in App options; pasted callback URLs as tokens; generic retry of invalid grants; treating private APIs as official.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-ACC-002`, `SYM-ACC-003`, `SYM-ACC-004`, `SYM-ACC-006`, `SYM-PROV-002`, `SYM-PROV-003`, `SYM-PROV-008`, `SYM-PROV-009`, `SYM-PROV-015`, `SYM-PROV-016`, `SYM-PROV-017`, `SYM-PROV-019`, `SYM-PROV-020`, `SYM-SEC-001`, `SYM-SEC-002`, `SYM-SEC-003`, `SYM-SEC-004`, `SYM-SEC-005`, `SYM-SEC-006`, `SYM-SEC-007`, `SYM-SEC-008`, `SYM-SEC-009`, `SYM-SEC-010`, `SYM-TEST-005`, `SYM-TEST-011`, `SYM-TEST-012`, `SYM-HA-012`, `SYM-SEC-012`, `SYM-SEC-013`, `SYM-SEC-014`, `SYM-SEC-015`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-002 native Core/My callback and provider authorization conformance
+- RG-008 final enrollment/key adapter, concurrency/reset UX and complete HA/App/provider/browser conformance beyond bounded native CSR/Ingress reset wire proof
+- RG-001 provider-specific scopes and account constraints
+- Authenticated actor/session binding and provider token/secret lifecycle integration
+- Decision on whether an unofficial YouTube Music adapter exists in the MVP

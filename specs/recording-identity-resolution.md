@@ -2,6 +2,7 @@
 
 - Status: Draft
 - Date: 2026-09-20
+- Last verified: Not applicable; this is not an as-built baseline. See the catalog migration audit for source/path verification.
 - Catalog capability ID: `recording-identity-resolution`
 - Owners: Symphonia maintainers
 - Scope: resolve provider track representations to provider-independent recordings using explainable, versioned evidence and durable manual decisions.
@@ -80,7 +81,9 @@ The existing normalization foundation now rejects non-ASCII decimal digits in IS
 5. Every automatic assessment records resolver/rule/data versions and material positive/negative evidence.
 6. Covers, live/studio, remix/edit, acoustic, remaster, clean/explicit, and video/upload distinctions are not collapsed when evidence indicates a difference.
 
-## 5. Product journey
+<a id="5-product-journey"></a>
+
+## 5. Current versus proposed product journey
 
 | Stage | Proposed behavior | User/operator effect |
 | --- | --- | --- |
@@ -140,7 +143,9 @@ Text equivalent: items begin unmatched; candidate evidence may make them ambiguo
 
 Candidate assessments separately use `exact`, `high_confidence`, `ambiguous`, and `unmatched`; these do not replace the provider track's resolution state.
 
-## 7. Configuration contract
+<a id="7-configuration-contract"></a>
+
+## 7. User-facing configuration
 
 Threshold values are not general user settings in the MVP. They are versioned resolver policy accepted with corpus evidence.
 
@@ -339,3 +344,18 @@ The twelve feature-specific UI cases supplement the UI-foundation budget and inh
 - Accepted: recording identity is provider-independent; uncertainty/manual evidence are first-class.
 - Rejected: title-only matching, opaque score-only UX, silent automatic override of manual decisions, work-level cover merging.
 - Follow-up: musical-work relationships and additional metadata providers after MVP evidence.
+
+### Catalog migration audit — 2026-10-29
+
+The catalog now uses the unmodified Copilot SDK v1 inventory contract. `lastVerified` records this source/path audit, not a live acceptance run. The document status above retains design readiness; inventory `proposed` does not authorize implementation. Existing foundation and laboratory paths are evidence of their bounded scope only. The numeric test budget and outstanding product decisions remain in force.
+
+Requirement inventory retained from the previous catalog:
+
+`SYM-PROD-002`, `SYM-PROD-003`, `SYM-LIB-002`, `SYM-MATCH-001`, `SYM-MATCH-002`, `SYM-MATCH-003`, `SYM-MATCH-004`, `SYM-MATCH-005`, `SYM-MATCH-006`, `SYM-MATCH-007`, `SYM-MATCH-008`, `SYM-ARCH-014`, `SYM-TEST-007`, `SYM-TEST-008`.
+
+Outstanding blockers retained from the previous catalog:
+
+- RG-003 licensed or synthetic labeled matching corpus
+- Automatic-link precision and false-link tolerance
+- Versioned scoring and confidence policy
+- Provider-specific candidate retrieval feasibility and quota

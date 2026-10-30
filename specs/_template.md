@@ -1,71 +1,95 @@
-# <Capability title>
+# <Product/Feature Specification Title>
 
 - Status: Draft
 - Date: YYYY-MM-DD
-- Catalog capability ID: `<id from catalog.json>`
-- Owners: Symphonia maintainers
+- Catalog capability ID: <stable id in catalog.json>
+- Last verified: <YYYY-MM-DD for an as-built baseline, otherwise not applicable>
+- Owners: <product/engineering owners>
 - Scope: <one sentence>
-- Related requirements: `<SYM-...>`
-- Related decisions/research: <links>
-- Required review gates: product UX, architecture, provider feasibility, testing, documentation, security/operations
-- Open decisions blocking readiness: <none or explicit list>
+- Related issues/PRs: <links>
+- Required review gates: product UX, architecture, testing, documentation,
+  security/operations
+- Open decisions blocking readiness: <none or list>
 
-> Start with [`README.md`](./README.md). Remove this note when the SDD is ready. Mark a non-applicable section explicitly and explain why.
+> Start with the repository standard in [`README.md`](./README.md). Remove this
+> note when the spec is ready. Mark a non-applicable section explicitly and give
+> a reason instead of silently deleting the concern.
 
 ## 1. Executive summary
 
-Describe the user-visible outcome, recommended default, and principal safety/correctness rule.
+Describe the user-visible outcome, the recommended default, and the principal
+safety/correctness rule in plain language.
 
 ```text
-<entry point> -> <system transitions> -> <visible result>
+<One compact end-to-end flow in product terminology>
 ```
 
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
 
-Who is affected, what they cannot do safely, and why it matters.
+Who is affected, what they cannot understand/do safely, and why it matters.
 
 ### 2.2 Current behavior
 
-State whether no implementation exists or describe verified behavior. Separate facts from assumptions.
+Number the actual current sequence. Separate verified facts from assumptions.
 
-### 2.3 Evidence and unknowns
+### 2.3 Evidence
 
-- Repository specifications/ADRs:
-- Official external sources:
-- Community implementation evidence:
+- Code/workflow/documentation references:
+- Incidents or concrete examples:
+- External primary sources:
 - Unknowns:
+
+### 2.4 Retrospective classification (as-built baselines only)
+
+- Observed behavior: <facts directly supported by current evidence>
+- Intentional contract: <observed behavior maintainers choose to preserve>
+- Known debt and limitations: <defects, constraints, and missing evidence>
+- Unknown rationale: <historic motivation that evidence cannot establish>
+- Proposed improvements: <future changes, clearly not represented as current>
+
+For a prospective specification, mark this subsection not applicable because no
+implemented baseline is being reconstructed.
 
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
-| --- | --- | --- | --- |
-| <actor> | <goal> | <event/action> | <App UI/HA/settings/docs/etc.> |
+|---|---|---|---|
+| <actor> | <goal> | <event/action> | <issue/PR/CLI/docs/etc.> |
 
-Define capability-specific terms and refer to the shared domain language.
+Define product terms, branch/data roles, ownership of facts, and language that
+must remain consistent across UI, code, tests, and documentation.
 
 ## 4. Goals, non-goals, and fixed invariants
 
 ### 4.1 Goals
 
-1. <Observable outcome>
+1. <Measurable outcome>
 
 ### 4.2 Non-goals
 
 1. <Explicitly excluded behavior>
 
-### 4.3 Fixed invariants
+### 4.3 Fixed product/safety invariants
 
-1. <Rule configuration cannot weaken>
+1. <Rule that configuration cannot weaken>
 
-## 5. Product journey
+## 5. Current versus proposed product journey
 
-| Stage | Proposed behavior | User/operator effect |
-| --- | --- | --- |
-| <stage> | <behavior> | <visible result> |
+| Stage | Current | Proposed | User/operator effect |
+|---|---|---|---|
+| <stage> | <behavior> | <behavior> | <observable change> |
 
-For three or more dependent transitions, include a flow/state diagram and a textual equivalent.
+For three or more dependent transitions, add a visual and a textual equivalent:
+
+```mermaid
+flowchart LR
+    A[User entry point] --> B[System transition]
+    B --> C[Visible result]
+```
+
+Text equivalent: `<entry point> -> <transition> -> <visible result>`.
 
 ## 6. Functional behavior and state model
 
@@ -73,172 +97,260 @@ For three or more dependent transitions, include a flow/state diagram and a text
 
 1. <Observable step and owner>
 
-### 6.2 Alternative and boundary paths
+### 6.2 Alternative paths
 
-- <Alternative and consequence>
+- <Supported alternative and consequence>
 
 ### 6.3 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
-| --- | --- | --- | --- | --- |
-| <state> | <fact> | <meaning> | <states> | <action> |
+|---|---|---|---|---|
+| <state> | <verified fact> | <plain language> | <states> | <action> |
 
-Specify duplicate, stale, out-of-order, cancellation, and partial behavior where applicable.
+Define duplicate, stale, out-of-order, canceled, and partially completed event
+behavior where applicable.
 
-## 7. Configuration contract
+## 7. User-facing configuration
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
-| --- | --- | --- | --- | --- |
-| `<name>` | <type> | <default and reason> | <bounded values> | <scope/snapshot> |
+|---|---|---|---|---|
+| `<name>` | <type> | `<default>` — <reason> | <bounded values> | <scope/snapshot> |
 
-Define validation, precedence, migration, a meaningful alternative, and behavior intentionally not configurable.
+Document:
+
+- validation and invalid cross-field combinations;
+- precedence and operation-time snapshot/reread behavior;
+- migration, retired, unknown, and deprecated values;
+- one recommended example and one meaningful alternative; and
+- behavior intentionally not configurable.
 
 ## 8. Clean Architecture design
 
 ### 8.1 Responsibilities and dependency direction
 
-| Boundary | Owns | Must not own/import |
-| --- | --- | --- |
-| Domain/pure policy | <decisions/invariants> | Provider/framework details |
-| Application | <use cases/semantic ports> | Concrete SDK/process concerns |
-| Adapters/data | <mapping and IO> | Product policy |
-| Infrastructure/composition | <implementations/wiring> | Business decisions |
-| Entrypoints/presentation | <input/view models> | Duplicated orchestration |
+| Layer/boundary | Owns | Must not own/import |
+|---|---|---|
+| Domain/pure policy | <decisions/invariants> | <provider/framework concerns> |
+| Application | <use cases/semantic ports> | <concrete SDK/process concerns> |
+| Adapters/data | <mapping/provider operations> | <product policy> |
+| Infrastructure/composition | <implementations/wiring> | <business decisions> |
+| Entrypoints | <input/event adaptation> | <duplicated orchestration> |
+| Presentation | <view models/rendering> | <mutations/state transitions> |
 
-### 8.2 Contracts, durable state, and trust boundaries
+```mermaid
+flowchart LR
+    E[Entrypoint] --> A[Application use case]
+    A --> D[Domain policy]
+    A --> P[Semantic port]
+    I[Provider adapter] --> P
+    A --> V[Presentation model]
+```
+
+### 8.2 Contracts, state, and trust boundaries
 
 - Pure decisions:
 - Application contracts:
 - Semantic ports:
 - Durable state/schema ownership:
-- Concurrency/idempotency:
-- Trusted/untrusted inputs:
-- Error mapping:
+- Concurrency/idempotency strategy:
+- Trusted and untrusted inputs:
+- Provider error mapping:
 
 ### 8.3 Executable architecture constraints
 
-- <Dependency/cycle/schema/contract rule and planned automated check>
+- <Dependency/cycle/contract/schema rule and its automated check>
 
 ## 9. UI/UX and content contract
 
-If this capability has a web surface, state how its feature-specific content/actions/states compose the [Home Assistant-native UI foundation](home-assistant-native-ui.md), which shared component families it uses, and any intentional divergence. If no web surface exists, mark this explicitly and explain why.
+Treat issues, PRs, comments, labels, checks, summaries, CLI output, and docs as UI
+when applicable.
 
 ### 9.1 Information hierarchy
 
-1. Current status.
-2. Completed facts.
-3. What happens next.
-4. Required human action or an explicit statement that none is needed.
-5. Impact and retained state.
-6. Collapsed, sanitized technical evidence.
+1. Current status
+2. Completed facts
+3. Next transition
+4. Human action, or explicit statement that none is needed
+5. Impact and inspectable links
+6. Collapsed technical evidence
 
-### 9.2 Representative states
+### 9.2 Representative primary view
 
-Provide concrete content for pending, action required, partial, failed/blocked, and completed states. Use text, not color or icons alone.
+```markdown
+<!-- stable machine marker -->
 
-### 9.3 Accessibility and localization
+# <Icon plus textual operation title>
 
-- Locale source/fallback:
-- Keyboard/focus/announcement behavior:
-- Narrow/mobile behavior:
-- Text alternative for diagrams:
-- Sanitization of provider/user content:
+> **Current status:** <plain-language state>
+>
+> **Action required:** <one instruction/link or "No action required">
+
+## Progress
+
+- [x] <completed fact>
+- [ ] <current/pending fact>
+
+## What happens next
+
+<One concise consequence>
+
+## Links
+
+[Descriptive destination](...) · [Descriptive destination](...)
+
+<details>
+<summary>Technical details</summary>
+<IDs, full hashes, provider facts, sanitized diagnostics>
+</details>
+```
+
+Add concrete variants for:
+
+- pending/no action;
+- action required;
+- blocked or failed before irreversible effects;
+- partially successful after an irreversible effect; and
+- completed.
+
+### 9.3 Issue, PR, and comment behavior
+
+- Deterministic titles and purpose:
+- What merge/close/retry will do:
+- Durable marker and idempotent update policy:
+- Comment/notification budget:
+- Labels and checks as supplemental state:
+- Direct links and navigation:
+
+### 9.4 Accessibility, localization, and responsive behavior
+
+- Supported locales and fallback:
+- Textual equivalent for visuals:
+- Narrow/mobile and light/dark expectations:
+- Heading/table/link rules:
+- Sanitization of untrusted Markdown, mentions, commands, markers, and URLs:
 
 ## 10. Failure, recovery, and cleanup
 
 | Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |
-| --- | --- | --- | --- | --- | --- |
-| <condition> | <impact> | <facts> | <bounded policy> | <action> | <rule> |
+|---|---|---|---|---|---|
+| <condition> | <impact> | <durable facts> | <yes/no/bounded> | <action/link> | <rule> |
 
-Errors follow `impact -> cause -> next action -> retained state`.
+User-facing errors follow `impact -> cause -> action -> retained state` and must
+not imply that an already successful irreversible action failed.
 
 ## 11. Security, permissions, and privacy
 
 1. <Least privilege and authorization>
-2. <Untrusted input and boundary validation>
-3. <Secret/PII/storage/logging rule>
-4. <Replay/forgery/abuse protection>
+2. <Untrusted input and execution boundary>
+3. <Secret/PII/logging/storage rule>
+4. <Abuse/replay/forgery protection>
 
 ## 12. Observability and operational UX
 
 - User-facing state:
+- Job Summary/operator evidence:
 - Logs, metrics, and correlation:
-- Pending external dependency versus service failure:
-- Rate-limit/retry visibility:
-- Notification/noise budget:
+- Pending external dependency versus workflow failure:
+- Rate-limit/retry behavior:
+- Noise/comment budget:
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-- Existing data/in-flight operations:
+- Existing in-flight operations/data:
 - Schema/configuration migration:
-- Rollout stages:
+- Deprecated behavior and compatibility window:
+- Rollout stages/feature flag if needed:
 - Rollback and irreversible effects:
 
 ## 14. Testing strategy and numeric budget
 
+The count is derived from the behavior/risk inventory and is a minimum, not a
+substitute for requirement coverage.
+
 | Area | Minimum distinct cases | Behaviors/risks covered |
-| --- | ---: | --- |
-| Domain/configuration/planning | <n> | <list> |
+|---|---:|---|
+| Domain/configuration/pure planning | <n> | <list> |
 | State/application/idempotency/races | <n> | <list> |
-| Adapters/contracts | <n> | <list> |
-| HTTP/UI/accessibility/sanitization | <n> | <list> |
+| Adapters/provider contracts | <n> | <list> |
+| Workflows/setup/schema | <n> | <list> |
+| UI/UX/localization/sanitization | <n> | <list> |
 | Integration/security/migration | <n> | <list> |
 | **Total** | **<n>** | No double counting |
 
-Define deterministic fakes/clocks/IDs, coverage expectations, contract fixtures, live-smoke isolation, and required human evidence.
+Define:
+
+- repository and changed-module coverage thresholds;
+- pure-policy branch coverage;
+- table-driven, replay, race, adapter, workflow-contract, and security tests;
+- deterministic clocks/IDs/fakes with no real waits or live services;
+- golden UI fixtures plus semantic assertions; and
+- manual UX evidence for readability that automation cannot establish.
 
 ## 15. Documentation and discoverability
 
-| Audience | Artifact | Required content | Validation/navigation |
-| --- | --- | --- | --- |
-| User | <page> | <journey/default/examples> | <link/fixture check> |
-| Setup owner | <page> | <permissions/configuration> | <contract check> |
+| Audience | Artifact/page | Required content | Validation/navigation |
+|---|---|---|---|
+| User | <page> | <journey/default/examples> | <route/link check> |
+| Setup owner | <page> | <permissions/configuration> | <contract fixture> |
 | Operator | <page> | <states/recovery/cleanup> | <decision tree> |
 | Contributor | <page> | <architecture/contracts> | <architecture check> |
 
+Include migration and troubleshooting documentation where applicable. Keep
+examples synchronized with implementation fixtures or contract tests.
+
 ## 16. Acceptance scenarios
 
-1. Given `<state>`, when `<event>`, then `<observable result>`.
-2. <Alternative/boundary/invalid case>.
-3. <Duplicate/out-of-order/cancellation/recovery case>.
-4. <Failure before irreversible effect>.
-5. <Partial success after irreversible effect>.
-6. <Security/permission/forged-input case>.
-7. <UI/accessibility/localization case>.
-8. <Documentation/configuration/architecture-contract case>.
+1. Given `<state>`, when `<event>`, then `<observable product result>`.
+2. <Alternative/boundary/invalid case>
+3. <Duplicate/out-of-order/cancellation/recovery case>
+4. <Failure before irreversible effect>
+5. <Partial success after irreversible effect>
+6. <Security/permission/forged-input case>
+7. <UI/accessibility/localization case>
+8. <Documentation/configuration/architecture-contract case>
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
-| --- | --- | --- | --- |
-| `<SYM-...>` | <owner> | <verification> | <page> |
+|---|---|---|---|
+| `<section/item>` | <owner> | <test/evidence> | <page> |
 
 ## 18. Implementation sequence
 
-1. Resolve blockers and approve contracts/configuration.
-2. Add failing architecture/contract tests and pure policies.
-3. Add application state/use cases and deterministic tests.
-4. Add adapters and contract tests.
-5. Add presentation, accessibility, and documentation.
-6. Add migration/recovery/security evidence and integration validation.
+1. Contracts, decisions, configuration, and architecture checks.
+2. Pure policies and tests.
+3. State/application orchestration and tests.
+4. Adapters/workflows and contract tests.
+5. Presentation, fixtures, accessibility, and localization.
+6. Migration, recovery, security, documentation, and generated artifacts.
+7. Integration, coverage, human UX evidence, and final validation.
+
+Adjust ordering to risk and dependencies; do not postpone documentation or UX
+until after behavior is considered complete.
+
+For an as-built baseline, interpret this as the required change sequence for
+future maintenance and state explicitly that the document itself proposes no
+behavior change.
 
 ## 19. Definition of Done
 
-- [ ] Status is `Ready for implementation` and explicit owner approval to implement exists.
 - [ ] Every normative requirement has acceptance and traceability.
-- [ ] Architecture boundaries and external contracts are automatically enforced.
-- [ ] Numeric test budget and stated coverage pass.
-- [ ] Configuration, migration, backup, rollback, and recovery agree.
-- [ ] Pending, action-required, partial, failed, and completed UX states are verified.
-- [ ] Every web surface uses the shared Home Assistant-native component/catalog/host-context contract, or an intentional divergence is documented and approved.
-- [ ] Accessibility, localization, sanitization, and secret-safety gates pass.
+- [ ] Architecture boundaries are implemented and automatically enforced.
+- [ ] Numeric test budget, distribution, and coverage requirements pass.
+- [ ] Configuration defaults, limits, validation, persistence, and migration agree.
+- [ ] Primary UI states and content examples are implemented and reviewed.
+- [ ] Accessibility, localization, responsive behavior, sanitization, and noise
+      budgets pass.
 - [ ] User/setup/operator/contributor documentation is complete and discoverable.
-- [ ] Catalog status and implementation evidence are current.
-- [ ] No readiness-blocking decision remains.
+- [ ] Failure, partial success, retry, idempotency, security, and cleanup pass.
+- [ ] Required generated artifacts and repository validation commands pass.
+- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and
+      `pnpm run validate:specifications` passes.
+- [ ] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 
 - Primary sources:
-- Related SDDs/ADRs:
-- Accepted and rejected alternatives:
-- Follow-up work outside scope:
+- Related specs/ADRs/issues/PRs:
+- Decisions and rejected alternatives:
+- Follow-up work explicitly outside this spec:
