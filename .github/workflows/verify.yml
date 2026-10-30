@@ -55,6 +55,8 @@ jobs:
           else
             git diff --check "${PATCH_BASE}...HEAD"
           fi
+      - name: Install pinned quality dependencies
+        run: python -m pip install '.[quality]'
       - name: Run offline test suite
         run: PYTHONPATH=src:. python -m unittest discover -s tests -v
 
@@ -136,8 +138,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - name: Install pinned quality tool
-        run: python -m pip install coverage==7.16.1
+      - name: Install pinned quality dependencies
+        run: python -m pip install '.[quality]'
       - name: Set up specification validator runtime
         uses: actions/setup-node@v7
         with:

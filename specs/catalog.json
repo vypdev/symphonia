@@ -574,6 +574,63 @@
         "docs/open-questions.md",
         "docs/providers/home-assistant-ecosystem-review.md"
       ]
+    },
+    {
+      "id": "native-oauth-validation-trial",
+      "title": "Native OAuth validation trial",
+      "status": "proposed",
+      "scope": "Bounded native Spotify OAuth trial under maintainer review: 54 source/package cases pass. Owner's corrected 852f3ea pair, explicit read consent, My callback/new confirmation, App restart, refresh/account match, local retirement and dedicated Spotify revocation passed. Owned teardown is recorded in the dated report. Production remains out of scope.",
+      "owner": "Symphonia maintainers",
+      "lastVerified": "2026-10-30",
+      "specs": [
+        "specs/native-oauth-validation-trial.md"
+      ],
+      "workflows": [
+        ".github/workflows/verify.yml"
+      ],
+      "entrypoints": [
+        "symphonia_native_oauth_trial/run.py",
+        "custom_components/symphonia_native_oauth_trial/config_flow.py",
+        "tools/install_native_oauth_trial_helper.sh",
+        "tools/native_oauth_trial_lab.py"
+      ],
+      "code": [
+        "symphonia_native_oauth_trial/policy.py",
+        "symphonia_native_oauth_trial/application.py",
+        "symphonia_native_oauth_trial/store.py",
+        "symphonia_native_oauth_trial/keys.py",
+        "symphonia_native_oauth_trial/provider.py",
+        "symphonia_native_oauth_trial/tls.py",
+        "symphonia_native_oauth_trial/server.py",
+        "symphonia_native_oauth_trial/run.py",
+        "custom_components/symphonia_native_oauth_trial/__init__.py",
+        "custom_components/symphonia_native_oauth_trial/config_flow.py",
+        "custom_components/symphonia_native_oauth_trial/bridge.py",
+        "custom_components/symphonia_native_oauth_trial/keys.py",
+        "symphonia_native_oauth_trial/config.yaml",
+        "symphonia_native_oauth_trial/Dockerfile",
+        "tools/stage_native_oauth_trial.py",
+        "tools/native_oauth_trial_lab.py"
+      ],
+      "tests": [
+        "tests/test_native_oauth_trial_policy.py",
+        "tests/test_native_oauth_trial_state.py",
+        "tests/test_native_oauth_trial_adapters.py",
+        "tests/test_native_oauth_trial_ha_adapter.py",
+        "tests/test_native_oauth_trial_packaging.py"
+      ],
+      "documentation": [
+        "docs/development/ha-app-lab.md",
+        "docs/development/oauth-callback-spike.md",
+        "docs/providers/provider-research.md",
+        "docs/providers/home-assistant-ecosystem-review.md",
+        "docs/development/native-oauth-trial-hooks-2026-10-30.md",
+        "docs/development/native-oauth-trial-preparation.md",
+        "symphonia_native_oauth_trial/README.md",
+        "docs/operations/native-oauth-trial.md",
+        "docs/development/native-oauth-trial-test-plan.md",
+        "docs/development/native-oauth-trial-acceptance-2026-10-30.md"
+      ]
     }
   ]
 }

@@ -6,6 +6,15 @@ tunnel based on this preview. See the [SDD](../../specs/home-assistant-oauth-com
 for readiness gates and the [RFC](../architecture/home-assistant-oauth-companion-rfc.md)
 for trust/recovery details.
 
+The separate [native validation trial](../../specs/native-oauth-validation-trial.md)
+has its bounded contract and [current-Core hook evidence](../development/native-oauth-trial-hooks-2026-10-30.md).
+It remains under maintainer review. Its package tests and bounded owner-browser
+OAuth, restart, refresh/account match and retirement have passed; see the
+[dated report](../development/native-oauth-trial-acceptance-2026-10-30.md). Its
+[preparation gates](../development/native-oauth-trial-preparation.md) preserve
+exact-package review before any owner installation; this production preview
+does not become installable through that separate design review.
+
 The [laboratory validation](../development/ha-oauth-companion-lab-2026-10-25.md)
 now proves some mechanics, not a released package. It confirms that private
 HA file permissions alone do not encrypt a key; unprotected backups can retain
@@ -130,3 +139,8 @@ Share only versions, negotiated profile, safe phase/result code and sanitized
 correlation ID. Do not share callback URLs, codes/state, private instance or
 Ingress routes, pairing challenges/keys, cookies, verifiers, client secrets or
 tokens. Stable healthy connections do not generate periodic notifications.
+
+The bounded native trial now has its own [install/retire runbook](native-oauth-trial.md)
+and [dated validation report](../development/native-oauth-trial-acceptance-2026-10-30.md).
+The report separates synthetic package evidence from the real owner trial;
+neither establishes production companion readiness.

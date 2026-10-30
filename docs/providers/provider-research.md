@@ -10,6 +10,13 @@ This snapshot separates what Symphonia needs from what an official API documents
 
 Existing Home Assistant and community implementations are reviewed separately in [Home Assistant music ecosystem review](home-assistant-ecosystem-review.md). They provide valuable implementation evidence but do not replace an official provider contract.
 
+The separate [2026-10-30 native trial report](../development/native-oauth-trial-acceptance-2026-10-30.md)
+records live owner PKCE through Core/My, fresh native confirmation, App restart,
+confirmed refresh/account match, local retirement and dedicated Spotify access
+removal. It reused existing dedicated read consent. This is dated implementation
+evidence for one bounded profile/matrix, not an official API guarantee, library
+or playback proof, or production companion readiness.
+
 ## 2026-10-25 — Native Home Assistant OAuth companion
 
 Official documentation/source reviewed on this date; no new live companion
