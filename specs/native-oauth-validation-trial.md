@@ -1,6 +1,6 @@
 # Native OAuth validation trial
 
-- Status: Draft
+- Status: Ready for implementation
 - Date: 2026-10-30
 - Catalog capability ID: `native-oauth-validation-trial` (proposed)
 - Last verified: not applicable; this is a prospective specification.
@@ -8,9 +8,9 @@
 - Scope: A manually started, installable, twenty-minute Home Assistant trial that validates native Spotify OAuth with an isolated App and auxiliary integration.
 - Related issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); research #31 and SDK-v1 adoption #34 are reported merged at `develop8045f33`.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None. Draft requires the standard readiness review before implementation.
+- Open decisions blocking readiness: None. The dated engineering review is recorded in `docs/development/native-oauth-trial-preparation.md`; package and live acceptance remain subsequent gates.
 
-> Start with the repository standard in [`README.md`](./README.md). This prospective draft describes no implemented trial. The catalog status is proposed; existing catalog paths are research foundations only.
+The [readiness review](../docs/development/native-oauth-trial-preparation.md) applies the standard's questions under the owner's standing implementation authorization. This prospective contract describes no implemented trial. The catalog remains proposed; current executable evidence is research only.
 
 ## 1. Executive summary
 
@@ -42,8 +42,8 @@ These are supplied evidence and reported facts, not proof of future implementati
 
 - Code/workflow/documentation references: bounded research foundations include `tools/ha_oauth_companion_lab/core_probe.py`, `native_reset_probe.py`, `enrollment_probe.py`, and `key_custody_probe.py`; existing test foundations include `tests/test_ha_oauth_companion_lab.py`, `tests/test_ha_oauth_key_custody_fixture.py`, and `tests/test_ha_oauth_recovery_fixture.py`.
 - Incidents or concrete examples: public-callback validation did not establish native installed-provider success; default Core grant persistence does not meet App-only ownership.
-- External primary sources: Spotify OAuth and Web API documentation; Home Assistant Core, Supervisor, App, Ingress, and My documentation. Exact URLs and versioned source snapshots must be recorded during readiness review and acceptance evidence.
-- Unknowns: final SDK hook compatibility beyond the reported structural validation; exact deployment constraints not covered by the bounded research; live Spotify behavior until dedicated-client validation. These are readiness/acceptance evidence obligations, not permission to expand scope.
+- External primary sources: exact official URLs and versioned source snapshots are recorded in section20 and the [hook report](../docs/development/native-oauth-trial-hooks-2026-10-30.md).
+- Current native hook feasibility is supported by22 real-Core main-flow/callback observations and the separate36-observation existing research rerun. The My-enabled flag, in-memory App port and four Ingress checks are named fixtures. Final exact-package TLS, Supervisor backup and owner My/Spotify behavior remain unobserved acceptance gates; none of these research observations counts toward the54 final-package cases.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -140,7 +140,7 @@ Text equivalent: install and pair -> native consent -> callback stages -> fresh 
 3. The App issues a bounded, single-use, five-minute bootstrap. The channel is OAuth-only, pinned private TLS, exact typed envelopes, and bound to installation, pairing, actor, flow, profile, redirect, and deadline.
 4. The administrator starts consent in a Core native form. Core/My redirect is exactly `https://my.home-assistant.io/redirect/oauth`. PKCE uses a per-attempt verifier and S256 challenge. Scope is exactly `user-read-private`.
 5. Core callback handling validates and stages a bounded return. It never exchanges a code. A fresh native request from the same currently active administrator confirms completion.
-6. The App durably claims a consume-once exchange fence before provider I/O, exchanges once against the fixed official HTTPS endpoint, validates `/v1/me` stable `account_id` and scope, seals the grant with a separate protected local key, and atomically publishes safe status. Core stores no provider grant/code/verifier/private key.
+6. The App durably claims a consume-once exchange fence before provider I/O, exchanges once against the fixed official HTTPS endpoint, validates `/v1/me` stable `account_id` and scope, seals the grant with a separate protected local key, and atomically publishes safe status. Core entries store no provider grant/code/verifier/private key; the native pairing key has its separate protected-file boundary.
 7. After an App restart, the administrator explicitly confirms one forced refresh in a fresh native form. A durable single-flight owner performs it once. If Spotify omits a replacement refresh token, the App may retain the prior verified refresh token. The identity must match the original account.
 8. The owner reviews evidence and retires the trial. Cleanup removes only owned trial files and state. Provider-side revocation is observed separately and never claimed from local cleanup alone.
 
@@ -164,7 +164,9 @@ Text equivalent: install and pair -> native consent -> callback stages -> fresh 
 | Staged | Valid callback return recorded once | Return is awaiting fresh confirmation | Exchanging, canceled, expired | Same active administrator confirms |
 | Exchanging | Durable owner claimed before I/O | Provider result is being resolved | Active, failed, uncertain, retired | App commits once or reports safe uncertainty |
 | Active | Grant sealed and identity checked | Trial grant is active until original deadline | Refreshing, locked, expired, retired | Administrator requests refresh or retires |
-| Refreshing | One durable refresh owner claimed | Confirmed refresh is underway | Active, uncertain, locked, expired, retired | App commits once or reports uncertainty |
+| Refreshing | One durable refresh owner claimed | Confirmed refresh is underway | Verified, uncertain, locked, expired, retired | App commits once or reports uncertainty |
+| Verified | Reopened grant refreshed and account matched | Verification complete, retirement still required | Expired, retired | Operator records evidence and retires |
+| Failed | Provider response definitively rejected | No accepted grant | Retired | Erase transients and retire |
 | Uncertain | Remote operation may have succeeded without local commit | Outcome cannot safely be replayed | Retired; fresh consent only where explicitly safe | Administrator retires/restarts trial per guidance |
 | Locked | Required existing key is missing or invalid | Stored grant cannot be opened | Retired | Retire/reinstall disposable namespace |
 | Expired/retired | Original deadline elapsed or owner retires | Trial authority ended | Uninstalled | Owned cleanup; no silent renewal |
@@ -218,6 +220,12 @@ flowchart LR
 - Trusted and untrusted inputs: only current server-validated native request establishes actor; callback values, Ingress headers, browser fields, provider payloads, persisted files, and repository/user text are untrusted until bounded and validated.
 - Provider error mapping: fixed categories such as denied, invalid grant, unavailable, malformed response, deadline, and uncertain. Never expose raw body, URL, header, exception, code, token, or verifier.
 
+The App's attempt verifier and staged code remain volatile; no database, Core entry or log persists them. A restart cancels an unadmitted transient attempt. An admitted incomplete exchange/refresh becomes uncertain, and health/status cannot finish or replay it. This disposable version permits one consent attempt and one forced refresh per installation; denial, cancellation or definitive failure requires retirement and a fresh explicit trial namespace, without extending the old deadline.
+
+The original UTC deadline and a nondecreasing observed clock bound survive restart. Clock rollback or invalid persisted metadata locks. Service lifetime, certificates and bootstrap cannot outlive the original deadline. Native start constructs a separate public PKCE authorizer per attempt, transfers its verifier over the paired channel and drops redundant Core references after caching the authorize URL; memory zeroization is not promised. Staging must originate through the real Core callback HTTP route and validated exact state, not just a submitted flow identifier or state-shaped object. Confirmation additionally requires a new native POST to the current flow by the initiating active administrator.
+
+Grant ciphertext, account binding, generation and active reference commit in one SQLite transaction under the admitted owner/epoch. Wrapping key is immutable, separately referenced and excluded from backups; authenticated data also binds credential generation. No multi-file secret publication or key rotation is part of this trial. All Core/App private files follow ADR0008: owned0700 directories, regular single-link0600 files, bounded no-follow reads, explicit first-provision marker and no rekey on partial or invalid existing state. Core restore requires operator revocation of the old App pair and explicit re-pairing; clone detection is not promised.
+
 ### 8.3 Executable architecture constraints
 
 Automated checks MUST verify dependency direction and import boundaries, forbid Core token resolver/token-entry/OAuth2Session paths, parse exact route and provider endpoint allowlists, validate typed envelope schemas and state schema, inspect package file manifests and hash/ownership rules, assert no App host ports/broad mounts/API privileges, and scan output/diagnostic fixtures for secret canaries. Package checks MUST exercise the actual helper and App artifacts. The live proof is distinct from deterministic contract tests.
@@ -262,7 +270,7 @@ Concrete state variants:
 
 **Partial/uncertain after possible provider effect** — “Current status: Spotify may have processed the exchange, but local completion was not confirmed. Completed: the attempt was durably fenced. Next: retire this trial and start a new consent attempt only as directed. Action required: do not retry this code. Retained state: uncertain marker; no grant is reported active.”
 
-**Completed** — “Current status: Account check and confirmed refresh succeeded. Completed: the App reopened its sealed grant after restart and refreshed once; account identity matched. Next: review evidence and retire the trial. Action required: none. Retained state: App-local encrypted grant until retirement or deadline.”
+**Completed** — “Current status: Account check and confirmed refresh succeeded. Completed: the App reopened its sealed grant after restart and refreshed once; account identity matched. Next: review evidence and retire the trial. Action required: retire the trial and revoke dedicated provider access separately. Retained state: App-local encrypted grant until retirement.”
 
 ### 9.3 Issue, PR, and comment behavior
 
@@ -282,15 +290,15 @@ Core translations support English and Spanish with HA locale fallback. Use nativ
 |---|---|---|---|---|---|
 | Invalid Client ID/slug/envelope | No attempt or request admitted | Safe validation category | No | Correct bounded input | No partial state |
 | Pairing TLS pin/CSR failure | No bootstrap or sensitive body sent | Safe pairing status | No implicit retry | Inspect exact App and retry pairing explicitly | Remove only owned partial pairing state |
-| Denial/cancel/expiry | No grant | Terminal attempt category and original deadline | No | Start a new attempt if time remains and user chooses | Erase transient code/verifier authority |
+| Denial/cancel/expiry | No grant | Terminal attempt category and original deadline | No | Retire; explicitly install a fresh disposable trial if desired | Erase transient code/verifier authority |
 | Duplicate/stale callback | No state replacement | Existing staged/terminal state | No | Continue existing flow or start new consent | No added authority |
 | Exchange uncertain | Grant activation unknown | Durable uncertain fence | Never | Retire trial; do not replay code | Remove owned local trial state on retirement |
-| Provider error/invalid scope/identity | No accepted grant | Fixed category; no raw payload | No for unknown or invalid grant | Correct client setup or reauthorize in a new attempt | Erase transient authority |
-| Refresh uncertain/invalid grant | Existing grant may be unusable | Uncertain fence or invalid-grant category | Never | Fresh consent only through a new safe attempt, or retire | Fence old refresh credential |
+| Provider error/invalid scope/identity | No accepted grant | Fixed category; no raw payload | No for unknown or invalid grant | Correct setup, retire and use a fresh explicit trial | Erase transient authority |
+| Refresh uncertain/invalid grant | Existing grant may be unusable | Uncertain fence or invalid-grant category | Never | Retire; new consent only through a fresh explicit trial | Fence old refresh credential |
 | App key missing/corrupt | Sealed grant cannot be opened | Locked marker and sealed evidence | No key regeneration | Retire/reinstall disposable namespace | Exclude keys from backups; remove only owned state |
 | App restart/deadline elapsed | Trial authority remains bounded or expires | Original deadline persists | No extension | Explicitly confirm refresh only while valid | Stop listeners and retire after expiry |
 | Installer conflict/unowned sentinel | Installation/rollback stops | Hash and ownership evidence | No overwrite | Review conflict manually | Preserve unrelated/modified files |
-| Local cleanup succeeds, provider revocation unknown | Local trial is removed; Spotify grant revocation is unobserved | Cleanup manifest | No claim of remote revocation | Separately revoke at Spotify if desired | Record this limitation |
+| Local cleanup succeeds, provider revocation unknown | Local trial is removed; Spotify grant revocation is unobserved | Cleanup manifest | No claim of remote revocation | Separately revoke dedicated access at Spotify and record its actual outcome | Record any unobserved step |
 
 Errors follow `impact -> cause -> action -> retained state`. A provider operation that may have succeeded is never described as failed without qualification.
 
@@ -299,7 +307,7 @@ Errors follow `impact -> cause -> action -> retained state`. A provider operatio
 1. Mutating native operations require a fresh server-validated current active administrator. Callback, flow ID, browser fields, App Ingress, and background context cannot supply authority.
 2. App is a distinct Ingress App running UID 10001, with no host ports, broad mounts, Core API privilege, or Supervisor API privilege. Only the strictly validated named App alias and fixed TLS port 8098 are reachable.
 3. Pairing uses generated Core CSR, private TLS pinning, bounded single-use five-minute bootstrap, exact typed envelopes, and binding to installation, App, actor, pairing generation, attempt, flow, profile, redirect, and original deadline. Validate server pin before sending sensitive body. No arbitrary URL/host, redirects, proxy environment, or endpoint overrides.
-4. Spotify transport uses only exact official HTTPS token/profile endpoints, normal CA validation, bounded response/body/deadline, no redirects or proxy environment. Scope is only `user-read-private`.
+4. Spotify transport uses only exact official HTTPS token/profile endpoints, normal CA validation, a real total ten-second deadline capped by remaining trial lifetime and at most64KiB response body, no redirects or proxy environment. Cancellation ends outstanding DNS/provider work rather than abandoning a thread. Responses reject duplicate JSON fields and invalid types. Scope is only `user-read-private`; no shipping endpoint/fake-provider override exists. Offline ProviderPort injection belongs only to lab composition.
 5. Authorization code, verifier, access/refresh grant, and App private keys never enter Core entry, UI, logs, diagnostics, exports, or public evidence. Core stores safe references and a protected mode-0600 private pairing key outside the entry. App keys are protected install-local files and excluded from backups. Missing existing key locks without replacement.
 6. App encrypts grants with authenticated encryption and a separate immutable local wrapping key; bind ciphertext to installation, profile, client, and pairing generation. SQLite transaction commits grant and active reference atomically.
 7. Durable consume-once fences precede exchange/refresh I/O. Unknown outcomes are not replayed. Single-flight refresh and generation fences prevent concurrent rotation or late publication.
@@ -458,6 +466,7 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 | `docs/providers/home-assistant-ecosystem-review.md` | reference |
 | `tools/ha_oauth_companion_lab/README.md` | reference |
 | `tools/ha_oauth_companion_lab/core_probe.py` | reference |
+| `tools/ha_oauth_companion_lab/native_flow_probe.py` | create |
 | `tools/ha_oauth_companion_lab/native_reset_probe.py` | reference |
 | `tools/ha_oauth_companion_lab/enrollment_probe.py` | reference |
 | `tools/ha_oauth_companion_lab/app/server.py` | reference |
@@ -516,7 +525,7 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 
 ## 18. Implementation sequence
 
-1. Complete readiness review against `specs/README.md`; resolve exact official source snapshots, SDK hooks, and any remaining support-matrix questions before Ready.
+1. Completed contract review is recorded in `docs/development/native-oauth-trial-preparation.md` with exact official snapshots, current-Core hook proof and bounded supported matrix. Keep that review current before implementation changes.
 2. Define immutable contracts, state schema, fixed configuration, semantic ports, and executable architecture/package checks.
 3. Implement pure policy and its 12 deterministic cases; then application state, durable fences, and 12 race/replay cases.
 4. Implement pinned TLS, key custody, fixed provider transport, secret-safe storage and 12 adapter cases.
@@ -542,7 +551,7 @@ New user/setup/operator documentation MUST be linked from the App README and rep
 
 ## 20. References and decisions
 
-- Primary sources: official Spotify OAuth authorization-code-with-PKCE and Web API profile documentation; Home Assistant Core config-flow, OAuth callback, auth, Supervisor App, Ingress, backup, and My documentation. Readiness review records exact official HTTPS URLs, access date, and relevant versioned behavior.
+- Primary sources, checked2026-10-30: [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow), [stable profile identity](https://developer.spotify.com/documentation/web-api/reference/get-current-users-profile), [refresh and omitted replacement](https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens), [HA native OAuth](https://contributors.home-assistant.io/core/integrations/oauth2/), [Core2026.10.4 OAuth source](https://github.com/home-assistant/core/blob/2026.10.4/homeassistant/helpers/config_entry_oauth2_flow.py), [Core HTTP context](https://github.com/home-assistant/core/blob/2026.10.4/homeassistant/components/http/__init__.py), [Supervisor2026.10.5 Ingress](https://github.com/home-assistant/supervisor/blob/2026.10.5/supervisor/api/ingress.py). Exact blob/image identities, execution boundaries and results are in the hook report. Community evidence remains separately dated in the ecosystem review.
 - Related specs/ADRs/issues/PRs: [Issue #32](https://github.com/vypdev/symphonia/issues/32); `specs/home-assistant-oauth-companion.md`, `specs/provider-connections-and-authorization.md`, `specs/home-assistant-app-runtime-and-ingress.md`, `specs/home-assistant-native-ui.md`; `docs/decisions/0007-home-assistant-oauth-companion.md`; `docs/decisions/0008-install-local-oauth-keys-and-backups.md`.
 - Decisions and rejected alternatives: fixed owner-authorized native Core/My callback, public PKCE client and one read scope; reject public App callback, Cloudflare, borrowed grants, Client Secret, broader production scope, and silent implementation before Ready.
 - Follow-up work explicitly outside this spec: production companion/authorization/runtime readiness, production recovery/reset and renewal UX, data-preserving key recovery, broader Spotify operations, and any other HA/Core/Supervisor support matrix.

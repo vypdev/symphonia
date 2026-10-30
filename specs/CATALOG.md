@@ -20,7 +20,7 @@ debt or convert unknown historic intent into a design decision.
 | `recording-identity-resolution` | Proposed | Resolve provider tracks to provider-independent recordings with versioned evidence, conservative automation, and durable manual decisions | [Recording identity resolution](./recording-identity-resolution.md) | 10 paths · 2026-10-29 |
 | `one-time-playlist-copy` | Proposed | Preview and execute a finite playlist copy with an immutable strict plan, a new target, ordered writes, and item-level outcomes | [One-time playlist copy](./one-time-playlist-copy.md) | 33 paths · 2026-10-29 |
 | `durable-operations-and-recovery` | Proposed | Execute imports and provider writes through durable, observable, lease-based operations that recover safely across restarts | [Durable operations and recovery](./durable-operations-and-recovery.md) | 55 paths · 2026-10-29 |
-| `native-oauth-validation-trial` | Proposed | Proposed twenty-minute native Spotify OAuth validation App and helper. Existing repository code and tests are research foundations, not an implemented or accepted installable trial. | [Native OAuth validation trial](./native-oauth-validation-trial.md) | 12 paths · 2026-10-30 |
+| `native-oauth-validation-trial` | Proposed | Proposed twenty-minute native Spotify OAuth validation App/helper; existing executable evidence is bounded real-Core research only, not an implemented or accepted final package. | [Native OAuth validation trial](./native-oauth-validation-trial.md) | 16 paths · 2026-10-30 |
 
 ## Evidence map
 
@@ -140,10 +140,10 @@ debt or convert unknown historic intent into a design decision.
 - Last verified: 2026-10-30
 - Specifications: [`specs/native-oauth-validation-trial.md`](./native-oauth-validation-trial.md)
 - Workflows: [`.github/workflows/verify.yml`](../.github/workflows/verify.yml)
-- Entrypoints: [`tools/ha_ingress_probe.py`](../tools/ha_ingress_probe.py)
-- Core code: [`tools/ha_ingress_probe.py`](../tools/ha_ingress_probe.py) · [`tools/ha_app_lab.py`](../tools/ha_app_lab.py) · [`tools/oauth_callback_spike.py`](../tools/oauth_callback_spike.py)
+- Entrypoints: [`tools/ha_ingress_probe.py`](../tools/ha_ingress_probe.py) · [`tools/ha_oauth_companion_lab/native_flow_probe.py`](../tools/ha_oauth_companion_lab/native_flow_probe.py)
+- Core code: [`tools/ha_ingress_probe.py`](../tools/ha_ingress_probe.py) · [`tools/ha_app_lab.py`](../tools/ha_app_lab.py) · [`tools/oauth_callback_spike.py`](../tools/oauth_callback_spike.py) · [`tools/ha_oauth_companion_lab/native_flow_probe.py`](../tools/ha_oauth_companion_lab/native_flow_probe.py)
 - Tests: [`tests/test_ha_ingress_probe.py`](../tests/test_ha_ingress_probe.py) · [`tests/test_ha_app_lab.py`](../tests/test_ha_app_lab.py) · [`tests/test_oauth_callback_spike.py`](../tests/test_oauth_callback_spike.py)
-- User documentation: [`docs/development/ha-app-lab.md`](../docs/development/ha-app-lab.md) · [`docs/development/oauth-callback-spike.md`](../docs/development/oauth-callback-spike.md) · [`docs/providers/provider-research.md`](../docs/providers/provider-research.md) · [`docs/providers/home-assistant-ecosystem-review.md`](../docs/providers/home-assistant-ecosystem-review.md)
+- User documentation: [`docs/development/ha-app-lab.md`](../docs/development/ha-app-lab.md) · [`docs/development/oauth-callback-spike.md`](../docs/development/oauth-callback-spike.md) · [`docs/providers/provider-research.md`](../docs/providers/provider-research.md) · [`docs/providers/home-assistant-ecosystem-review.md`](../docs/providers/home-assistant-ecosystem-review.md) · [`docs/development/native-oauth-trial-hooks-2026-10-30.md`](../docs/development/native-oauth-trial-hooks-2026-10-30.md) · [`docs/development/native-oauth-trial-preparation.md`](../docs/development/native-oauth-trial-preparation.md)
 
 ## Maintenance contract
 
