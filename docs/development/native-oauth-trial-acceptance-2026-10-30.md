@@ -90,12 +90,15 @@ retirement and Core-key removal. The entry, App and owned source/helper files
 were removed, and absence of this installation's Core keys was verified.
 
 Keyboard submission and checkbox operation were exercised at 390 × 844. Native
-pairing forms were reviewed in [English](evidence/native-oauth-trial/en-narrow.png)
-and [Spanish](evidence/native-oauth-trial/es-narrow.png); representative evidence
-shows [pairing success](evidence/native-oauth-trial/pair-success-es.png), the
-[unchecked consent screen](evidence/native-oauth-trial/connect-review-es.png), and
-[confirmed retirement](evidence/native-oauth-trial/retire-success-es.png).
-These images contain no bootstrap material or session routes. The encrypted
+pairing forms were reviewed in English and Spanish. Five original captures
+(pair forms, pairing success, unchecked consent and confirmed retirement) remain
+in the local `symphonia-native-oauth-trial-20261030` review bundle, with a
+`browser-capture-manifest.json` inventory. They contain no bootstrap material or
+session routes. They are separate review outputs, not shipped App assets or
+CI-reviewed source. Copilot refused binary evidence in the source diff; Chrome
+attachment upload was unavailable with its current file-access setting. Public
+capture delivery and independent visual acceptance remain pending; no check was
+waived and file metadata alone does not establish image correctness. The encrypted
 backup checkbox was a synthetic acknowledgement, not proof of encrypted lab backups.
 
 Chrome paste alone did not emit the native field-change events in the automation;

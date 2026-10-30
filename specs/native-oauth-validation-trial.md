@@ -454,11 +454,6 @@ Define coverage and execution gates: preserve repository-wide thresholds; change
 | `docs/development/native-oauth-trial-hooks-2026-10-30.md` | create |
 | `docs/development/native-oauth-trial-preparation.md` | create |
 | `docs/development/native-oauth-trial-acceptance-2026-10-30.md` | create |
-| `docs/development/evidence/native-oauth-trial/en-narrow.png` | create |
-| `docs/development/evidence/native-oauth-trial/es-narrow.png` | create |
-| `docs/development/evidence/native-oauth-trial/pair-success-es.png` | create |
-| `docs/development/evidence/native-oauth-trial/connect-review-es.png` | create |
-| `docs/development/evidence/native-oauth-trial/retire-success-es.png` | create |
 | `specs/README.md` | reference |
 | `specs/_template.md` | reference |
 | `specs/home-assistant-oauth-companion.md` | reference |
