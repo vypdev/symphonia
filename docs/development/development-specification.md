@@ -148,6 +148,23 @@ Numeric acceptance thresholds are open until the corpus and error costs are revi
 
 ## Quality gates
 
+### GitHub Actions scheduling
+
+Verification runs when a pull request is opened, reopened or updated. A branch
+push without a pull request does not launch verification or Copilot analysis.
+One workflow concurrency group per repository/PR cancels superseded verification;
+different pull requests keep independent groups. All verification jobs, runner
+assignments, coverage thresholds and merge protections remain required.
+
+The PR workflow owns Copilot code review and its existing branch lifecycle.
+The redundant push-only Commit and Branch Sync workflows are removed and were
+disabled in GitHub to cover branches that still contain old workflow files.
+Issue admission, review/approval observers and explicit deployment/manual
+workflows retain their existing triggers. Future workflow setup updates must
+preserve this owner-selected PR-only scheduling policy.
+
+### Required validation
+
 A change is incomplete until, in proportion to its scope:
 
 - specifications and requirement traceability agree with behavior;
